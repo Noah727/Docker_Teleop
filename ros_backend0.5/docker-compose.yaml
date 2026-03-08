@@ -1,0 +1,22 @@
+services:
+  motion_planner:
+    build: .
+    container_name: motion_planner_05
+    ports:
+      - "6080:6080" # noVNC web client
+      - "10001:10000" # ROS-TCP-Endpoint (Unity <-> ROS)
+      - "${QUEST_UDP_HOST_PORT:-5016}:5005/udp" # UDP hand pose (Unity/Quest -> ROS)
+      # Real UR driver may require the robot to connect back to the driver.
+      # On macOS (Docker Desktop), publish these ports so the robot can reach them via your Mac's LAN IP.
+      - "51001:50001" # reverse_port (default)
+      - "51002:50002" # script_sender_port (commonly used)
+      - "51003:50003" # optional (driver/RTDE auxiliaries depending on config)
+    volumes:
+      - ./src:/home/noah/ws_moveit/src
+      - ./simulation:/home/noah/ws_moveit/simulation
+    stdin_open: true
+    tty: true
+    environment:
+      - AUTO_COLCON_BUILD=1
+      - DISPLAY=:1
+    command: /start_desktop.sh

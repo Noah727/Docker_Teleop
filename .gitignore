@@ -1,0 +1,17 @@
+.DS_Store
+**/.DS_Store
+
+# Unity generated folders (not in this backup)
+UnityApp/Library/
+UnityApp/Logs/
+UnityApp/BuildTest/
+UnityApp/Temp/
+UnityApp/Obj/
+UnityApp/UserSettings/
+
+# Python/ROS build outputs
+**/__pycache__/
+**/*.pyc
+**/build/
+**/install/
+**/log/

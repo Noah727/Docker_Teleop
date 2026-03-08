@@ -1,0 +1,74 @@
+# Unified teleop tuning file
+# Edit values, then restart Part 2/3 nodes (see part23_ctl.sh).
+
+received_pose_to_target_twist:
+  ros__parameters:
+    target_frame: base_link
+    ee_frame: tool0
+    publish_rate_hz: 60.0
+    stale_timeout_sec: 0.25
+
+    # Linear/Angular target-chasing gains and caps
+    kp_linear: 2.0
+    max_linear_speed: 0.30
+    linear_deadband: 0.005
+    kp_angular: 4.0
+    max_angular_speed: 1.50
+    angular_deadband: 0.02
+
+    # Unity -> robot axis mapping
+    # map_axes/map_signs map Unity [x,y,z] onto robot [x,y,z].
+    # Current default: robot_xyz = [ +unity_x, -unity_z, +unity_y ]
+    map_axes: ["x", "z", "y"]
+    map_signs: [1.0, -1.0, 1.0]
+
+    # Post-map affine transform and clamp workspace in target_frame
+    scale_xyz: [1.0, 1.0, 1.0]
+    offset_xyz: [0.0, 0.0, 0.0]
+    min_xyz: [0.15, -0.50, 0.05]
+    max_xyz: [0.75, 0.50, 0.70]
+
+target_twist_to_servo_cmd:
+  ros__parameters:
+    publish_rate_hz: 60.0
+    stale_timeout_sec: 0.25
+    require_tracked: true
+    auto_start_servo: true
+    start_on_reset_release: true
+
+target_twist_to_gripper_cmd:
+  ros__parameters:
+    publish_rate_hz: 30.0
+    speed_m_per_s: 0.03
+    min_pos: 0.0
+    max_pos: 0.025
+    initial_pos: 0.025
+    stale_timeout_sec: 0.25
+    require_tracked: true
+
+target_twist_reset_manager:
+  ros__parameters:
+    control_rate_hz: 40.0
+
+    # Reset "kick" when B is pressed
+    kick_velocities: [-0.35, 0.18, 0.28, 0.18, -0.28, -0.25]
+    kick_duration_sec: 1.5
+
+    # Home pose after kick (radians): [pan, lift, elbow, wrist1, wrist2, wrist3]
+    home_joint_positions: [0.0, 0.0, 1.57079632679, 0.0, 0.0, 0.0]
+    home_kp: 1.2
+    home_max_vel: 0.60
+    home_tolerance: 0.03
+    home_timeout_sec: 8.0
+    settle_sec: 0.3
+
+    gripper_open_pos: 0.025
+    gripper_hold_open_sec: 0.6
+    min_reset_interval_sec: 2.5
+
+    # Cube reset target pose
+    reset_cube_with_ign_service: true
+    world_name: ur_hande_tabletop
+    cube_model_name: target_cube
+    cube_reset_pose_xyz: [0.60, 0.25, 0.03]
+    cube_reset_pose_xyzw: [0.0, 0.0, 0.0, 1.0]
