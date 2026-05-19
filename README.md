@@ -1,12 +1,6 @@
 # UR5e Hand-E VR Teleoperation
 
-This repository contains a Unity + Meta Quest interface for teleoperating a simulated UR5e robot with a Robotiq Hand-E gripper through ROS 2, MoveIt Servo, and Gazebo. Unity is used for headset interaction, scene visualization, controller input, synchronized object visualization, and wrist-camera recording. ROS/Gazebo is the source of robot and object physics.
-
-## Current Status
-
-The current canonical backend is `ros_backend1.0`.
-
-Older local experiment folders such as `ros_backend0.9`, `Archive`, and `Ros_archive` are intentionally ignored by `.gitignore` so the GitHub repo stays clean.
+This project lets a Meta Quest 3 user teleoperate a simulated UR5e robot with a Robotiq Hand-E gripper in Gazebo through a Unity MR/VR interface. Unity provides headset/controller input, robot visualization, synchronized object visualization, a floating control panel, and wrist-camera recording. ROS 2, MoveIt Servo, and Gazebo provide the robot control and physics authority.
 
 ## Demo Videos
 
@@ -19,22 +13,66 @@ Use this section for short demo links once the project has stable recordings. Pr
 | Object manipulation | Robot moving the cubes/cylinders onto the target plates. | TODO |
 | Wrist camera recording | Floating panel preview and saved wrist-camera data. | TODO |
 
+## Main Docs
+
+Start here:
+
+- [docs/System_Setup.md](docs/System_Setup.md): full replication guide for a new computer or new developer.
+- [docs/Getting_Started.md](docs/Getting_Started.md): day-to-day run guide, backend bringup, checkpoints, controller buttons, and recovery.
+- [docs/Technical_Details.md](docs/Technical_Details.md): deeper architecture, networking, mapping, recording, troubleshooting, and Git/GitHub notes.
+
+## System Diagram
+
+```mermaid
+flowchart LR
+    Quest[Quest 3 / Unity App] -->|TCP controller pose| Receiver[ROS TCP Receiver]
+    Quest -->|ROS-TCP Connector| RosTcp[ROS-TCP Endpoint]
+    Receiver --> Mapper[Teleop Mapping]
+    Mapper --> Servo[MoveIt Servo]
+    Servo --> Gazebo[Gazebo UR5e + Hand-E]
+    Gazebo --> Sync[Joint/Object Pose Sync]
+    Sync --> RosTcp
+    RosTcp --> Quest
+```
+
+## Current Status
+
+The current canonical backend is:
+
+```text
+ros_backend1.0
+```
+
+The active Unity scene is:
+
+```text
+UnityApp/Assets/Scenes/Ur5e_Working 1.unity
+```
+
+Preferred local development mode is wired Quest TCP over USB with `adb reverse`.
+
+## Tested Environment
+
+| Component | Tested Version / Setup |
+| --- | --- |
+| Unity | `6000.2.10f1` |
+| Headset | Meta Quest 3 |
+| Unity app package ID | `com.noahli.handtrackingunity` |
+| Backend | Dockerized ROS 2 Humble workspace |
+| Robot | UR5e + Robotiq Hand-E |
+| Simulation | Gazebo |
+| Motion control | MoveIt Servo |
+| Preferred connection | USB wired via `adb reverse` |
+
 ## Repository Layout
 
 ```text
 .
 ├── README.md
 ├── docs/
-│   ├── ARCHITECTURE.md
-│   ├── CONTROLLER_BUTTONS.md
-│   ├── GRIPPER_CAMERA.md
-│   ├── MAPPING_TUNING.md
-│   ├── RECORDING.md
-│   ├── SYSTEM_BRINGUP.md
-│   ├── TROUBLESHOOTING.md
-│   ├── UNITY_QUEST_BUILD.md
-│   ├── WIRED_WIRELESS_SETUP.md
-│   └── WORLD_FRAME_MAPPING.md
+│   ├── System_Setup.md
+│   ├── Getting_Started.md
+│   └── Technical_Details.md
 ├── UnityApp/
 │   ├── Assets/
 │   ├── Packages/
@@ -48,74 +86,85 @@ Use this section for short demo links once the project has stable recordings. Pr
     └── src/
 ```
 
-## Main Components
-
-- `UnityApp/`: Unity project for Quest/headset input, robot visualization, synchronized scene objects, floating control panel, and wrist-camera recording.
-- `ros_backend1.0/`: Dockerized ROS 2 backend with UR5e + Hand-E descriptions, Gazebo simulation setup, MoveIt Servo configuration, TCP receiver, mapper, reset manager, and object pose sync.
-- `docs/`: User-facing setup, tuning, operation, and troubleshooting notes.
-
-## Requirements
-
-- Unity `6000.2.10f1`.
-- Docker Desktop on macOS, or Docker Engine / Docker Compose on Linux.
-- Meta Quest headset and Meta XR / OpenXR Unity setup.
-- `adb` for wired Quest mode.
-- Git LFS for large Unity and mesh assets.
-
 ## Quick Start
 
-From the repository root:
+Clone with Git LFS:
+
+```bash
+git lfs install
+git clone git@github.com:su-idr-lab/ros_unity_project.git
+cd ros_unity_project
+git lfs pull
+```
+
+Start the wired backend:
 
 ```bash
 cd ros_backend1.0
 cp .env.example .env
-./scripts/backend10_lifecycle.sh up_container
-./scripts/backend10_lifecycle.sh build_ws
 ./scripts/backend10_lifecycle.sh bringup_wired
+./scripts/backend10_lifecycle.sh status
 ```
 
-For detailed bringup and checkpoints, see [docs/SYSTEM_BRINGUP.md](docs/SYSTEM_BRINGUP.md).
-
-## Unity App
-
-Open `UnityApp/` in Unity `6000.2.10f1`.
-
-The active scene is:
+Open Unity:
 
 ```text
-UnityApp/Assets/Scenes/Ur5e_Working 1.unity
+Unity Hub -> Add project from disk -> UnityApp
+Unity version: 6000.2.10f1
+Active scene: Assets/Scenes/Ur5e_Working 1.unity
 ```
 
-For cloning, opening, rebuilding, and deploying the Quest app, see [docs/UNITY_QUEST_BUILD.md](docs/UNITY_QUEST_BUILD.md).
+For complete setup, use [docs/System_Setup.md](docs/System_Setup.md). For normal operation, use [docs/Getting_Started.md](docs/Getting_Started.md).
 
-For controller bindings, see [docs/CONTROLLER_BUTTONS.md](docs/CONTROLLER_BUTTONS.md).
+## Controls Summary
 
-## Networking
+Right controller:
 
-Preferred local development mode is wired Quest TCP over USB with `adb reverse`.
+- `Grip hold`: engage robot teleop.
+- `Trigger tap`: toggle gripper open / close.
+- `A hold`: rotation mode.
+- `B tap`: reset robot and table objects.
+- `Thumbstick press`: clutch / pause hand following; release to reset hand reference.
 
-See [docs/WIRED_WIRELESS_SETUP.md](docs/WIRED_WIRELESS_SETUP.md).
+Left controller:
+
+- `X tap`: start / stop wrist-camera recording.
+- `Y tap`: switch hand-pose mode and thumbstick/gamepad mode.
 
 ## Recording
 
-The Unity wrist camera can preview in the floating control panel and record frames from the headset session.
+Wrist-camera recordings are stored on Quest under:
 
-See [docs/RECORDING.md](docs/RECORDING.md) and [docs/GRIPPER_CAMERA.md](docs/GRIPPER_CAMERA.md).
+```text
+/storage/emulated/0/Android/data/com.noahli.handtrackingunity/files/GripperCameraRecordings
+```
 
-## Tuning
+Do not commit recordings or videos to Git. Store demos externally and link them in the Demo Videos table.
 
-Mapping and controller tuning is documented in:
+## Known Limitations
 
-- [docs/MAPPING_TUNING.md](docs/MAPPING_TUNING.md)
-- [docs/WORLD_FRAME_MAPPING.md](docs/WORLD_FRAME_MAPPING.md)
+- Gazebo rendering on macOS Docker can be CPU-heavy.
+- Wired Quest mode requires `adb reverse` and an active USB connection.
+- Unity is intended as visualization/control UI; Gazebo is the physics authority.
+- Videos and datasets are intentionally not stored in Git.
 
-## Troubleshooting
+## Development Workflow
 
-Common issues are collected in [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+Keep `main` stable. Use feature branches for changes:
 
-## GitHub Setup
+```bash
+git checkout -b feature/my-change
+```
 
-Repository setup and first-push instructions are in [docs/GITHUB_SETUP.md](docs/GITHUB_SETUP.md).
+After testing:
+
+```bash
+git add UnityApp ros_backend1.0 docs README.md
+git commit -m "Describe the change"
+git push -u origin feature/my-change
+```
+
+Merge to `main` only after the Quest build and backend are tested.
 
 ## Versioning Recommendation
 
