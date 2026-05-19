@@ -79,3 +79,6 @@ __pycache__/
 
 # Docker / local logs
 *.log
+
+# Private local developer scratch notes
+dev_notes/private/

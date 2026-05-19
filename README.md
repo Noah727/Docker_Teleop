@@ -73,6 +73,9 @@ Preferred local development mode is wired Quest TCP over USB with `adb reverse`.
 │   ├── System_Setup.md
 │   ├── Getting_Started.md
 │   └── Technical_Details.md
+├── dev_notes/
+│   ├── README.md
+│   └── Unity_Quest_Debug_Stream_Setup.md
 ├── UnityApp/
 │   ├── Assets/
 │   ├── Packages/
@@ -115,6 +118,10 @@ Active scene: Assets/Scenes/Ur5e_Working 1.unity
 ```
 
 For complete setup, use [docs/System_Setup.md](docs/System_Setup.md). For normal operation, use [docs/Getting_Started.md](docs/Getting_Started.md).
+
+## Developer Notes
+
+Active implementation notes and debugging plans live in [dev_notes/](dev_notes/). These are developer-facing notes, while `docs/` is the stable user-facing documentation.
 
 ## Controls Summary
 
