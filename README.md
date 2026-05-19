@@ -32,6 +32,7 @@ Use this section for short demo links once the project has stable recordings. Pr
 │   ├── RECORDING.md
 │   ├── SYSTEM_BRINGUP.md
 │   ├── TROUBLESHOOTING.md
+│   ├── UNITY_QUEST_BUILD.md
 │   ├── WIRED_WIRELESS_SETUP.md
 │   └── WORLD_FRAME_MAPPING.md
 ├── UnityApp/
@@ -84,6 +85,8 @@ The active scene is:
 ```text
 UnityApp/Assets/Scenes/Ur5e_Working 1.unity
 ```
+
+For cloning, opening, rebuilding, and deploying the Quest app, see [docs/UNITY_QUEST_BUILD.md](docs/UNITY_QUEST_BUILD.md).
 
 For controller bindings, see [docs/CONTROLLER_BUTTONS.md](docs/CONTROLLER_BUTTONS.md).
 

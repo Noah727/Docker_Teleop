@@ -84,7 +84,7 @@ The script saves frames under Unity's `Application.persistentDataPath`.
 For the Quest/Android build, expected path:
 
 ```text
-/storage/emulated/0/Android/data/com.DefaultCompany.Myproject/files/GripperCameraRecordings
+/storage/emulated/0/Android/data/com.noahli.handtrackingunity/files/GripperCameraRecordings
 ```
 
 Inside that folder:
@@ -134,7 +134,7 @@ Pull the recording folder:
 
 ```bash
 cd /Users/noahli/ros_unity_project
-adb pull "/storage/emulated/0/Android/data/com.DefaultCompany.Myproject/files/GripperCameraRecordings" ./GripperCameraRecordings
+adb pull "/storage/emulated/0/Android/data/com.noahli.handtrackingunity/files/GripperCameraRecordings" ./GripperCameraRecordings
 ```
 
 Open the pulled folder:
@@ -148,13 +148,13 @@ open ./GripperCameraRecordings
 List recording folders on the Quest:
 
 ```bash
-adb shell ls -lah "/storage/emulated/0/Android/data/com.DefaultCompany.Myproject/files/GripperCameraRecordings"
+adb shell ls -lah "/storage/emulated/0/Android/data/com.noahli.handtrackingunity/files/GripperCameraRecordings"
 ```
 
 List files inside one session:
 
 ```bash
-adb shell ls -lah "/storage/emulated/0/Android/data/com.DefaultCompany.Myproject/files/GripperCameraRecordings/20260416_143015"
+adb shell ls -lah "/storage/emulated/0/Android/data/com.noahli.handtrackingunity/files/GripperCameraRecordings/20260416_143015"
 ```
 
 Replace `20260416_143015` with the actual session folder name.
