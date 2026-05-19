@@ -8,6 +8,17 @@ The current canonical backend is `ros_backend1.0`.
 
 Older local experiment folders such as `ros_backend0.9`, `Archive`, and `Ros_archive` are intentionally ignored by `.gitignore` so the GitHub repo stays clean.
 
+## Demo Videos
+
+Use this section for short demo links once the project has stable recordings. Prefer linking videos from GitHub Releases, YouTube, Google Drive, or lab storage instead of committing large `.mp4` files directly to the repository.
+
+| Demo | Description | Link |
+| --- | --- | --- |
+| Full system bringup | Container start, Gazebo launch, Unity connection, and first robot motion. | TODO |
+| Quest teleoperation | Headset/controller input moving the UR5e end effector. | TODO |
+| Object manipulation | Robot moving the cubes/cylinders onto the target plates. | TODO |
+| Wrist camera recording | Floating panel preview and saved wrist-camera data. | TODO |
+
 ## Repository Layout
 
 ```text
