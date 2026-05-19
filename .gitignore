@@ -1,0 +1,81 @@
+# macOS / OS generated
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Local editor / IDE
+.vscode/
+.idea/
+*.csproj
+*.sln
+*.slnx
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.suo
+*.tmp
+*.swp
+
+# Unity generated files
+UnityApp/Library/
+UnityApp/Temp/
+UnityApp/Obj/
+UnityApp/Logs/
+UnityApp/Build/
+UnityApp/Builds/
+UnityApp/BuildTest/
+UnityApp/MemoryCaptures/
+UnityApp/UserSettings/
+UnityApp/.utmp/
+UnityApp/*.csproj
+UnityApp/*.sln
+UnityApp/*.slnx
+UnityApp/.vs/
+
+# Unity cache / crash files
+UnityApp/Assets/AssetStoreTools*
+UnityApp/Assets/Samples/
+UnityApp/Assets/Samples.meta
+UnityApp/Assets/Screenshots/
+UnityApp/Assets/Screenshots.meta
+UnityApp/Assets/StreamingAssets/aa.meta
+UnityApp/Assets/StreamingAssets/aa/
+UnityApp/RuntimeActionBindings.json
+sysinfo.txt
+
+# ROS / colcon generated files
+ros_backend1.0/build/
+ros_backend1.0/install/
+ros_backend1.0/log/
+ros_backend1.0/.colcon/
+ros_backend1.0/.ros/
+
+# Local backend environment
+ros_backend1.0/.env
+
+# Runtime recordings and datasets
+GripperCameraRecordings/
+recordings/
+*.apk
+*.aab
+*.bag
+*.bag.active
+*.db3
+*.mcap
+*.mp4
+*.mov
+
+# Old local experiments / archives, not part of the clean repo
+Archive/
+Ros_archive/
+ros_backend0.9/
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Docker / local logs
+*.log
