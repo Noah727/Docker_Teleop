@@ -23,6 +23,12 @@ public class GazeboPoseStampedSubscriber : MonoBehaviour
     public bool convertFromRosFluToUnity = true;
     public bool applyOrientation = true;
 
+    [Header("Workspace placement")]
+    [Tooltip("When present, incoming Gazebo-world poses are placed relative to this movable Unity workspace root.")]
+    public Transform workspaceRoot;
+    public string workspaceRootName = "GazeboWorkspace";
+    public bool applyWorkspaceTransform = true;
+
     [Header("Preview / Authoring")]
     [Tooltip("Applies a preview pose before the first ROS message arrives so you can lay out visuals without Gazebo/sync running.")]
     public bool previewWithoutRos = false;
@@ -65,6 +71,8 @@ public class GazeboPoseStampedSubscriber : MonoBehaviour
 
     private void Start()
     {
+        ResolveWorkspaceRoot();
+
         if (referenceFrame == null)
         {
             var go = GameObject.Find("base_link") ?? GameObject.Find("UR5e");
@@ -123,6 +131,9 @@ public class GazeboPoseStampedSubscriber : MonoBehaviour
         if (target == null)
             return;
 
+        if (applyWorkspaceTransform && workspaceRoot == null)
+            ResolveWorkspaceRoot();
+
         if (!hasPose)
         {
             ApplyPreviewPoseIfNeeded();
@@ -137,7 +148,13 @@ public class GazeboPoseStampedSubscriber : MonoBehaviour
             q = latestRotation;
         }
 
-        if (referenceFrame != null)
+        if (applyWorkspaceTransform && workspaceRoot != null)
+        {
+            target.position = workspaceRoot.TransformPoint(p);
+            if (applyOrientation)
+                target.rotation = workspaceRoot.rotation * q;
+        }
+        else if (referenceFrame != null)
         {
             target.position = referenceFrame.TransformPoint(p);
             if (applyOrientation)
@@ -158,7 +175,13 @@ public class GazeboPoseStampedSubscriber : MonoBehaviour
 
         Quaternion previewRotation = Quaternion.Euler(previewEulerDegrees);
 
-        if (previewRelativeToReferenceFrame && referenceFrame != null)
+        if (applyWorkspaceTransform && workspaceRoot != null)
+        {
+            target.position = workspaceRoot.TransformPoint(previewPosition);
+            if (applyOrientation)
+                target.rotation = workspaceRoot.rotation * previewRotation;
+        }
+        else if (previewRelativeToReferenceFrame && referenceFrame != null)
         {
             target.position = referenceFrame.TransformPoint(previewPosition);
             if (applyOrientation)
@@ -172,5 +195,15 @@ public class GazeboPoseStampedSubscriber : MonoBehaviour
         }
 
         previewApplied = true;
+    }
+
+    private void ResolveWorkspaceRoot()
+    {
+        if (!applyWorkspaceTransform || workspaceRoot != null || string.IsNullOrWhiteSpace(workspaceRootName))
+            return;
+
+        GameObject go = GameObject.Find(workspaceRootName);
+        if (go != null)
+            workspaceRoot = go.transform;
     }
 }

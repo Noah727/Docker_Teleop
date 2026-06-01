@@ -1,0 +1,27 @@
+task_profile: cable_insertion
+schema_version: 0.1
+description: Cable insertion task with a Rubik-sized receiver box, rectangular port, and small cable rod with a rectangular plug end.
+task_group_name: TaskGroup_Main
+sync_topic_prefix: /unity_sync
+objects:
+  - id: Sync_CableReceiverBox
+    type: port_box
+    link_name: body_link
+    static: true
+    size_xyz: [0.040, 0.040, 0.040]
+    local_position_xyz: [0.000, 0.020, -0.020]
+    local_euler_xyz: [0.0, 0.0, 0.0]
+    color_rgba: [0.12, 0.14, 0.16, 1.0]
+    port_size_xyz: [0.018, 0.006, 0.014]
+    port_color_rgba: [0.01, 0.01, 0.012, 1.0]
+  - id: Sync_CableRod
+    type: cable_rod
+    link_name: body_link
+    static: false
+    size_xyz: [0.009, 0.009, 0.075]
+    local_position_xyz: [0.000, 0.018, 0.080]
+    local_euler_xyz: [0.0, 0.0, 0.0]
+    color_rgba: [0.035, 0.035, 0.038, 1.0]
+    mass_kg: 0.018
+    plug_size_xyz: [0.016, 0.010, 0.016]
+    plug_color_rgba: [0.12, 0.12, 0.13, 1.0]

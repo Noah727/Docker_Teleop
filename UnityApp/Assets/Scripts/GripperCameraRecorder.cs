@@ -4,6 +4,7 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
+using UnityEngine.Rendering;
 using UnityEngine.UI;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -31,6 +32,12 @@ public class GripperCameraRecorder : MonoBehaviour
         Thumbstick
     }
 
+    public enum CaptureImageFormat
+    {
+        Png,
+        Jpg
+    }
+
     [Header("Camera")]
     public Camera sourceCamera;
     public int width = 1280;
@@ -44,9 +51,20 @@ public class GripperCameraRecorder : MonoBehaviour
     public KeyCode toggleRecordingKey = KeyCode.R;
     public KeyCode captureOneFrameKey = KeyCode.P;
     public int captureEveryNFrames = 5;
+    [Tooltip("Use a real capture rate instead of every-N-rendered-frames. This avoids accidentally recording at very high rates on Quest.")]
+    public bool useTargetRecordingHz = true;
+    [Range(0.2f, 30f)] public float targetRecordingHz = 5.0f;
     public string outputFolderName = "GripperCameraRecordings";
     public bool logOutputPathOnStart = true;
     public bool forceRenderBeforeCapture = false;
+    public bool useAsyncGpuReadback = true;
+    public CaptureImageFormat captureImageFormat = CaptureImageFormat.Jpg;
+    [Range(1, 100)] public int jpgQuality = 75;
+    public int maxPendingCaptures = 1;
+    [Tooltip("On Quest builds, cap recording resolution to keep capture from stalling the whole app.")]
+    public bool useQuestSafeRecordingResolution = true;
+    public int questSafeWidth = 640;
+    public int questSafeHeight = 360;
     public bool enableKeyboardShortcuts = true;
     public bool toggleRecordingWithLeftX = true;
     public bool debugLeftXInput = true;
@@ -57,10 +75,10 @@ public class GripperCameraRecorder : MonoBehaviour
     public bool createRuntimeSceneMarker = true;
     public bool rebuildSceneMarkerFromSettings = false;
     public int runtimeSceneMarkerLayer = 0;
-    public Color markerColor = new Color(0.2f, 0.85f, 1.0f, 1.0f);
+    public Color markerColor = new Color(0.24f, 0.78f, 1.0f, 0.22f);
     public Vector3 markerBoxSize = new Vector3(0.035f, 0.02f, 0.025f);
-    public float markerForwardLength = 0.12f;
-    public float markerFrustumHalfSize = 0.035f;
+    public float markerForwardLength = 0.06f;
+    public float markerFrustumHalfSize = 0.0175f;
     public float markerLineWidth = 0.004f;
 
     [Header("Floating Control Panel")]
@@ -91,6 +109,9 @@ public class GripperCameraRecorder : MonoBehaviour
     public float floatingPanelDragRayMaxDistance = 3.0f;
     public float rightGripTeleopDragBlockThreshold = 0.55f;
     public bool persistFloatingPanelDraggedPose = true;
+    public bool requireFloatingPanelDragHandleHit = true;
+    public string floatingPanelDragHandleName = "DragHandle";
+    public Color floatingPanelDragHandleColor = new Color(1.0f, 0.92f, 0.72f, 0.70f);
 
     private RenderTexture runtimeRenderTexture;
     private Texture2D readbackTexture;
@@ -113,6 +134,8 @@ public class GripperCameraRecorder : MonoBehaviour
     private bool floatingPanelSavedPoseLoaded;
     private Vector3 floatingPanelDragLocalOffsetFromController;
     private Quaternion floatingPanelDragWorldRotation;
+    private int pendingCaptureCount;
+    private float nextCaptureTime;
     private bool leftXWasHeld;
     private float lastLeftXToggleTime = -999f;
     private bool legacyInputUnavailable;
@@ -121,6 +144,10 @@ public class GripperCameraRecorder : MonoBehaviour
     private bool editorMarkerForceRebuildQueued;
     private bool editorFloatingPanelForceRebuildQueued;
 #endif
+
+    public bool IsRecording => recording;
+    public string CurrentSessionFolder => sessionFolder;
+    public Texture PreviewTexture => sourceCamera != null ? sourceCamera.targetTexture : null;
 
     private void OnEnable()
     {
@@ -141,8 +168,13 @@ public class GripperCameraRecorder : MonoBehaviour
         rebuildFloatingPanelFromSettings = false;
 
         captureEveryNFrames = Mathf.Max(1, captureEveryNFrames);
+        targetRecordingHz = Mathf.Clamp(targetRecordingHz, 0.2f, 30.0f);
+        jpgQuality = Mathf.Clamp(jpgQuality, 1, 100);
+        maxPendingCaptures = Mathf.Max(1, maxPendingCaptures);
         width = Mathf.Max(16, width);
         height = Mathf.Max(16, height);
+        questSafeWidth = Mathf.Max(16, questSafeWidth);
+        questSafeHeight = Mathf.Max(16, questSafeHeight);
         runtimeSceneMarkerLayer = Mathf.Clamp(runtimeSceneMarkerLayer, 0, 31);
         markerForwardLength = Mathf.Max(0.01f, markerForwardLength);
         markerFrustumHalfSize = Mathf.Max(0.005f, markerFrustumHalfSize);
@@ -180,6 +212,7 @@ public class GripperCameraRecorder : MonoBehaviour
         captureEveryNFrames = Mathf.Max(1, captureEveryNFrames);
         width = Mathf.Max(16, width);
         height = Mathf.Max(16, height);
+        ApplyRuntimeRecordingDefaults();
 
         EnsureRuntimeRenderTexture();
     }
@@ -237,14 +270,27 @@ public class GripperCameraRecorder : MonoBehaviour
         if (!recording)
             return;
 
+        if (useTargetRecordingHz)
+        {
+            if (Time.unscaledTime >= nextCaptureTime)
+            {
+                float interval = 1.0f / Mathf.Max(0.2f, targetRecordingHz);
+                nextCaptureTime = Time.unscaledTime + interval;
+                StartFrameCaptureIfPossible();
+            }
+            return;
+        }
+
         if ((frameCounter++ % captureEveryNFrames) == 0)
-            StartCoroutine(CaptureFrame());
+            StartFrameCaptureIfPossible();
     }
 
     public void StartRecording()
     {
         EnsureSessionFolder(DateTime.Now.ToString("yyyyMMdd_HHmmss"));
         frameCounter = 0;
+        pendingCaptureCount = 0;
+        nextCaptureTime = Time.unscaledTime;
         recording = true;
         Debug.Log($"[GripperCameraRecorder] Started recording to: {sessionFolder}");
         UpdateFloatingPanel();
@@ -268,9 +314,17 @@ public class GripperCameraRecorder : MonoBehaviour
     public void CaptureOneFrame()
     {
         EnsureSessionFolder("single_frame");
-        StartCoroutine(CaptureFrame());
+        StartFrameCaptureIfPossible();
         Debug.Log($"[GripperCameraRecorder] Captured one frame to: {sessionFolder}");
         UpdateFloatingPanel();
+    }
+
+    private void StartFrameCaptureIfPossible()
+    {
+        if (pendingCaptureCount >= Mathf.Max(1, maxPendingCaptures))
+            return;
+
+        StartCoroutine(CaptureFrame());
     }
 
     private bool LeftControllerXPressed()
@@ -329,16 +383,43 @@ public class GripperCameraRecorder : MonoBehaviour
         }
     }
 
-    private IEnumerator CaptureFrame()
+    private void ApplyRuntimeRecordingDefaults()
     {
-        yield return new WaitForEndOfFrame();
-        CaptureCurrentFrame();
+        targetRecordingHz = Mathf.Clamp(targetRecordingHz, 0.2f, 30.0f);
+        jpgQuality = Mathf.Clamp(jpgQuality, 1, 100);
+        maxPendingCaptures = Mathf.Max(1, maxPendingCaptures);
+        questSafeWidth = Mathf.Max(16, questSafeWidth);
+        questSafeHeight = Mathf.Max(16, questSafeHeight);
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (useQuestSafeRecordingResolution)
+        {
+            width = Mathf.Min(width, questSafeWidth);
+            height = Mathf.Min(height, questSafeHeight);
+        }
+#endif
     }
 
-    private void CaptureCurrentFrame()
+    private IEnumerator CaptureFrame()
+    {
+        pendingCaptureCount++;
+        yield return new WaitForEndOfFrame();
+        bool captureCompletesAsync = false;
+        try
+        {
+            captureCompletesAsync = CaptureCurrentFrame();
+        }
+        finally
+        {
+            if (!captureCompletesAsync)
+                pendingCaptureCount = Mathf.Max(0, pendingCaptureCount - 1);
+        }
+    }
+
+    private bool CaptureCurrentFrame()
     {
         if (sourceCamera == null)
-            return;
+            return false;
 
         bool markerWasActive = runtimeSceneMarker != null && runtimeSceneMarker.activeSelf;
         RenderTexture previousActive = RenderTexture.active;
@@ -363,6 +444,13 @@ public class GripperCameraRecorder : MonoBehaviour
             // If the camera already renders the live preview RT each frame, avoid a second full render.
             if (forceRenderBeforeCapture || createdTemporaryTarget)
                 sourceCamera.Render();
+
+            string fileName = $"gripper_camera_{DateTime.Now:yyyyMMdd_HHmmss_fff}_{Time.frameCount:D08}.{GetCaptureExtension()}";
+            string filePath = Path.Combine(sessionFolder, fileName);
+
+            if (createdTemporaryTarget == false && TryQueueAsyncReadback(targetTexture, filePath))
+                return true;
+
             RenderTexture.active = targetTexture;
 
             if (readbackTexture == null || readbackTexture.width != targetTexture.width || readbackTexture.height != targetTexture.height)
@@ -370,10 +458,7 @@ public class GripperCameraRecorder : MonoBehaviour
 
             readbackTexture.ReadPixels(new Rect(0, 0, targetTexture.width, targetTexture.height), 0, 0);
             readbackTexture.Apply(false);
-
-            string fileName = $"gripper_camera_{DateTime.Now:yyyyMMdd_HHmmss_fff}_{Time.frameCount:D08}.png";
-            string filePath = Path.Combine(sessionFolder, fileName);
-            File.WriteAllBytes(filePath, readbackTexture.EncodeToPNG());
+            File.WriteAllBytes(filePath, EncodeTexture(readbackTexture));
         }
         finally
         {
@@ -388,6 +473,60 @@ public class GripperCameraRecorder : MonoBehaviour
             if (markerWasActive)
                 runtimeSceneMarker.SetActive(true);
         }
+
+        return false;
+    }
+
+    private bool TryQueueAsyncReadback(RenderTexture targetTexture, string filePath)
+    {
+        if (!useAsyncGpuReadback || !SystemInfo.supportsAsyncGPUReadback || targetTexture == null)
+            return false;
+
+        int captureWidth = targetTexture.width;
+        int captureHeight = targetTexture.height;
+        AsyncGPUReadback.Request(targetTexture, 0, TextureFormat.RGB24, request =>
+        {
+            try
+            {
+                if (request.hasError)
+                {
+                    Debug.LogWarning("[GripperCameraRecorder] Async GPU readback failed; dropping frame.");
+                    return;
+                }
+
+                Texture2D texture = null;
+                try
+                {
+                    texture = new Texture2D(captureWidth, captureHeight, TextureFormat.RGB24, false);
+                    texture.LoadRawTextureData(request.GetData<byte>().ToArray());
+                    texture.Apply(false);
+                    File.WriteAllBytes(filePath, EncodeTexture(texture));
+                }
+                finally
+                {
+                    if (texture != null)
+                        DestroyObjectSafe(texture);
+                }
+            }
+            finally
+            {
+                pendingCaptureCount = Mathf.Max(0, pendingCaptureCount - 1);
+            }
+        });
+        return true;
+    }
+
+    private byte[] EncodeTexture(Texture2D texture)
+    {
+        if (captureImageFormat == CaptureImageFormat.Jpg)
+            return texture.EncodeToJPG(Mathf.Clamp(jpgQuality, 1, 100));
+
+        return texture.EncodeToPNG();
+    }
+
+    private string GetCaptureExtension()
+    {
+        return captureImageFormat == CaptureImageFormat.Jpg ? "jpg" : "png";
     }
 
     private void EnsureSessionFolder(string sessionName)
@@ -458,6 +597,7 @@ public class GripperCameraRecorder : MonoBehaviour
         EnsureFloatingPanelRootComponents(rect, shouldBuildDefaultPanel);
         if (!shouldBuildDefaultPanel)
         {
+            EnsureFloatingPanelDragHandle(rect);
             ResolveFloatingPanelReferences();
             BindFloatingPanelButtons();
             UpdateFloatingPanel();
@@ -472,6 +612,8 @@ public class GripperCameraRecorder : MonoBehaviour
 
         Text title = CreateText("Title", rect, font, "Control Panel", 20, TextAnchor.MiddleLeft);
         SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -18f), new Vector2(220f, 32f));
+
+        EnsureFloatingPanelDragHandle(rect);
 
         statusText = CreateText("Status", rect, font, "IDLE", 16, TextAnchor.MiddleRight);
         SetRect(statusText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -18f), new Vector2(150f, 32f));
@@ -497,6 +639,21 @@ public class GripperCameraRecorder : MonoBehaviour
 #if UNITY_EDITOR
         MarkSceneDirtyInEditor();
 #endif
+    }
+
+    private void EnsureFloatingPanelDragHandle(RectTransform panelRect)
+    {
+        if (panelRect == null)
+            return;
+
+        UICornerDragHandle.Ensure(
+            panelRect.transform,
+            floatingPanelDragHandleName,
+            floatingPanelDragHandleColor,
+            new Vector2(1f, 0f),
+            new Vector2(1f, 0f),
+            new Vector2(-12f, 12f),
+            new Vector2(46f, 46f));
     }
 
     private void EnsureFloatingPanelRootComponents(RectTransform rect, bool applySettings)
@@ -681,7 +838,7 @@ public class GripperCameraRecorder : MonoBehaviour
             return;
         }
 
-        if (buttonHeld && !floatingPanelDragButtonWasHeld && PanelRayHits(rect, controller))
+        if (buttonHeld && !floatingPanelDragActive && PanelRayHits(rect, controller))
             BeginFloatingPanelDrag(rect, controller);
 
         if (floatingPanelDragActive && buttonHeld)
@@ -707,6 +864,17 @@ public class GripperCameraRecorder : MonoBehaviour
     }
 
     private bool PanelRayHits(RectTransform rect, Transform controller)
+    {
+        if (requireFloatingPanelDragHandleHit)
+        {
+            RectTransform handle = FindFloatingPanelChildComponent<RectTransform>(floatingPanelDragHandleName);
+            return handle != null && PanelRayHitsRect(handle, controller);
+        }
+
+        return PanelRayHitsRect(rect, controller);
+    }
+
+    private bool PanelRayHitsRect(RectTransform rect, Transform controller)
     {
         Ray ray = new Ray(controller.position, controller.forward);
         Plane panelPlane = new Plane(rect.forward, rect.position);
@@ -840,6 +1008,17 @@ public class GripperCameraRecorder : MonoBehaviour
         return image;
     }
 
+    private static Image CreateImage(string name, Transform parent, Color color)
+    {
+        GameObject go = new GameObject(name);
+        SetLayerRecursively(go, 5);
+        RectTransform rect = go.AddComponent<RectTransform>();
+        rect.SetParent(parent, false);
+        Image image = go.AddComponent<Image>();
+        image.color = color;
+        return image;
+    }
+
     private static Button CreateButton(string name, Transform parent, Font font, string label, Color color)
     {
         GameObject go = new GameObject(name);
@@ -866,7 +1045,12 @@ public class GripperCameraRecorder : MonoBehaviour
 
     private static void EnsureEventSystem()
     {
-        EventSystem existing = FindObjectOfType<EventSystem>();
+        EventSystem existing =
+#if UNITY_2023_1_OR_NEWER
+            FindFirstObjectByType<EventSystem>();
+#else
+            FindObjectOfType<EventSystem>();
+#endif
         if (existing != null)
         {
             if (existing.GetComponent<BaseInputModule>() == null)
@@ -942,10 +1126,12 @@ public class GripperCameraRecorder : MonoBehaviour
             {
                 name = "GripperDataCameraMarker_Material"
             };
+            ConfigureTransparentMaterial(runtimeMarkerMaterial);
             ApplyMaterialColor(runtimeMarkerMaterial, markerColor);
         }
         else
         {
+            ConfigureTransparentMaterial(runtimeMarkerMaterial);
             ApplyMaterialColor(runtimeMarkerMaterial, markerColor);
         }
 
@@ -963,7 +1149,11 @@ public class GripperCameraRecorder : MonoBehaviour
 
         Renderer renderer = body.GetComponent<Renderer>();
         if (renderer != null)
+        {
             renderer.sharedMaterial = runtimeMarkerMaterial;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+        }
 
         Vector3 forward = Vector3.forward * Mathf.Max(0.01f, markerForwardLength);
         float half = Mathf.Max(0.005f, markerFrustumHalfSize);
@@ -1031,27 +1221,27 @@ public class GripperCameraRecorder : MonoBehaviour
         Renderer[] renderers = runtimeSceneMarker.GetComponentsInChildren<Renderer>(true);
         LineRenderer[] lines = runtimeSceneMarker.GetComponentsInChildren<LineRenderer>(true);
 
-        bool needsMaterial = false;
-        foreach (Renderer renderer in renderers)
-            needsMaterial |= renderer != null && renderer.sharedMaterial == null;
-        foreach (LineRenderer line in lines)
-            needsMaterial |= line != null && line.sharedMaterial == null;
-
-        if (!needsMaterial)
-            return;
-
         EnsureRuntimeMarkerMaterial();
+        ApplyMaterialColor(runtimeMarkerMaterial, markerColor);
 
         foreach (Renderer renderer in renderers)
         {
-            if (renderer != null && renderer.sharedMaterial == null)
+            if (renderer != null)
+            {
+                if (renderer.sharedMaterial == null)
+                    renderer.sharedMaterial = runtimeMarkerMaterial;
                 renderer.sharedMaterial = runtimeMarkerMaterial;
+            }
         }
 
         foreach (LineRenderer line in lines)
         {
-            if (line != null && line.sharedMaterial == null)
+            if (line != null)
+            {
                 line.sharedMaterial = runtimeMarkerMaterial;
+                line.startColor = markerColor;
+                line.endColor = markerColor;
+            }
         }
     }
 
@@ -1076,7 +1266,37 @@ public class GripperCameraRecorder : MonoBehaviour
         {
             name = "GripperDataCameraMarker_Material"
         };
+        ConfigureTransparentMaterial(runtimeMarkerMaterial);
         ApplyMaterialColor(runtimeMarkerMaterial, markerColor);
+    }
+
+    private static void ConfigureTransparentMaterial(Material material)
+    {
+        if (material == null)
+            return;
+
+        material.renderQueue = 3000;
+        material.SetOverrideTag("RenderType", "Transparent");
+        if (material.HasProperty("_Mode"))
+            material.SetFloat("_Mode", 3f);
+        if (material.HasProperty("_Surface"))
+            material.SetFloat("_Surface", 1f);
+        if (material.HasProperty("_Blend"))
+            material.SetFloat("_Blend", 0f);
+        if (material.HasProperty("_AlphaClip"))
+            material.SetFloat("_AlphaClip", 0f);
+        if (material.HasProperty("_Cull"))
+            material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+        if (material.HasProperty("_SrcBlend"))
+            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        if (material.HasProperty("_DstBlend"))
+            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        if (material.HasProperty("_ZWrite"))
+            material.SetFloat("_ZWrite", 0f);
+        material.DisableKeyword("_ALPHATEST_ON");
+        material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+        material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        material.EnableKeyword("_ALPHABLEND_ON");
     }
 
     private static void ClearMarkerChildren(Transform root)

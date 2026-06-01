@@ -20,12 +20,11 @@ public class FixPluginImportSettings : MonoBehaviour
             PluginImporter importer = AssetImporter.GetAtPath(path) as PluginImporter;
             if (importer != null)
             {
-                // Disable for Android
+                // These are editor/desktop helper plugins from URDF Importer. If left on
+                // "Any Platform", Android packaging tries to include duplicate assimp.dlls.
+                importer.SetCompatibleWithAnyPlatform(false);
+                importer.SetCompatibleWithEditor(false);
                 importer.SetCompatibleWithPlatform(BuildTarget.Android, false);
-                
-                // Also ensure it doesn't fallback to "Any Platform" if we can help it
-                // Usually these are Any Platform = True by default.
-                // We just strictly check Android = False.
                 
                 importer.SaveAndReimport();
                 Debug.Log($"Fixed settings for: {path}");

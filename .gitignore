@@ -6,6 +6,7 @@
 # Local editor / IDE
 .vscode/
 .idea/
+.dotnet/
 *.csproj
 *.sln
 *.slnx
@@ -50,13 +51,21 @@ ros_backend1.0/install/
 ros_backend1.0/log/
 ros_backend1.0/.colcon/
 ros_backend1.0/.ros/
+ros_backend1.1/build/
+ros_backend1.1/install/
+ros_backend1.1/log/
+ros_backend1.1/.colcon/
+ros_backend1.1/.ros/
 
 # Local backend environment
 ros_backend1.0/.env
+ros_backend1.1/.env
 
 # Runtime recordings and datasets
 GripperCameraRecordings/
 recordings/
+.quest_screenshots/
+debug/
 *.apk
 *.aab
 *.bag

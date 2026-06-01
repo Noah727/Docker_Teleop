@@ -21,6 +21,8 @@ public class TeleopInstructionBoard : MonoBehaviour
     public Color accentColor = new Color(0.90f, 0.55f, 0.25f, 1.0f);
     public Color titleColor = new Color(1.0f, 0.88f, 0.66f, 1.0f);
     public Color textColor = new Color(0.96f, 0.92f, 0.84f, 1.0f);
+    public Color dragHandleColor = new Color(1.0f, 0.92f, 0.72f, 0.70f);
+    public bool makeBoardDraggable = true;
 
     public string title = "ROBOT CONTROLS";
 
@@ -28,7 +30,8 @@ public class TeleopInstructionBoard : MonoBehaviour
     public string instructions =
         "RIGHT CONTROLLER\n" +
         "Grip hold: engage robot teleop\n" +
-        "Trigger tap: toggle gripper open / close\n" +
+        "While gripping: trigger tap toggles gripper open / close\n" +
+        "Grip released: trigger hold drags robot workspace\n" +
         "A hold: rotation mode\n" +
         "B tap: reset robot + table objects\n" +
         "Thumbstick press: clutch; release to recenter hand reference\n\n" +
@@ -45,7 +48,10 @@ public class TeleopInstructionBoard : MonoBehaviour
 
     void OnEnable()
     {
-        CreateOrUpdateBoard();
+        if (createInstructionBoard)
+            CreateOrUpdateBoard();
+        else
+            HideExistingBoard();
     }
 
     void OnValidate()
@@ -55,8 +61,13 @@ public class TeleopInstructionBoard : MonoBehaviour
         {
             EditorApplication.delayCall += () =>
             {
-                if (this != null)
+                if (this == null)
+                    return;
+
+                if (createInstructionBoard)
                     CreateOrUpdateBoard();
+                else
+                    HideExistingBoard();
             };
         }
 #endif
@@ -65,7 +76,10 @@ public class TeleopInstructionBoard : MonoBehaviour
     public void CreateOrUpdateBoard()
     {
         if (!createInstructionBoard)
+        {
+            HideExistingBoard();
             return;
+        }
 
         GameObject board = GameObject.Find(boardName);
         bool needsBuild = board == null || rebuildInstructionBoardFromSettings || !HasExpectedChildren(board);
@@ -96,6 +110,7 @@ public class TeleopInstructionBoard : MonoBehaviour
     {
         return board.transform.Find("Background") != null
             && board.transform.Find("AccentBar") != null
+            && board.transform.Find("DragHandle") != null
             && board.transform.Find("Title") != null
             && board.transform.Find("Instructions") != null;
     }
@@ -115,6 +130,7 @@ public class TeleopInstructionBoard : MonoBehaviour
 
         CreateImage(board.transform, "Background", backgroundColor, Vector2.zero, boardSize);
         CreateImage(board.transform, "AccentBar", accentColor, new Vector2(0.0f, boardSize.y * 0.5f - 18.0f), new Vector2(boardSize.x, 14.0f));
+        EnsureDragHandle(board);
 
         CreateText(
             board.transform,
@@ -139,7 +155,25 @@ public class TeleopInstructionBoard : MonoBehaviour
             new Vector2(boardSize.x - 64.0f, boardSize.y - 118.0f));
 
         ApplyBoardTransform(board);
+        EnsureDraggableWindow(board);
         return board;
+    }
+
+    void HideExistingBoard()
+    {
+        GameObject board = GameObject.Find(boardName);
+        if (board == null || !board.activeSelf)
+            return;
+
+        board.SetActive(false);
+
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+        {
+            EditorUtility.SetDirty(board);
+            EditorSceneManager.MarkSceneDirty(board.scene);
+        }
+#endif
     }
 
     void ApplyBoardTransform(GameObject board)
@@ -152,6 +186,42 @@ public class TeleopInstructionBoard : MonoBehaviour
         board.transform.position = boardWorldPosition;
         board.transform.rotation = Quaternion.Euler(boardWorldEuler);
         board.transform.localScale = boardWorldScale;
+        EnsureDragHandle(board);
+        EnsureDraggableWindow(board);
+    }
+
+    void EnsureDragHandle(GameObject board)
+    {
+        if (board == null)
+            return;
+
+        UICornerDragHandle.Ensure(
+            board.transform,
+            "DragHandle",
+            dragHandleColor,
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(boardSize.x * 0.5f - 28.0f, -boardSize.y * 0.5f + 28.0f),
+            new Vector2(52.0f, 52.0f));
+    }
+
+    void EnsureDraggableWindow(GameObject board)
+    {
+        if (!makeBoardDraggable || board == null)
+            return;
+
+        RectTransform rect = board.GetComponent<RectTransform>();
+        VRDraggableWindow dragger = board.GetComponent<VRDraggableWindow>();
+        if (dragger == null)
+            dragger = board.AddComponent<VRDraggableWindow>();
+
+        dragger.windowRoot = rect;
+        dragger.handleNameContains = "DragHandle";
+        dragger.requireHandleHit = true;
+        dragger.allowWholeWindowFallback = false;
+        dragger.dragController = VRDraggableWindow.DragController.Left;
+        dragger.dragButton = VRDraggableWindow.DragButton.Trigger;
+        dragger.requireRightGripReleased = true;
     }
 
     Image CreateImage(Transform parent, string name, Color color, Vector2 anchoredPosition, Vector2 size)

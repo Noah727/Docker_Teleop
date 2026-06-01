@@ -8,7 +8,12 @@ public static class AddHandTargetVisualizer
     [MenuItem("Tools/Hand Teleop/Add Hand Target Visualizer")]
     public static void AddToScene()
     {
-        var existing = Object.FindObjectOfType<HandTargetPoseVisualizer>();
+        var existing =
+#if UNITY_2023_1_OR_NEWER
+            Object.FindFirstObjectByType<HandTargetPoseVisualizer>();
+#else
+            Object.FindObjectOfType<HandTargetPoseVisualizer>();
+#endif
         if (existing != null)
         {
             Debug.Log("[AddHandTargetVisualizer] HandTargetPoseVisualizer already exists in scene.");

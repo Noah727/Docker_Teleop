@@ -10,12 +10,25 @@ This project lets a Meta Quest 3 user teleoperate a simulated UR5e robot with a 
 
 Use this table for short demo links. Prefer GitHub Releases, YouTube, Google Drive, or lab storage instead of committing `.mp4` files directly.
 
+Recommended clips:
+
+- System bringup: backend launch, Gazebo dual-arm scene, Quest app connection, and first robot motion.
+- MR workspace placement: passthrough view with workspace drag/rotate and viewpoint reset.
+- Dual-arm teleop: left/right controller control of separate robot arms.
+- Pick/place task: one complete grasp and placement onto a blue plate.
+- Attachment mode: end effector following the controller with calibrated attachment offset.
+- Coupled gripper behavior: close-up showing stable grasp without finger rail drift.
+- Camera/data recording: camera preview, recording toggle, and saved data location.
+
 | Demo | Description | Link |
 | --- | --- | --- |
-| Full system bringup | Container start, Gazebo launch, Unity connection, and first robot motion. | TODO |
-| Quest teleoperation | Headset/controller input moving the UR5e end effector. | TODO |
-| Object manipulation | Robot moving cubes/cylinders onto target plates. | TODO |
-| Wrist camera recording | Floating panel preview and saved wrist-camera data. | TODO |
+| Full system bringup | Backend launch, Gazebo dual-arm scene, Quest connection, and first confirmed robot motion. | TODO |
+| MR workspace placement | Passthrough scene with draggable/rotatable workspace and viewpoint reset. | TODO |
+| Dual-arm teleoperation | Independent left/right controller control of both robot arms. | TODO |
+| Pick/place task | Complete grasp, transport, and placement of one cube/cylinder onto a target plate. | TODO |
+| Attachment mode | End effector following controller attachment pose with calibrated offset. | TODO |
+| Coupled gripper behavior | Close-up showing stable two-finger grasp without rail drift. | TODO |
+| Camera/data recording | Control panel camera preview, start/stop recording, and saved recording location. | TODO |
 
 ## System Diagram
 
@@ -37,13 +50,13 @@ flowchart LR
 The current canonical backend is:
 
 ```text
-ros_backend1.0
+ros_backend1.1
 ```
 
 The active Unity scene is:
 
 ```text
-UnityApp/Assets/Scenes/Ur5e_Working 1.unity
+UnityApp/Assets/Scenes/GazeboReplica_DualArm_MR.unity
 ```
 
 The preferred development connection mode is wired Quest mode over USB using `adb reverse`.

@@ -1,0 +1,340 @@
+{
+  "taskProfile": "pick_place_basic",
+  "taskGroupName": "TaskGroup_Main",
+  "taskGroupLocalPosition": {
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.25
+  },
+  "taskGroupLocalEuler": {
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0
+  },
+  "objects": [
+    {
+      "id": "Sync_RedCube",
+      "type": "box",
+      "localPosition": {
+        "x": -0.055,
+        "y": 0.02,
+        "z": -0.06
+      },
+      "localEuler": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "size": {
+        "x": 0.02,
+        "y": 0.04,
+        "z": 0.02
+      },
+      "radius": 0.01,
+      "height": 0.048,
+      "rubikOrder": 2,
+      "rubikX": 0,
+      "rubikY": 0,
+      "rubikZ": 0,
+      "stickerGap": 0.002,
+      "portSize": {
+        "x": 0.018,
+        "y": 0.006,
+        "z": 0.014
+      },
+      "portColor": {
+        "r": 0.01,
+        "g": 0.01,
+        "b": 0.012,
+        "a": 1.0
+      },
+      "plugSize": {
+        "x": 0.016,
+        "y": 0.01,
+        "z": 0.016
+      },
+      "plugColor": {
+        "r": 0.12,
+        "g": 0.12,
+        "b": 0.13,
+        "a": 1.0
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.12,
+        "b": 0.12,
+        "a": 1.0
+      }
+    },
+    {
+      "id": "Sync_GreenCube",
+      "type": "box",
+      "localPosition": {
+        "x": 0.055,
+        "y": 0.02,
+        "z": -0.06
+      },
+      "localEuler": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "size": {
+        "x": 0.02,
+        "y": 0.04,
+        "z": 0.02
+      },
+      "radius": 0.01,
+      "height": 0.048,
+      "rubikOrder": 2,
+      "rubikX": 0,
+      "rubikY": 0,
+      "rubikZ": 0,
+      "stickerGap": 0.002,
+      "portSize": {
+        "x": 0.018,
+        "y": 0.006,
+        "z": 0.014
+      },
+      "portColor": {
+        "r": 0.01,
+        "g": 0.01,
+        "b": 0.012,
+        "a": 1.0
+      },
+      "plugSize": {
+        "x": 0.016,
+        "y": 0.01,
+        "z": 0.016
+      },
+      "plugColor": {
+        "r": 0.12,
+        "g": 0.12,
+        "b": 0.13,
+        "a": 1.0
+      },
+      "color": {
+        "r": 0.1,
+        "g": 0.7,
+        "b": 0.18,
+        "a": 1.0
+      }
+    },
+    {
+      "id": "Sync_RedCylinder",
+      "type": "cylinder",
+      "localPosition": {
+        "x": -0.055,
+        "y": 0.024,
+        "z": 0.06
+      },
+      "localEuler": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "size": {
+        "x": 0.02,
+        "y": 0.04,
+        "z": 0.02
+      },
+      "radius": 0.01,
+      "height": 0.048,
+      "rubikOrder": 2,
+      "rubikX": 0,
+      "rubikY": 0,
+      "rubikZ": 0,
+      "stickerGap": 0.002,
+      "portSize": {
+        "x": 0.018,
+        "y": 0.006,
+        "z": 0.014
+      },
+      "portColor": {
+        "r": 0.01,
+        "g": 0.01,
+        "b": 0.012,
+        "a": 1.0
+      },
+      "plugSize": {
+        "x": 0.016,
+        "y": 0.01,
+        "z": 0.016
+      },
+      "plugColor": {
+        "r": 0.12,
+        "g": 0.12,
+        "b": 0.13,
+        "a": 1.0
+      },
+      "color": {
+        "r": 0.85,
+        "g": 0.12,
+        "b": 0.12,
+        "a": 1.0
+      }
+    },
+    {
+      "id": "Sync_GreenCylinder",
+      "type": "cylinder",
+      "localPosition": {
+        "x": 0.055,
+        "y": 0.024,
+        "z": 0.06
+      },
+      "localEuler": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "size": {
+        "x": 0.02,
+        "y": 0.04,
+        "z": 0.02
+      },
+      "radius": 0.01,
+      "height": 0.048,
+      "rubikOrder": 2,
+      "rubikX": 0,
+      "rubikY": 0,
+      "rubikZ": 0,
+      "stickerGap": 0.002,
+      "portSize": {
+        "x": 0.018,
+        "y": 0.006,
+        "z": 0.014
+      },
+      "portColor": {
+        "r": 0.01,
+        "g": 0.01,
+        "b": 0.012,
+        "a": 1.0
+      },
+      "plugSize": {
+        "x": 0.016,
+        "y": 0.01,
+        "z": 0.016
+      },
+      "plugColor": {
+        "r": 0.12,
+        "g": 0.12,
+        "b": 0.13,
+        "a": 1.0
+      },
+      "color": {
+        "r": 0.1,
+        "g": 0.7,
+        "b": 0.18,
+        "a": 1.0
+      }
+    },
+    {
+      "id": "Sync_Plate_A",
+      "type": "plate",
+      "localPosition": {
+        "x": -0.16,
+        "y": 0.0025,
+        "z": 0.0
+      },
+      "localEuler": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "size": {
+        "x": 0.1,
+        "y": 0.005,
+        "z": 0.1
+      },
+      "radius": 0.01,
+      "height": 0.048,
+      "rubikOrder": 2,
+      "rubikX": 0,
+      "rubikY": 0,
+      "rubikZ": 0,
+      "stickerGap": 0.002,
+      "portSize": {
+        "x": 0.018,
+        "y": 0.006,
+        "z": 0.014
+      },
+      "portColor": {
+        "r": 0.01,
+        "g": 0.01,
+        "b": 0.012,
+        "a": 1.0
+      },
+      "plugSize": {
+        "x": 0.016,
+        "y": 0.01,
+        "z": 0.016
+      },
+      "plugColor": {
+        "r": 0.12,
+        "g": 0.12,
+        "b": 0.13,
+        "a": 1.0
+      },
+      "color": {
+        "r": 0.6,
+        "g": 0.8,
+        "b": 0.95,
+        "a": 1.0
+      }
+    },
+    {
+      "id": "Sync_Plate_B",
+      "type": "plate",
+      "localPosition": {
+        "x": 0.16,
+        "y": 0.0025,
+        "z": 0.0
+      },
+      "localEuler": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "size": {
+        "x": 0.1,
+        "y": 0.005,
+        "z": 0.1
+      },
+      "radius": 0.01,
+      "height": 0.048,
+      "rubikOrder": 2,
+      "rubikX": 0,
+      "rubikY": 0,
+      "rubikZ": 0,
+      "stickerGap": 0.002,
+      "portSize": {
+        "x": 0.018,
+        "y": 0.006,
+        "z": 0.014
+      },
+      "portColor": {
+        "r": 0.01,
+        "g": 0.01,
+        "b": 0.012,
+        "a": 1.0
+      },
+      "plugSize": {
+        "x": 0.016,
+        "y": 0.01,
+        "z": 0.016
+      },
+      "plugColor": {
+        "r": 0.12,
+        "g": 0.12,
+        "b": 0.13,
+        "a": 1.0
+      },
+      "color": {
+        "r": 0.6,
+        "g": 0.8,
+        "b": 0.95,
+        "a": 1.0
+      }
+    }
+  ]
+}

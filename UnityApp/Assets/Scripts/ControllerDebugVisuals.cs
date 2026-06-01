@@ -9,6 +9,9 @@ public class ControllerDebugVisuals : MonoBehaviour
     [Header("Visual Settings")]
     public float markerScale = 0.06f;
     public bool createOnlyIfNoRenderer = true;
+    public bool makeExistingControllerRenderersTransparent = true;
+    [Range(0.05f, 1.0f)] public float idleAlpha = 0.48f;
+    [Range(0.05f, 1.0f)] public float teleopGripHeldAlpha = 0.24f;
 
     private GameObject leftMarker;
     private GameObject rightMarker;
@@ -17,6 +20,19 @@ public class ControllerDebugVisuals : MonoBehaviour
     {
         ResolveAnchors();
         CreateOrAttachMarkers();
+    }
+
+    void Update()
+    {
+        float leftAlpha = GetGripValue(true) >= 0.55f ? teleopGripHeldAlpha : idleAlpha;
+        float rightAlpha = GetGripValue(false) >= 0.55f ? teleopGripHeldAlpha : idleAlpha;
+        SetMarkerAlpha(leftMarker, leftAlpha);
+        SetMarkerAlpha(rightMarker, rightAlpha);
+        if (makeExistingControllerRenderersTransparent)
+        {
+            SetAnchorRenderersAlpha(leftControllerAnchor, leftAlpha);
+            SetAnchorRenderersAlpha(rightControllerAnchor, rightAlpha);
+        }
     }
 
     void ResolveAnchors()
@@ -69,7 +85,8 @@ public class ControllerDebugVisuals : MonoBehaviour
         if (renderer != null)
         {
             Material mat = new Material(Shader.Find("Standard"));
-            mat.color = color;
+            ConfigureTransparentMaterial(mat);
+            mat.color = new Color(color.r, color.g, color.b, idleAlpha);
             renderer.material = mat;
         }
 
@@ -77,5 +94,63 @@ public class ControllerDebugVisuals : MonoBehaviour
         if (collider != null) collider.enabled = false;
 
         return marker;
+    }
+
+    private static float GetGripValue(bool left)
+    {
+        return left
+            ? Mathf.Max(OVRInput.Get(OVRInput.Axis1D.PrimaryHandTrigger, OVRInput.Controller.LTouch), OVRInput.Get(OVRInput.Axis1D.PrimaryHandTrigger, OVRInput.Controller.Touch))
+            : Mathf.Max(OVRInput.Get(OVRInput.Axis1D.PrimaryHandTrigger, OVRInput.Controller.RTouch), OVRInput.Get(OVRInput.Axis1D.SecondaryHandTrigger, OVRInput.Controller.Touch));
+    }
+
+    private static void SetMarkerAlpha(GameObject marker, float alpha)
+    {
+        if (marker == null)
+            return;
+        Renderer[] renderers = marker.GetComponentsInChildren<Renderer>(true);
+        foreach (Renderer renderer in renderers)
+        {
+            if (renderer == null || renderer.material == null)
+                continue;
+            Color color = renderer.material.color;
+            color.a = alpha;
+            renderer.material.color = color;
+        }
+    }
+
+    private static void SetAnchorRenderersAlpha(Transform anchor, float alpha)
+    {
+        if (anchor == null)
+            return;
+        Renderer[] renderers = anchor.GetComponentsInChildren<Renderer>(true);
+        foreach (Renderer renderer in renderers)
+        {
+            if (renderer == null)
+                continue;
+            foreach (Material material in renderer.materials)
+            {
+                ConfigureTransparentMaterial(material);
+                Color color = material.color;
+                color.a = alpha;
+                material.color = color;
+            }
+        }
+    }
+
+    private static void ConfigureTransparentMaterial(Material material)
+    {
+        if (material == null)
+            return;
+        material.renderQueue = 3000;
+        material.SetOverrideTag("RenderType", "Transparent");
+        if (material.HasProperty("_Mode"))
+            material.SetFloat("_Mode", 3f);
+        if (material.HasProperty("_SrcBlend"))
+            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        if (material.HasProperty("_DstBlend"))
+            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        if (material.HasProperty("_ZWrite"))
+            material.SetFloat("_ZWrite", 0f);
+        material.EnableKeyword("_ALPHABLEND_ON");
     }
 }

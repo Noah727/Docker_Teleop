@@ -1761,3 +1761,201 @@ cp .env.example .env
 
 
 ---
+
+## Mixed Reality, Robot View, And Haptics
+
+The Unity app now has a runtime feature layer that is created automatically when the scene starts:
+
+- `QuestMRFeatureBootstrap.cs` creates the feature root at runtime.
+- `QuestPassthroughController.cs` enables Meta Quest passthrough and hides the virtual room shell/decor while keeping the robot, table, synced objects, controls, and panels visible.
+- `RobotViewpointController.cs` creates a second camera directly above the robot base and displays it on a small world-space `Robot View` panel.
+- `QuestHapticFeedbackController.cs` drives controller vibration from robot target-vs-actual EE error and gripper pinch heuristics.
+- `TeleopRuntimeDebugPanel.cs` shows MR, teleop, haptic, and robot-view status in headset.
+
+Meta passthrough support is enabled in:
+
+```text
+UnityApp/Assets/Oculus/OculusProjectConfig.asset
+```
+
+If Unity does not pick up the scene feature objects automatically, use the editor menu:
+
+```text
+Tools > Quest MR Features > Add Runtime Feature Root To Scene
+Tools > Quest MR Features > Enable Meta Passthrough Project Setting
+```
+
+The haptic gap signal uses two standard ROS topics published by the backend:
+
+```text
+/teleop/target_ee_pose   geometry_msgs/PoseStamped
+/teleop/actual_ee_pose   geometry_msgs/PoseStamped
+```
+
+Those are published by:
+
+```text
+ros_backend1.0/src/teleop_bridge/teleop_bridge/received_pose_to_target_twist.py
+```
+
+The pinch confirmation vibration is currently heuristic-based. It watches the gripper command, the actual gripper joint from `/joint_states`, and the synchronized object positions. A future improvement is to publish true Gazebo finger contact sensors and use that topic instead of the stall/proximity heuristic.
+
+---
+
+## Robot Arm Switching Protocol
+
+The current system is built around UR5e + Robotiq Hand-E, but the project can be moved to another robot if the ROS description, controllers, frames, Unity visualization, and mapping parameters are changed together.
+
+Use this checklist when switching arms.
+
+## 1. ROS Description
+
+Replace or add the robot description package under:
+
+```text
+ros_backend1.0/src/
+```
+
+The new robot needs:
+
+```text
+URDF/Xacro robot description
+Meshes/materials
+Gazebo-compatible inertial/collision data
+MoveIt SRDF/config
+ros2_control controllers
+A fixed end-effector frame name
+```
+
+For UR5e, the important frames are:
+
+```text
+target_frame: base_link
+ee_frame: tool0
+```
+
+For a new robot, decide the equivalent base frame and tool frame first. Update ROS params anywhere these are declared, especially `received_pose_to_target_twist` and MoveIt Servo config.
+
+## 2. Gazebo / Simulation Setup
+
+Update the launch/world setup that spawns the robot and controllers. For this project, start from:
+
+```text
+ros_backend1.0/simulation/
+ros_backend1.0/src/servo_test_config/config/
+```
+
+The new robot must publish:
+
+```text
+/joint_states
+/tf
+/tf_static
+```
+
+The MoveIt Servo command path should still accept:
+
+```text
+/servo_node/delta_twist_cmds
+```
+
+If the robot uses a different gripper, replace the Hand-E controller bridge or adapt it to the new gripper command topic.
+
+## 3. Unity Robot Visualization
+
+Import or create a Unity visualization for the new robot. The recommended setup is visual-only:
+
+```text
+Unity visual robot follows ROS /joint_states
+Gazebo remains the only physics authority
+Unity robot colliders disabled
+Unity gripper/fingers driven as visual meshes unless real Unity physics is intentionally needed
+```
+
+For the current UR5e setup, the visual sync is handled by:
+
+```text
+UnityApp/Assets/Ur5eTrajectorySubscriber.cs
+```
+
+For a different robot, either duplicate/generalize that script or create a new subscriber with:
+
+```text
+ROS joint names
+Unity joint/mesh transforms
+Gripper/finger visualization mapping
+Base transform alignment
+```
+
+## 4. Joint Name Mapping
+
+The current UR5e joint list is hard-coded in `Ur5eTrajectorySubscriber.cs`:
+
+```text
+shoulder_pan_joint
+shoulder_lift_joint
+elbow_joint
+wrist_1_joint
+wrist_2_joint
+wrist_3_joint
+```
+
+For another robot, replace this with that robot's active arm joints in the same order used by `/joint_states` and MoveIt Servo.
+
+## 5. Teleop Mapping Parameters
+
+After the robot moves, retune these parameters:
+
+```text
+map_axes
+map_signs
+rot_map_axes
+rot_map_signs
+rot_scale_xyz
+scale_xyz
+offset_xyz
+min_xyz
+max_xyz
+kp_linear
+kp_angular
+max_linear_speed
+max_angular_speed
+```
+
+These live in the `received_pose_to_target_twist` ROS node and can be tuned live with `ros2 param set`, then written back into the backend bringup/config files.
+
+## 6. Gripper Interface
+
+For a new gripper, define:
+
+```text
+Open command
+Close command
+Actual gripper joint/state source
+Unity visual finger transforms
+Contact or pinch detection source
+```
+
+If the gripper publishes real contact state, connect that to the haptic controller instead of using the current stall/proximity heuristic.
+
+## 7. Validation
+
+Before using the headset, validate in this order:
+
+```bash
+ros2 topic echo /joint_states --once
+ros2 run tf2_ros tf2_echo base_link tool0
+ros2 topic hz /servo_node/delta_twist_cmds
+ros2 topic echo /teleop/target_ee_pose --once
+ros2 topic echo /teleop/actual_ee_pose --once
+```
+
+Then run Unity and confirm:
+
+```text
+Robot arm follows /joint_states visually
+Gripper visualization opens/closes correctly
+Synced objects follow Gazebo poses
+MR passthrough shows the real room with robot/table overlays
+Haptics only vibrate during meaningful gap/contact events
+```

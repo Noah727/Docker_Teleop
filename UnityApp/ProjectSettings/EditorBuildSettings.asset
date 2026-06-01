@@ -6,17 +6,11 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 0
-    path: Assets/Scenes/HandTrackingTeleop.unity
-    guid: 019489557b2de43e7ae283fecdd61dbc
-  - enabled: 0
-    path: Assets/Ur5e.unity
-    guid: 10bf099f5d2534abca8c85fd2d56c0e5
-  - enabled: 0
-    path: Assets/Scenes/Ur5e_Working.unity
-    guid: cc7f1b955b68847fd9f43216d5de0260
+    path: Assets/Scenes/GazeboReplica_MR.unity
+    guid: f62b4b94df4642819ee9287265906760
   - enabled: 1
-    path: Assets/Scenes/Ur5e_Working 1.unity
-    guid: c24781542a5614d7d9ba44b38899d5b6
+    path: Assets/Scenes/GazeboReplica_DualArm_MR.unity
+    guid: e3a6fa32148a4c7f8c6d0db350c139b0
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: 70bd2f28bfab64842844c6c9a2829134, type: 2}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 3991ab714e5084cda98fd9b963c2945c, type: 2}

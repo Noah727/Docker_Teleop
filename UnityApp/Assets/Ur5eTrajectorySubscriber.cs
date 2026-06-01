@@ -11,6 +11,8 @@ public class Ur5eTrajectorySubscriber : MonoBehaviour
     [Header("Part4: JointState sync (recommended)")]
     public bool useJointStates = true;
     public string jointStatesTopic = "/joint_states";
+    [Tooltip("Optional ROS joint prefix for multi-arm scenes, e.g. 'left_' or 'right_'.")]
+    public string rosJointNamePrefix = "";
     [Tooltip("If true, also keep subscribing to trajectory topic while JointState sync is enabled.")]
     public bool subscribeTrajectoryWhileJointStatesEnabled = false;
 
@@ -31,7 +33,10 @@ public class Ur5eTrajectorySubscriber : MonoBehaviour
     public bool visualizeGripperFromJointState = true;
     [Tooltip("If enabled, drive imported gripper ArticulationBodies directly. Disable for pure visual-only gripper motion.")]
     public bool useGripperArticulationBodies = false;
+    [Tooltip("Legacy fallback gripper joint name. Prefer left/right names below for dual-finger visual sync.")]
     public string gripperJointName = "robotiq_hande_left_finger_joint";
+    public string leftGripperJointName = "robotiq_hande_left_finger_joint";
+    public string rightGripperJointName = "robotiq_hande_right_finger_joint";
     public bool autoFindGripperFingers = true;
     public Transform leftFinger;
     public Transform rightFinger;
@@ -56,6 +61,11 @@ public class Ur5eTrajectorySubscriber : MonoBehaviour
     public Vector3 leftFingerVisualOffset = Vector3.zero;
     [Tooltip("Constant local offset applied to the right finger visual baseline before travel motion.")]
     public Vector3 rightFingerVisualOffset = Vector3.zero;
+
+    [Header("Gripper visual diagnostics")]
+    [Tooltip("Print periodic gripper joint/visual positions to Android logcat for Unity-vs-Gazebo comparisons.")]
+    public bool debugGripperVisualSync = true;
+    public float gripperVisualDebugLogPeriodSec = 2.0f;
 
     [Header("Playback")]
     [Tooltip("If a new trajectory arrives, restart playback from t=0")]
@@ -106,7 +116,11 @@ public class Ur5eTrajectorySubscriber : MonoBehaviour
     private readonly bool[] haveJointStateRad = new bool[6];
     private bool haveAnyJointState;
     private bool haveGripperJointState;
+    private bool haveLeftGripperJointState;
+    private bool haveRightGripperJointState;
     private float latestGripperJointMeters;
+    private float latestLeftGripperJointMeters;
+    private float latestRightGripperJointMeters;
     private float nextJointStateLogTime;
 
     private bool gripperBaseCaptured;
@@ -116,6 +130,34 @@ public class Ur5eTrajectorySubscriber : MonoBehaviour
     private ArticulationBody rightFingerJointBody;
     private bool gripperVisualReferenceCaptured;
     private float gripperVisualReferenceMeters;
+    private float nextGripperVisualDebugLogTime;
+
+    public bool HasLatestGripperJointState
+    {
+        get
+        {
+            lock (jointStateLock)
+            {
+                return haveGripperJointState || haveLeftGripperJointState || haveRightGripperJointState;
+            }
+        }
+    }
+
+    public float LatestGripperJointMeters
+    {
+        get
+        {
+            lock (jointStateLock)
+            {
+                if (haveLeftGripperJointState)
+                    return latestLeftGripperJointMeters;
+                return latestGripperJointMeters;
+            }
+        }
+    }
+
+    public Transform LeftFingerTransform => leftFinger;
+    public Transform RightFingerTransform => rightFinger;
 
     private void Awake()
     {
@@ -330,7 +372,7 @@ public class Ur5eTrajectorySubscriber : MonoBehaviour
         if (localMatch != null)
             return localMatch;
 
-        var global = FindObjectsOfType<Transform>(true);
+        var global = FindSceneObjects<Transform>();
         return global.FirstOrDefault(
             t => t != null && t.name.IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0
         );
@@ -368,10 +410,19 @@ public class Ur5eTrajectorySubscriber : MonoBehaviour
         if (localMatch != null)
             return localMatch;
 
-        var global = FindObjectsOfType<ArticulationBody>(true);
+        var global = FindSceneObjects<ArticulationBody>();
         return global.FirstOrDefault(
             ab => ab != null && ab.name.IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0
         );
+    }
+
+    private static T[] FindSceneObjects<T>() where T : UnityEngine.Object
+    {
+#if UNITY_2023_1_OR_NEWER
+        return FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+#else
+        return FindObjectsOfType<T>(true);
+#endif
     }
 
     private void CaptureGripperBaseIfNeeded()
@@ -433,6 +484,10 @@ public class Ur5eTrajectorySubscriber : MonoBehaviour
         bool touchedAny = false;
         float gripperVal = 0.0f;
         bool touchedGripper = false;
+        float leftGripperVal = 0.0f;
+        bool touchedLeftGripper = false;
+        float rightGripperVal = 0.0f;
+        bool touchedRightGripper = false;
 
         lock (jointStateLock)
         {
@@ -449,10 +504,22 @@ public class Ur5eTrajectorySubscriber : MonoBehaviour
                     touchedAny = true;
                 }
 
-                if (string.Equals(rosJointName, gripperJointName, StringComparison.Ordinal))
+                if (IsRosJointNameMatch(rosJointName, gripperJointName))
                 {
                     gripperVal = (float)value;
                     touchedGripper = true;
+                }
+
+                if (IsRosJointNameMatch(rosJointName, leftGripperJointName))
+                {
+                    leftGripperVal = (float)value;
+                    touchedLeftGripper = true;
+                }
+
+                if (IsRosJointNameMatch(rosJointName, rightGripperJointName))
+                {
+                    rightGripperVal = (float)value;
+                    touchedRightGripper = true;
                 }
             }
 
@@ -463,13 +530,28 @@ public class Ur5eTrajectorySubscriber : MonoBehaviour
                 latestGripperJointMeters = gripperVal;
                 haveGripperJointState = true;
             }
+            if (touchedLeftGripper)
+            {
+                latestLeftGripperJointMeters = leftGripperVal;
+                haveLeftGripperJointState = true;
+                latestGripperJointMeters = leftGripperVal;
+                haveGripperJointState = true;
+            }
+            if (touchedRightGripper)
+            {
+                latestRightGripperJointMeters = rightGripperVal;
+                haveRightGripperJointState = true;
+                haveGripperJointState = true;
+            }
         }
 
         if (Time.realtimeSinceStartup >= nextJointStateLogTime)
         {
             nextJointStateLogTime = Time.realtimeSinceStartup + 2.0f;
             Debug.Log(
-                $"[Ur5eTrajectorySubscriber] JointState update: arm={touchedAny}, gripper={touchedGripper}, n={n}"
+                $"[Ur5eTrajectorySubscriber] JointState update: arm={touchedAny}, " +
+                $"gripper={touchedGripper || touchedLeftGripper || touchedRightGripper}, " +
+                $"leftGripper={touchedLeftGripper}, rightGripper={touchedRightGripper}, n={n}"
             );
         }
     }
@@ -481,10 +563,26 @@ public class Ur5eTrajectorySubscriber : MonoBehaviour
 
         for (int i = 0; i < urJointNames.Length; i++)
         {
-            if (rosJointName == urJointNames[i] || rosJointName.EndsWith("/" + urJointNames[i], StringComparison.Ordinal))
+            if (IsRosJointNameMatch(rosJointName, urJointNames[i]))
                 return i;
         }
         return -1;
+    }
+
+    private bool IsRosJointNameMatch(string rosJointName, string baseJointName)
+    {
+        if (string.IsNullOrEmpty(rosJointName) || string.IsNullOrEmpty(baseJointName))
+            return false;
+
+        if (rosJointName == baseJointName || rosJointName.EndsWith("/" + baseJointName, StringComparison.Ordinal))
+            return true;
+
+        string prefix = string.IsNullOrWhiteSpace(rosJointNamePrefix) ? "" : rosJointNamePrefix.Trim();
+        if (string.IsNullOrEmpty(prefix))
+            return false;
+
+        string prefixed = prefix + baseJointName;
+        return rosJointName == prefixed || rosJointName.EndsWith("/" + prefixed, StringComparison.Ordinal);
     }
 
     private void OnTrajectoryReceived(JointTrajectoryMsg msg)
@@ -601,7 +699,7 @@ public class Ur5eTrajectorySubscriber : MonoBehaviour
 
     private bool ApplyJointStateBuffer()
     {
-        if (!haveAnyJointState && !haveGripperJointState)
+        if (!haveAnyJointState && !haveGripperJointState && !haveLeftGripperJointState && !haveRightGripperJointState)
             return false;
 
         double[] armVals = new double[6];
@@ -609,12 +707,20 @@ public class Ur5eTrajectorySubscriber : MonoBehaviour
         bool hasArm;
         bool hasGripper;
         float gripperMeters;
+        bool hasLeftGripper;
+        bool hasRightGripper;
+        float leftGripperMeters;
+        float rightGripperMeters;
 
         lock (jointStateLock)
         {
             hasArm = haveAnyJointState;
             hasGripper = haveGripperJointState;
             gripperMeters = latestGripperJointMeters;
+            hasLeftGripper = haveLeftGripperJointState;
+            hasRightGripper = haveRightGripperJointState;
+            leftGripperMeters = latestLeftGripperJointMeters;
+            rightGripperMeters = latestRightGripperJointMeters;
             Array.Copy(latestJointStateRad, armVals, latestJointStateRad.Length);
             Array.Copy(haveJointStateRad, armHas, haveJointStateRad.Length);
         }
@@ -628,29 +734,47 @@ public class Ur5eTrajectorySubscriber : MonoBehaviour
             }
         }
 
-        if (hasGripper)
+        if (hasLeftGripper || hasRightGripper)
+            ApplyGripperFromJointStates(leftGripperMeters, hasLeftGripper, rightGripperMeters, hasRightGripper, gripperMeters);
+        else if (hasGripper)
             ApplyGripperFromJointState(gripperMeters);
 
-        return hasArm || hasGripper;
+        return hasArm || hasGripper || hasLeftGripper || hasRightGripper;
     }
 
     private void ApplyGripperFromJointState(float jointMeters)
     {
+        ApplyGripperFromJointStates(jointMeters, true, jointMeters, true, jointMeters);
+    }
+
+    private void ApplyGripperFromJointStates(
+        float leftJointMeters,
+        bool hasLeftJointMeters,
+        float rightJointMeters,
+        bool hasRightJointMeters,
+        float fallbackJointMeters
+    )
+    {
         if (!visualizeGripperFromJointState)
             return;
+
+        if (!hasLeftJointMeters)
+            leftJointMeters = fallbackJointMeters;
+        if (!hasRightJointMeters)
+            rightJointMeters = fallbackJointMeters;
 
         if (useGripperArticulationBodies)
         {
             bool droveArticulation = false;
             if (leftFingerJointBody != null)
             {
-                SetPrismaticTargetMeters(leftFingerJointBody, jointMeters);
+                SetPrismaticTargetMeters(leftFingerJointBody, leftJointMeters);
                 droveArticulation = true;
             }
 
             if (rightFingerJointBody != null)
             {
-                SetPrismaticTargetMeters(rightFingerJointBody, jointMeters);
+                SetPrismaticTargetMeters(rightFingerJointBody, rightJointMeters);
                 droveArticulation = true;
             }
 
@@ -662,39 +786,62 @@ public class Ur5eTrajectorySubscriber : MonoBehaviour
         if (!gripperBaseCaptured)
             return;
 
-        float normalized;
+        float leftNormalized;
+        float rightNormalized;
         if (useAbsoluteGripperJointForVisuals)
         {
             float range = Mathf.Max(1e-5f, gripperOpenPositionMeters - gripperClosedPositionMeters);
-            normalized = Mathf.Clamp01((jointMeters - gripperClosedPositionMeters) / range);
+            leftNormalized = Mathf.Clamp01((leftJointMeters - gripperClosedPositionMeters) / range);
+            rightNormalized = Mathf.Clamp01((rightJointMeters - gripperClosedPositionMeters) / range);
         }
         else
         {
             float open = Mathf.Max(1e-5f, gripperOpenPositionMeters);
             if (!gripperVisualReferenceCaptured)
             {
-                gripperVisualReferenceMeters = jointMeters;
+                gripperVisualReferenceMeters = fallbackJointMeters;
                 gripperVisualReferenceCaptured = true;
             }
 
-            normalized = Mathf.Clamp((jointMeters - gripperVisualReferenceMeters) / open, -1f, 1f);
+            leftNormalized = Mathf.Clamp((leftJointMeters - gripperVisualReferenceMeters) / open, -1f, 1f);
+            rightNormalized = Mathf.Clamp((rightJointMeters - gripperVisualReferenceMeters) / open, -1f, 1f);
         }
+
         Vector3 leftAxis = leftFingerLocalAxis.sqrMagnitude > 1e-8f ? leftFingerLocalAxis.normalized : Vector3.right;
         Vector3 rightAxis = rightFingerLocalAxis.sqrMagnitude > 1e-8f ? rightFingerLocalAxis.normalized : Vector3.right;
 
         if (leftFinger != null)
         {
             Vector3 p = leftFingerBaseLocalPos + leftFingerVisualOffset;
-            p += leftAxis * (Mathf.Sign(leftFingerDirectionSign) * leftFingerTravelMeters * normalized);
+            p += leftAxis * (Mathf.Sign(leftFingerDirectionSign) * leftFingerTravelMeters * leftNormalized);
             leftFinger.localPosition = p;
         }
 
         if (rightFinger != null)
         {
             Vector3 p = rightFingerBaseLocalPos + rightFingerVisualOffset;
-            p += rightAxis * (Mathf.Sign(rightFingerDirectionSign) * rightFingerTravelMeters * normalized);
+            p += rightAxis * (Mathf.Sign(rightFingerDirectionSign) * rightFingerTravelMeters * rightNormalized);
             rightFinger.localPosition = p;
         }
+
+        if (debugGripperVisualSync && Time.realtimeSinceStartup >= nextGripperVisualDebugLogTime)
+        {
+            nextGripperVisualDebugLogTime = Time.realtimeSinceStartup + Mathf.Max(0.2f, gripperVisualDebugLogPeriodSec);
+            Debug.Log(
+                "[Ur5eTrajectorySubscriber] GripperVisualSync " +
+                $"prefix={rosJointNamePrefix}, " +
+                $"jointL={leftJointMeters:F5}, jointR={rightJointMeters:F5}, " +
+                $"normL={leftNormalized:F3}, normR={rightNormalized:F3}, " +
+                $"leftLocal={FormatVector3(leftFinger != null ? leftFinger.localPosition : Vector3.zero)}, " +
+                $"rightLocal={FormatVector3(rightFinger != null ? rightFinger.localPosition : Vector3.zero)}, " +
+                $"leftBase={FormatVector3(leftFingerBaseLocalPos)}, rightBase={FormatVector3(rightFingerBaseLocalPos)}"
+            );
+        }
+    }
+
+    private static string FormatVector3(Vector3 value)
+    {
+        return $"({value.x:F4},{value.y:F4},{value.z:F4})";
     }
 
     private void SetPrismaticTargetMeters(ArticulationBody joint, float meters)
