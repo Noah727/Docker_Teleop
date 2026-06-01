@@ -24082,6 +24082,8 @@ MonoBehaviour:
   rightFingerDirectionSign: -1
   leftFingerVisualOffset: {x: 0, y: 0, z: 0}
   rightFingerVisualOffset: {x: 0, y: 0, z: 0}
+  debugGripperVisualSync: 1
+  gripperVisualDebugLogPeriodSec: 2
   restartOnNewTrajectory: 1
   clampToLimits: 1
   initializeDrivesOnStart: 1
@@ -29493,18 +29495,18 @@ LineRenderer:
   m_SortingOrder: 0
   m_Positions:
   - {x: 0, y: 0, z: 0}
-  - {x: -0.035, y: 0.035, z: 0.12}
+  - {x: -0.0175, y: 0.0175, z: 0.06}
   - {x: 0, y: 0, z: 0}
-  - {x: 0.035, y: 0.035, z: 0.12}
+  - {x: 0.0175, y: 0.0175, z: 0.06}
   - {x: 0, y: 0, z: 0}
-  - {x: 0.035, y: -0.035, z: 0.12}
+  - {x: 0.0175, y: -0.0175, z: 0.06}
   - {x: 0, y: 0, z: 0}
-  - {x: -0.035, y: -0.035, z: 0.12}
-  - {x: -0.035, y: 0.035, z: 0.12}
-  - {x: 0.035, y: 0.035, z: 0.12}
-  - {x: 0.035, y: -0.035, z: 0.12}
-  - {x: -0.035, y: -0.035, z: 0.12}
-  - {x: -0.035, y: 0.035, z: 0.12}
+  - {x: -0.0175, y: -0.0175, z: 0.06}
+  - {x: -0.0175, y: 0.0175, z: 0.06}
+  - {x: 0.0175, y: 0.0175, z: 0.06}
+  - {x: 0.0175, y: -0.0175, z: 0.06}
+  - {x: -0.0175, y: -0.0175, z: 0.06}
+  - {x: -0.0175, y: 0.0175, z: 0.06}
   m_Parameters:
     serializedVersion: 3
     widthMultiplier: 1
@@ -36521,18 +36523,18 @@ LineRenderer:
   m_SortingOrder: 0
   m_Positions:
   - {x: 0, y: 0, z: 0}
-  - {x: -0.035, y: 0.035, z: 0.12}
+  - {x: -0.0175, y: 0.0175, z: 0.06}
   - {x: 0, y: 0, z: 0}
-  - {x: 0.035, y: 0.035, z: 0.12}
+  - {x: 0.0175, y: 0.0175, z: 0.06}
   - {x: 0, y: 0, z: 0}
-  - {x: 0.035, y: -0.035, z: 0.12}
+  - {x: 0.0175, y: -0.0175, z: 0.06}
   - {x: 0, y: 0, z: 0}
-  - {x: -0.035, y: -0.035, z: 0.12}
-  - {x: -0.035, y: 0.035, z: 0.12}
-  - {x: 0.035, y: 0.035, z: 0.12}
-  - {x: 0.035, y: -0.035, z: 0.12}
-  - {x: -0.035, y: -0.035, z: 0.12}
-  - {x: -0.035, y: 0.035, z: 0.12}
+  - {x: -0.0175, y: -0.0175, z: 0.06}
+  - {x: -0.0175, y: 0.0175, z: 0.06}
+  - {x: 0.0175, y: 0.0175, z: 0.06}
+  - {x: 0.0175, y: -0.0175, z: 0.06}
+  - {x: -0.0175, y: -0.0175, z: 0.06}
+  - {x: -0.0175, y: 0.0175, z: 0.06}
   m_Parameters:
     serializedVersion: 3
     widthMultiplier: 1
@@ -38981,18 +38983,18 @@ LineRenderer:
   m_SortingOrder: 0
   m_Positions:
   - {x: 0, y: 0, z: 0}
-  - {x: -0.035, y: 0.035, z: 0.12}
+  - {x: -0.0175, y: 0.0175, z: 0.06}
   - {x: 0, y: 0, z: 0}
-  - {x: 0.035, y: 0.035, z: 0.12}
+  - {x: 0.0175, y: 0.0175, z: 0.06}
   - {x: 0, y: 0, z: 0}
-  - {x: 0.035, y: -0.035, z: 0.12}
+  - {x: 0.0175, y: -0.0175, z: 0.06}
   - {x: 0, y: 0, z: 0}
-  - {x: -0.035, y: -0.035, z: 0.12}
-  - {x: -0.035, y: 0.035, z: 0.12}
-  - {x: 0.035, y: 0.035, z: 0.12}
-  - {x: 0.035, y: -0.035, z: 0.12}
-  - {x: -0.035, y: -0.035, z: 0.12}
-  - {x: -0.035, y: 0.035, z: 0.12}
+  - {x: -0.0175, y: -0.0175, z: 0.06}
+  - {x: -0.0175, y: 0.0175, z: 0.06}
+  - {x: 0.0175, y: 0.0175, z: 0.06}
+  - {x: 0.0175, y: -0.0175, z: 0.06}
+  - {x: -0.0175, y: -0.0175, z: 0.06}
+  - {x: -0.0175, y: 0.0175, z: 0.06}
   m_Parameters:
     serializedVersion: 3
     widthMultiplier: 1
@@ -53956,6 +53958,8 @@ MonoBehaviour:
   rightFingerDirectionSign: -1
   leftFingerVisualOffset: {x: 0, y: 0, z: 0}
   rightFingerVisualOffset: {x: 0, y: 0, z: 0}
+  debugGripperVisualSync: 1
+  gripperVisualDebugLogPeriodSec: 2
   restartOnNewTrajectory: 1
   clampToLimits: 1
   initializeDrivesOnStart: 1
@@ -57102,6 +57106,8 @@ MonoBehaviour:
   rightFingerDirectionSign: -1
   leftFingerVisualOffset: {x: 0, y: 0, z: 0}
   rightFingerVisualOffset: {x: 0, y: 0, z: 0}
+  debugGripperVisualSync: 1
+  gripperVisualDebugLogPeriodSec: 2
   restartOnNewTrajectory: 1
   clampToLimits: 1
   initializeDrivesOnStart: 1

@@ -459,13 +459,14 @@ start_servo() {
 start_dual_part23() {
   require_running
   ensure_ws_built
-  local dual_gripper_controller="${DUAL_GRIPPER_CONTROLLER:-position}"
+  local dual_gripper_controller="${DUAL_GRIPPER_CONTROLLER:-coupled}"
   local dual_gripper_node="target_twist_to_gripper_cmd"
   if [[ "${dual_gripper_controller}" == "coupled" ]]; then
     dual_gripper_node="coupled_hande_gripper_controller"
   elif [[ "${dual_gripper_controller}" != "position" ]]; then
-    echo "[warn] Unknown DUAL_GRIPPER_CONTROLLER=${dual_gripper_controller}; using position."
-    dual_gripper_controller="position"
+    echo "[warn] Unknown DUAL_GRIPPER_CONTROLLER=${dual_gripper_controller}; using coupled."
+    dual_gripper_controller="coupled"
+    dual_gripper_node="coupled_hande_gripper_controller"
   fi
   dexec "source /opt/ros/humble/setup.bash && source /home/noah/ws_moveit/install/setup.bash && \
     self=\$\$; \

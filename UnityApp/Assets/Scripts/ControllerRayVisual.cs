@@ -54,7 +54,12 @@ public class ControllerRayVisual : MonoBehaviour
     public float rightGripTeleopThreshold = 0.55f;
     public string[] interactableNameContains =
     {
-        "WorkspaceDragHandle", "WorkspaceRotateHandle", "DragHandle", "ToggleRecordingButton", "CaptureFrameButton"
+        "WorkspaceDragHandle",
+        "WorkspaceRotateHandle",
+        "DragHandle",
+        "ToggleRecordingButton",
+        "CaptureFrameButton",
+        "FloatingCameraBody"
     };
 
     public string LastStatus { get; private set; } = "not initialized";

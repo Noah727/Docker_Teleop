@@ -39,6 +39,17 @@ public class FloatingSceneCameraController : MonoBehaviour
     public float gripBlockThreshold = 0.55f;
     public float rayMaxDistance = 4.0f;
 
+    [Header("Ray Contact Feedback")]
+    public bool showRayContactMarker = true;
+    [Tooltip("Show the camera contact marker once the trigger is lightly touched, before a drag begins.")]
+    public float hoverTriggerThreshold = 0.05f;
+    [Tooltip("Keep hover feedback alive while ControllerRayVisual is visible during its linger window.")]
+    public bool showContactMarkerWhileRayVisualVisible = true;
+    public float contactMarkerScale = 0.025f;
+    public float contactMarkerSurfaceOffset = 0.004f;
+    public Color contactMarkerColor = new Color(1.0f, 0.86f, 0.08f, 0.94f);
+    [Range(0.0f, 1.0f)] public float occludedContactAlphaMultiplier = 0.55f;
+
     public Camera SourceCamera { get; private set; }
     public Texture PreviewTexture => SourceCamera != null ? SourceCamera.targetTexture : null;
     public string LastStatus { get; private set; } = "not initialized";
@@ -60,6 +71,8 @@ public class FloatingSceneCameraController : MonoBehaviour
     private Vector3 rotationBasisUWorld;
     private Vector3 rotationBasisVWorld;
     private float rotationStartAngle;
+    private Transform contactMarker;
+    private Material contactMarkerMaterial;
 
     private void Start()
     {
@@ -321,8 +334,20 @@ public class FloatingSceneCameraController : MonoBehaviour
     private void UpdateControllerDrag()
     {
         ResolveControllers();
-        bool triggerHeld = GetTriggerValue(true) >= triggerThreshold || GetTriggerValue(false) >= triggerThreshold;
+        float leftTrigger = GetTriggerValue(true);
+        float rightTrigger = GetTriggerValue(false);
+        bool triggerHeld = leftTrigger >= triggerThreshold || rightTrigger >= triggerThreshold;
+        bool hoverIntent = leftTrigger >= hoverTriggerThreshold
+            || rightTrigger >= hoverTriggerThreshold
+            || (showContactMarkerWhileRayVisualVisible && IsControllerRayVisualVisible());
         bool gripHeld = GetGripValue(true) >= gripBlockThreshold || GetGripValue(false) >= gripBlockThreshold;
+
+        bool contactHit = false;
+        Vector3 contactPoint = Vector3.zero;
+        Transform contactController = null;
+        if (!gripHeld && hoverIntent)
+            contactHit = TryFindCameraContact(out contactPoint, out contactController);
+        UpdateRayContactMarker(contactHit, contactPoint, contactController);
 
         if (gripHeld || !triggerHeld)
         {
@@ -422,6 +447,149 @@ public class FloatingSceneCameraController : MonoBehaviour
         return false;
     }
 
+    private bool TryFindCameraContact(out Vector3 hitPoint, out Transform hitController)
+    {
+        hitPoint = Vector3.zero;
+        hitController = null;
+
+        bool found = false;
+        float bestDistance = float.PositiveInfinity;
+        if (TryFindCameraContactWithController(leftController, ref bestDistance, out Vector3 leftPoint))
+        {
+            hitPoint = leftPoint;
+            hitController = leftController;
+            found = true;
+        }
+
+        if (TryFindCameraContactWithController(rightController, ref bestDistance, out Vector3 rightPoint))
+        {
+            hitPoint = rightPoint;
+            hitController = rightController;
+            found = true;
+        }
+
+        return found;
+    }
+
+    private bool TryFindCameraContactWithController(Transform controller, ref float bestDistance, out Vector3 hitPoint)
+    {
+        hitPoint = Vector3.zero;
+        if (controller == null || cameraObject == null || markerRoot == null)
+            return false;
+
+        bool found = false;
+        if (TryRayHitRotationRing(controller, out RotationRingHit ringHit) && ringHit.distance < bestDistance)
+        {
+            bestDistance = ringHit.distance;
+            hitPoint = ringHit.pointWorld;
+            found = true;
+        }
+
+        Ray ray = new Ray(controller.position, controller.forward);
+        RaycastHit[] hits = Physics.RaycastAll(ray, Mathf.Max(0.05f, rayMaxDistance), ~0, QueryTriggerInteraction.Collide);
+        if (hits == null)
+            return found;
+
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.collider == null || hit.distance >= bestDistance)
+                continue;
+
+            if (hit.collider.transform == markerRoot.transform || hit.collider.transform.IsChildOf(markerRoot.transform))
+            {
+                bestDistance = hit.distance;
+                hitPoint = hit.point;
+                found = true;
+            }
+        }
+
+        return found;
+    }
+
+    private void UpdateRayContactMarker(bool visible, Vector3 hitPoint, Transform controller)
+    {
+        if (!showRayContactMarker || !visible || controller == null)
+        {
+            if (contactMarker != null)
+                contactMarker.gameObject.SetActive(false);
+            return;
+        }
+
+        EnsureContactMarker();
+        if (contactMarker == null)
+            return;
+
+        Vector3 towardController = controller.position - hitPoint;
+        Vector3 markerPosition = hitPoint;
+        if (towardController.sqrMagnitude > 0.000001f)
+            markerPosition += towardController.normalized * Mathf.Max(0.0f, contactMarkerSurfaceOffset);
+
+        contactMarker.gameObject.SetActive(true);
+        contactMarker.position = markerPosition;
+        contactMarker.rotation = Quaternion.identity;
+        contactMarker.localScale = Vector3.one * Mathf.Max(0.002f, contactMarkerScale);
+        SetContactMarkerColor(contactMarkerColor);
+    }
+
+    private void EnsureContactMarker()
+    {
+        if (contactMarker != null)
+            return;
+
+        GameObject existing = GameObject.Find("FloatingCameraContactMarker");
+        GameObject marker = existing != null ? existing : GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        marker.name = "FloatingCameraContactMarker";
+        Collider collider = marker.GetComponent<Collider>();
+        if (collider != null)
+            collider.enabled = false;
+
+        contactMarker = marker.transform;
+        Renderer renderer = marker.GetComponent<Renderer>();
+        if (renderer != null)
+        {
+            contactMarkerMaterial = CreateContactMarkerMaterial();
+            renderer.sharedMaterial = contactMarkerMaterial;
+        }
+
+        marker.SetActive(false);
+    }
+
+    private Material CreateContactMarkerMaterial()
+    {
+        Shader shader = Shader.Find("Custom/XRayTransparentHandle")
+            ?? Shader.Find("Universal Render Pipeline/Unlit")
+            ?? Shader.Find("Unlit/Color")
+            ?? Shader.Find("Standard");
+        Material material = new Material(shader) { name = "FloatingCameraContactMarker_XRay_Material" };
+        material.renderQueue = 3030;
+        material.SetOverrideTag("RenderType", "Transparent");
+        if (material.HasProperty("_Surface"))
+            material.SetFloat("_Surface", 1f);
+        if (material.HasProperty("_Blend"))
+            material.SetFloat("_Blend", 0f);
+        if (material.HasProperty("_SrcBlend"))
+            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        if (material.HasProperty("_DstBlend"))
+            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        if (material.HasProperty("_ZWrite"))
+            material.SetFloat("_ZWrite", 0f);
+        if (material.HasProperty("_OccludedAlphaMultiplier"))
+            material.SetFloat("_OccludedAlphaMultiplier", occludedContactAlphaMultiplier);
+        material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        material.EnableKeyword("_ALPHABLEND_ON");
+        SetMaterialColor(material, contactMarkerColor);
+        return material;
+    }
+
+    private void SetContactMarkerColor(Color color)
+    {
+        if (contactMarkerMaterial == null)
+            return;
+        SetMaterialColor(contactMarkerMaterial, color);
+        if (contactMarkerMaterial.HasProperty("_OccludedAlphaMultiplier"))
+            contactMarkerMaterial.SetFloat("_OccludedAlphaMultiplier", occludedContactAlphaMultiplier);
+    }
+
     private bool TryRayHitRotationRing(Transform controller, out RotationRingHit bestHit)
     {
         bestHit = default;
@@ -465,7 +633,9 @@ public class FloatingSceneCameraController : MonoBehaviour
             centerWorld = centerWorld,
             basisUWorld = basisUWorld,
             basisVWorld = basisVWorld,
-            angleDegrees = Mathf.Atan2(Vector3.Dot(radial, basisVWorld), Vector3.Dot(radial, basisUWorld)) * Mathf.Rad2Deg
+            angleDegrees = Mathf.Atan2(Vector3.Dot(radial, basisVWorld), Vector3.Dot(radial, basisUWorld)) * Mathf.Rad2Deg,
+            pointWorld = pointWorld,
+            distance = distance
         };
         bestDistance = distance;
         found = true;
@@ -582,10 +752,22 @@ public class FloatingSceneCameraController : MonoBehaviour
 
     private static void SetMaterialColor(Material material, Color color)
     {
+        if (material == null)
+            return;
         if (material.HasProperty("_BaseColor"))
             material.SetColor("_BaseColor", color);
         if (material.HasProperty("_Color"))
             material.SetColor("_Color", color);
+    }
+
+    private bool IsControllerRayVisualVisible()
+    {
+        GameObject leftRay = GameObject.Find("LeftControllerAimRay");
+        if (leftRay != null && leftRay.activeInHierarchy)
+            return true;
+
+        GameObject rightRay = GameObject.Find("RightControllerAimRay");
+        return rightRay != null && rightRay.activeInHierarchy;
     }
 
     private struct RotationRingHit
@@ -595,6 +777,8 @@ public class FloatingSceneCameraController : MonoBehaviour
         public Vector3 centerWorld;
         public Vector3 basisUWorld;
         public Vector3 basisVWorld;
+        public Vector3 pointWorld;
+        public float distance;
         public float angleDegrees;
     }
 }

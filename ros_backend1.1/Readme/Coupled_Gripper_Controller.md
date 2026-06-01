@@ -1,9 +1,8 @@
 # Coupled Hand-E Gripper Controller
 
-The default dual-arm setup uses the smoother position-controller gripper path.
-Use the coupled controller only when testing Gazebo contact behavior.
+The default dual-arm setup uses the coupled Hand-E controller. This is the recommended path for Gazebo contact because it treats the two finger joints like one mechanical gripper instead of two unrelated sliders.
 
-## Default Smooth Gripper
+## Default Coupled Gripper
 
 ```bash
 cd /Users/noahli/ros_unity_project/ros_backend1.1
@@ -12,24 +11,23 @@ cd /Users/noahli/ros_unity_project/ros_backend1.1
 ./scripts/backend11_lifecycle.sh bringup_dual
 ```
 
-This starts `target_twist_to_gripper_cmd`, which publishes the same position target to both Hand-E finger joints.
+This starts `coupled_hande_gripper_controller` for both arms.
 
-## Experimental Coupled Gripper
-
-```bash
-cd /Users/noahli/ros_unity_project/ros_backend1.1
-./scripts/backend11_lifecycle.sh build_ws
-DUAL_GRIPPER_CONTROLLER=coupled ./scripts/backend11_lifecycle.sh safe_down
-DUAL_GRIPPER_CONTROLLER=coupled ./scripts/backend11_lifecycle.sh bringup_dual
-```
-
-If Gazebo is already running and you only want to switch the Part 2/3 bridge nodes:
+If Gazebo is already running and you only want to restart the Part 2/3 bridge nodes:
 
 ```bash
-DUAL_GRIPPER_CONTROLLER=coupled ./scripts/backend11_lifecycle.sh start_dual_part23
+./scripts/backend11_lifecycle.sh start_dual_part23
 ```
 
-Switch back to the default gripper bridge:
+## Optional Simple Position Gripper
+
+Use this only if you intentionally want the old simple position bridge:
+
+```bash
+DUAL_GRIPPER_CONTROLLER=position ./scripts/backend11_lifecycle.sh bringup_dual
+```
+
+Or switch only Part 2/3 while Gazebo is running:
 
 ```bash
 DUAL_GRIPPER_CONTROLLER=position ./scripts/backend11_lifecycle.sh start_dual_part23
@@ -37,7 +35,7 @@ DUAL_GRIPPER_CONTROLLER=position ./scripts/backend11_lifecycle.sh start_dual_par
 
 ## How It Works
 
-The experimental node is `coupled_hande_gripper_controller`.
+The controller node is `coupled_hande_gripper_controller`.
 It treats the two Hand-E finger joints as one shared aperture:
 
 - One scalar target is used for both fingers.
@@ -60,9 +58,10 @@ Relevant section:
 ```yaml
 /left_arm/coupled_hande_gripper_controller:
   ros__parameters:
-    speed_m_per_s: 0.03
-    close_speed_m_per_s: 0.06
-    open_speed_m_per_s: 0.05
+    publish_rate_hz: 60.0
+    speed_m_per_s: 0.08
+    close_speed_m_per_s: 0.12
+    open_speed_m_per_s: 0.10
     min_pos: -0.025
     max_pos: 0.0
     initial_pos: 0.0

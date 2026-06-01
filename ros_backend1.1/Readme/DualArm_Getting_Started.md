@@ -17,6 +17,12 @@ cd ros_backend1.1
 
 `bringup_dual` starts the container, applies wired ADB reverse tunnels if wired mode is enabled and the Quest is connected, builds the ROS workspace if needed, starts Gazebo, starts dual Servo, starts the Quest TCP receiver, starts the dual teleop mapping pipeline, starts Unity synchronization, and prints status.
 
+By default, `bringup_dual` uses the coupled Hand-E gripper controller for both arms. To intentionally use the old simple position gripper bridge, run:
+
+```bash
+DUAL_GRIPPER_CONTROLLER=position ./scripts/backend11_lifecycle.sh bringup_dual
+```
+
 If you want to run each step manually:
 
 ```bash
@@ -139,7 +145,7 @@ simulation/launch/run_dual_arm_tabletop_sim.sh
 | Command | What It Does |
 | --- | --- |
 | `start_receiver` | Starts `quest_controller_receiver`, the TCP receiver that reads controller/hand data from the Quest app. |
-| `start_dual_part23` | Starts both left and right teleop mapping pipelines, Servo command bridges, gripper command bridges, and reset managers. |
+| `start_dual_part23` | Starts both left and right teleop mapping pipelines, Servo command bridges, coupled gripper controllers, and reset managers. |
 | `start_dual_part4` | Starts ROS-TCP endpoint and Gazebo-to-Unity object pose synchronization for the dual-arm world. |
 | `start_part23` | Starts the legacy single-arm teleop mapping pipeline. |
 | `start_part4` | Starts legacy single-arm Unity sync and ROS-TCP endpoint. |
