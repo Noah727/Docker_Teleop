@@ -64,6 +64,7 @@ ros_backend1.1/.env
 # Runtime recordings and datasets
 GripperCameraRecordings/
 recordings/
+demo_media/
 .quest_screenshots/
 debug/
 *.apk
@@ -90,4 +91,8 @@ __pycache__/
 *.log
 
 # Private local developer scratch notes
-dev_notes/private/
+dev_notes/
+
+# Local thesis evaluation material
+thesis_eval_raw/
+complete_material/
