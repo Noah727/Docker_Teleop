@@ -1,0 +1,1 @@
+date,trial_id,control_mode,arm_mode,task_object,target_plate,success,completion_time_s,drop_count,reset_count,collision_count,video_ref,screenshot_ref,rosbag_ref,notes

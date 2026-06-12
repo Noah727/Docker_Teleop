@@ -1,0 +1,51 @@
+{
+  "commands": {
+    "adb_devices": {
+      "cmd": [
+        "adb",
+        "devices"
+      ],
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "List of devices attached\n2G97C5ZH6J00ND\tdevice\n\n"
+    },
+    "docker_ps": {
+      "cmd": [
+        "docker",
+        "ps"
+      ],
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES\n"
+    },
+    "docker_version": {
+      "cmd": [
+        "docker",
+        "version"
+      ],
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "Client:\n Version:           29.2.1\n API version:       1.53\n Go version:        go1.25.6\n Git commit:        a5c7197\n Built:             Mon Feb  2 17:16:37 2026\n OS/Arch:           darwin/arm64\n Context:           desktop-linux\n\nServer: Docker Desktop 4.63.0 (220185)\n Engine:\n  Version:          29.2.1\n  API version:      1.53 (minimum version 1.44)\n  Go version:       go1.25.6\n  Git commit:       6bc6209\n  Built:            Mon Feb  2 17:16:47 2026\n  OS/Arch:          linux/arm64\n  Experimental:     false\n containerd:\n  Version:          v2.2.1\n  GitCommit:        dea7da592f5d1d2b7755e3a161be07f43fad8f75\n runc:\n  Version:          1.3.4\n  GitCommit:        v1.3.4-0-gd6d73eb8\n docker-init:\n  Version:          0.19.0\n  GitCommit:        de40ad0\n"
+    },
+    "lifecycle_status": {
+      "cmd": [
+        "./scripts/backend11_lifecycle.sh",
+        "status"
+      ],
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "NAMES     STATUS    PORTS\n"
+    }
+  },
+  "container": "motion_planner_11",
+  "host": {
+    "adb_on_path": "/opt/homebrew/bin/adb",
+    "docker_on_path": "/usr/local/bin/docker",
+    "machine": "arm64",
+    "platform": "macOS-15.7.2-arm64-arm-64bit-Mach-O",
+    "python": "3.14.0",
+    "release": "24.6.0",
+    "system": "Darwin"
+  },
+  "ok": true
+}

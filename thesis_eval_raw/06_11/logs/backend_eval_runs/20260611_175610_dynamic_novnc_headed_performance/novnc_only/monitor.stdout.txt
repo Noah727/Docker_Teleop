@@ -1,0 +1,31 @@
+{
+  "duration_sec": 60.0,
+  "clock_messages": 38357,
+  "rtf_instant": {
+    "count": 38357,
+    "mean": 0.717240783192426,
+    "min": 0.06548985351641975,
+    "max": 20.28727038955927,
+    "std": 0.7246852836995228,
+    "p05": 0.46937337750816127
+  },
+  "rtf_window_sec": 1.0,
+  "rtf_window": {
+    "count": 60,
+    "mean": 0.6410589885996211,
+    "min": 0.615526865426827,
+    "max": 0.6655383639732212,
+    "std": 0.009255113172119108,
+    "p05": 0.6245534580413186
+  },
+  "cpu_percent": {
+    "count": 30,
+    "mean": 423.52166666666665,
+    "min": 410.03,
+    "max": 528.67,
+    "std": 20.318353293403362,
+    "p05": 412.9
+  },
+  "cpu_samples": 30
+}
+[ok] wrote results to /Users/noahli/ros_unity_project/thesis_eval_raw/06_11/logs/backend_eval_runs/20260611_175610_dynamic_novnc_headed_performance/novnc_only/20260611_175810_backend_rtf_cpu

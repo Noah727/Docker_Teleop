@@ -1,0 +1,38 @@
+{
+  "duration_sec": 15.0,
+  "topics": [
+    {
+      "topic": "/left_arm/received_pose_states",
+      "type": "teleop_bridge_msgs/msg/ReceivedPoseStates",
+      "messages": 802,
+      "mean_hz": 60.00204442431843,
+      "min_gap_sec": 0.0001817919546738267,
+      "max_gap_sec": 0.3380763749592006
+    },
+    {
+      "topic": "/right_arm/received_pose_states",
+      "type": "teleop_bridge_msgs/msg/ReceivedPoseStates",
+      "messages": 802,
+      "mean_hz": 60.00195565498785,
+      "min_gap_sec": 0.0001824579667299986,
+      "max_gap_sec": 0.33799404208548367
+    },
+    {
+      "topic": "/left_arm/target_twist_states",
+      "type": "teleop_bridge_msgs/msg/TargetTwistStates",
+      "messages": 808,
+      "mean_hz": 53.773793915106594,
+      "min_gap_sec": 0.00022966694086790085,
+      "max_gap_sec": 0.3368737919954583
+    },
+    {
+      "topic": "/right_arm/target_twist_states",
+      "type": "teleop_bridge_msgs/msg/TargetTwistStates",
+      "messages": 807,
+      "mean_hz": 53.76487656285357,
+      "min_gap_sec": 0.00023016601335257292,
+      "max_gap_sec": 0.33723333408124745
+    }
+  ]
+}
+[ok] wrote results to ../thesis_eval_raw/06_11/latency_rates/synthetic_receiver/20260611_202354_synthetic_hand_receiver/20260611_202355_ros_topic_rate_audit

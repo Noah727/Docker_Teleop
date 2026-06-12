@@ -1,0 +1,7 @@
+{
+  "checked_names": 16,
+  "mcp_followup": "Use Unity MCP execute_menu_item('Tools/Gazebo Replica/Rebuild Dual Arm Workspace In Active Scene'), then read_console and save scene.",
+  "missing": 0,
+  "scene": "UnityApp/Assets/Scenes/GazeboReplica_DualArm_MR.unity",
+  "task_json": "UnityApp/Assets/Resources/TaskProfiles/active_task.json"
+}

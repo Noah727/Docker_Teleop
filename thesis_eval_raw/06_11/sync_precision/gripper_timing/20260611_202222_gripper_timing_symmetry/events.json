@@ -1,0 +1,50 @@
+[
+  {
+    "command": "close",
+    "cycle": 0,
+    "value": 0.025,
+    "wall_time": 1781223743.442416
+  },
+  {
+    "command": "open",
+    "cycle": 0,
+    "value": 0.0,
+    "wall_time": 1781223744.95275
+  },
+  {
+    "command": "close",
+    "cycle": 1,
+    "value": 0.025,
+    "wall_time": 1781223746.4641116
+  },
+  {
+    "command": "open",
+    "cycle": 1,
+    "value": 0.0,
+    "wall_time": 1781223747.9751427
+  },
+  {
+    "command": "close",
+    "cycle": 2,
+    "value": 0.025,
+    "wall_time": 1781223749.4833934
+  },
+  {
+    "command": "open",
+    "cycle": 2,
+    "value": 0.0,
+    "wall_time": 1781223750.9926195
+  },
+  {
+    "command": "close",
+    "cycle": 3,
+    "value": 0.025,
+    "wall_time": 1781223752.493224
+  },
+  {
+    "command": "open",
+    "cycle": 3,
+    "value": 0.0,
+    "wall_time": 1781223753.9964683
+  }
+]

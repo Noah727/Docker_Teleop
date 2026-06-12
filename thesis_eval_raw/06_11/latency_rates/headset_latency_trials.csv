@@ -1,0 +1,1 @@
+date,trial_id,platform,recording_state,arm,video_ref,video_fps,frame_count_input_to_robot,visible_latency_ms,backend_latency_summary_ref,notes

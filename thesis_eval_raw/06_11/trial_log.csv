@@ -1,0 +1,1 @@
+date,trial_id,section,task,method,arm_mode,operator,host,quest_app,backend_mode,task_profile,unity_scene,start_time,end_time,success,completion_time_s,reset_count,drop_count,collision_count,rtf_mean,cpu_mean_percent,notes,raw_refs

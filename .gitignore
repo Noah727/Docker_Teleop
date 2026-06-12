@@ -93,6 +93,5 @@ __pycache__/
 # Private local developer scratch notes
 dev_notes/
 
-# Local thesis evaluation material
-thesis_eval_raw/
+# Local curated thesis material
 complete_material/
