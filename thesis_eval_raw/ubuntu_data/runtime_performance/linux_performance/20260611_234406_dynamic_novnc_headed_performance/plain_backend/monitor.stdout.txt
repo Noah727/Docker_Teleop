@@ -1,0 +1,31 @@
+{
+  "duration_sec": 60.0,
+  "clock_messages": 11298,
+  "rtf_instant": {
+    "count": 11298,
+    "mean": 0.21897305450755505,
+    "min": 0.06254768545147846,
+    "max": 0.34403604339658195,
+    "std": 0.06696183788210874,
+    "p05": 0.08951719779152481
+  },
+  "rtf_window_sec": 1.0,
+  "rtf_window": {
+    "count": 60,
+    "mean": 0.18846445185847976,
+    "min": 0.13354612722472323,
+    "max": 0.24127308005066833,
+    "std": 0.02299543812270633,
+    "p05": 0.14935281766160563
+  },
+  "cpu_percent": {
+    "count": 30,
+    "mean": 563.3286666666667,
+    "min": 486.31,
+    "max": 1163.9,
+    "std": 115.15011161474787,
+    "p05": 488.9
+  },
+  "cpu_samples": 30
+}
+[ok] wrote results to /home/noah/ros_unity_project/thesis_eval_raw/ubuntu_data/runtime_performance/linux_performance/20260611_234406_dynamic_novnc_headed_performance/plain_backend/20260611_234452_backend_rtf_cpu

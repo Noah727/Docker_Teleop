@@ -1,0 +1,14 @@
+ Network ros_backend11_default Creating 
+ Network ros_backend11_default Created 
+ Container motion_planner_11 Creating 
+ Container motion_planner_11 Created 
+ Container motion_planner_11 Starting 
+ Container motion_planner_11 Started 
+/usr/lib/python3/dist-packages/setuptools/dist.py:723: UserWarning: Usage of dash-separated 'script-dir' will not be supported in future versions. Please use the underscore name 'script_dir' instead
+  warnings.warn(
+/usr/lib/python3/dist-packages/setuptools/dist.py:723: UserWarning: Usage of dash-separated 'install-scripts' will not be supported in future versions. Please use the underscore name 'install_scripts' instead
+  warnings.warn(
+--- stderr: ros_tcp_endpoint
+/usr/lib/python3/dist-packages/setuptools/dist.py:723: UserWarning: Usage of dash-separated 'script-dir' will not be supported in future versions. Please use the underscore name 'script_dir' instead
+  warnings.warn(
+---

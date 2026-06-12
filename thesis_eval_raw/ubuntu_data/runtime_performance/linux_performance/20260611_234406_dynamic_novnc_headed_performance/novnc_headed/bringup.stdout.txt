@@ -1,0 +1,175 @@
+NAMES               STATUS                  PORTS
+motion_planner_11   Up Less than a second   0.0.0.0:6080->6080/tcp, [::]:6080->6080/tcp, 127.0.0.1:5031->5005/tcp, 127.0.0.1:10011->10000/tcp, 0.0.0.0:51001->50001/tcp, [::]:51001->50001/tcp, 0.0.0.0:51002->50002/tcp, [::]:51002->50002/tcp, 0.0.0.0:51003->50003/tcp, [::]:51003->50003/tcp
+5005/tcp -> 127.0.0.1:5031
+6080/tcp -> 0.0.0.0:6080
+6080/tcp -> [::]:6080
+10000/tcp -> 127.0.0.1:10011
+50001/tcp -> 0.0.0.0:51001
+50001/tcp -> [::]:51001
+50002/tcp -> 0.0.0.0:51002
+50002/tcp -> [::]:51002
+50003/tcp -> 0.0.0.0:51003
+50003/tcp -> [::]:51003
+[warn] adb not found; skipping wired TCP tunnels.
+[info] Workspace not ready in container. Building now...
+Starting >>> robotiq_hande_description
+Starting >>> teleop_bridge_msgs
+Starting >>> ros_tcp_endpoint
+Finished <<< ros_tcp_endpoint [0.85s]
+Finished <<< robotiq_hande_description [1.02s]
+Starting >>> ur_hande_description
+Finished <<< ur_hande_description [0.93s]
+Starting >>> ur_moveit_config
+Finished <<< teleop_bridge_msgs [4.98s]
+Starting >>> receiver
+Starting >>> teleop_bridge
+Finished <<< receiver [0.95s]
+Finished <<< teleop_bridge [1.03s]
+Finished <<< ur_moveit_config [13.9s]
+Starting >>> servo_test_config
+Finished <<< servo_test_config [0.81s]
+
+Summary: 8 packages finished [16.9s]
+  1 package had stderr output: ros_tcp_endpoint
+[ok] Built workspace packages: robotiq_hande_description ur_hande_description ur_moveit_config servo_test_config teleop_bridge_msgs teleop_bridge ros_tcp_endpoint receiver
+[ok] Workspace already built (teleop_bridge + servo_test_config found).
+[info] Generating dual-arm world from /home/noah/ros_unity_project/ros_backend1.1/profiles/scenes/dual_arm_tabletop/scene.yaml
+Generated /home/noah/ros_unity_project/ros_backend1.1/simulation/worlds/ur_hande_dual_arm_tabletop.sdf from /home/noah/ros_unity_project/ros_backend1.1/profiles/scenes/dual_arm_tabletop/scene.yaml
+Generated /home/noah/ros_unity_project/UnityApp/Assets/Resources/TaskProfiles/active_task.json from /home/noah/ros_unity_project/ros_backend1.1/profiles/scenes/dual_arm_tabletop/scene.yaml
+[ok] Started dual-arm Gazebo tabletop scaffold (SIM_HEADLESS=0).
+[ok] Workspace already built (teleop_bridge + servo_test_config found).
+[ok] Started dual-arm servo launch.
+[ok] Receiver package already built (receiver).
+[ok] Started quest_controller_receiver (log: /tmp/qcr.log).
+[ok] Workspace already built (teleop_bridge + servo_test_config found).
+[ok] Started dual-arm Part2/Part3 mapper/bridges (gripper=coupled).
+[ok] Workspace already built (teleop_bridge + servo_test_config found).
+[ok] Started dual-arm Part4 sync services (sync=60.0 Hz, haptics=1, haptic_rate=60.0 Hz).
+NAMES               STATUS          PORTS
+motion_planner_11   Up 34 seconds   0.0.0.0:6080->6080/tcp, [::]:6080->6080/tcp, 127.0.0.1:5031->5005/tcp, 127.0.0.1:10011->10000/tcp, 0.0.0.0:51001->50001/tcp, [::]:51001->50001/tcp, 0.0.0.0:51002->50002/tcp, [::]:51002->50002/tcp, 0.0.0.0:51003->50003/tcp, [::]:51003->50003/tcp
+--- processes
+1198 bash /home/noah/ws_moveit/simulation/launch/run_dual_arm_tabletop_sim.sh
+1486 /usr/bin/python3 /opt/ros/humble/bin/ros2 run ros_gz_bridge parameter_bridge /clock@rosgraph_msgs/msg/Clock[ignition.msgs.Clock
+1493 /opt/ros/humble/lib/ros_gz_bridge/parameter_bridge /clock@rosgraph_msgs/msg/Clock[ignition.msgs.Clock
+1624 /usr/bin/python3 /opt/ros/humble/bin/ros2 launch servo_test_config servo_dual_gz.launch.py
+1653 /usr/bin/python3 /home/noah/ws_moveit/install/servo_test_config/lib/servo_test_config/joint_states_filter --ros-args -r __node:=joint_states_filter -r __ns:=/left_arm --params-file /tmp/launch_params_ru0qs1qk
+1655 /opt/ros/humble/lib/moveit_servo/servo_node_main --ros-args -r __node:=servo_node -r __ns:=/left_arm --params-file /tmp/launch_params__58el5to --params-file /tmp/launch_params_daygadmw --params-file /tmp/launch_params_qgx9lh5n --params-file /tmp/launch_params_6w04ynkd --params-file /tmp/launch_params_4rivnbw6 --params-file /tmp/launch_params_m5nw4is8
+1657 /usr/bin/python3 /home/noah/ws_moveit/install/servo_test_config/lib/servo_test_config/joint_states_filter --ros-args -r __node:=joint_states_filter -r __ns:=/right_arm --params-file /tmp/launch_params_ebxvji85
+1659 /opt/ros/humble/lib/moveit_servo/servo_node_main --ros-args -r __node:=servo_node -r __ns:=/right_arm --params-file /tmp/launch_params_1dq1zozq --params-file /tmp/launch_params_zd2gskci --params-file /tmp/launch_params_i1xdeibh --params-file /tmp/launch_params_r02yk07j --params-file /tmp/launch_params_jldxfsio --params-file /tmp/launch_params_c29xebpq
+2018 /usr/bin/python3 /opt/ros/humble/bin/ros2 run receiver quest_controller_receiver
+2027 /usr/bin/python3 /home/noah/ws_moveit/install/receiver/lib/receiver/quest_controller_receiver
+2183 /usr/bin/python3 /opt/ros/humble/bin/ros2 run teleop_bridge hand_pose_mapper --ros-args -r __ns:=/left_arm --params-file /home/noah/ws_moveit/src/teleop_bridge/config/teleop_tuning_dual_left.yaml
+2184 /usr/bin/python3 /opt/ros/humble/bin/ros2 run teleop_bridge servo_command_bridge --ros-args -r __ns:=/left_arm --params-file /home/noah/ws_moveit/src/teleop_bridge/config/teleop_tuning_dual_left.yaml
+2185 /usr/bin/python3 /opt/ros/humble/bin/ros2 run teleop_bridge coupled_gripper_controller --ros-args -r __ns:=/left_arm --params-file /home/noah/ws_moveit/src/teleop_bridge/config/teleop_tuning_dual_left.yaml
+2187 /usr/bin/python3 /opt/ros/humble/bin/ros2 run teleop_bridge reset_manager --ros-args -r __ns:=/left_arm --params-file /home/noah/ws_moveit/src/teleop_bridge/config/teleop_tuning_dual_left.yaml
+2188 /usr/bin/python3 /opt/ros/humble/bin/ros2 run teleop_bridge hand_pose_mapper --ros-args -r __ns:=/right_arm --params-file /home/noah/ws_moveit/src/teleop_bridge/config/teleop_tuning_dual_right.yaml
+2189 /usr/bin/python3 /opt/ros/humble/bin/ros2 run teleop_bridge servo_command_bridge --ros-args -r __ns:=/right_arm --params-file /home/noah/ws_moveit/src/teleop_bridge/config/teleop_tuning_dual_right.yaml
+2190 /usr/bin/python3 /opt/ros/humble/bin/ros2 run teleop_bridge coupled_gripper_controller --ros-args -r __ns:=/right_arm --params-file /home/noah/ws_moveit/src/teleop_bridge/config/teleop_tuning_dual_right.yaml
+2191 /usr/bin/python3 /opt/ros/humble/bin/ros2 run teleop_bridge reset_manager --ros-args -r __ns:=/right_arm --params-file /home/noah/ws_moveit/src/teleop_bridge/config/teleop_tuning_dual_right.yaml
+2199 /usr/bin/python3 /home/noah/ws_moveit/install/teleop_bridge/lib/teleop_bridge/servo_command_bridge --ros-args -r __ns:=/right_arm --params-file /home/noah/ws_moveit/src/teleop_bridge/config/teleop_tuning_dual_right.yaml
+2200 /usr/bin/python3 /home/noah/ws_moveit/install/teleop_bridge/lib/teleop_bridge/reset_manager --ros-args -r __ns:=/right_arm --params-file /home/noah/ws_moveit/src/teleop_bridge/config/teleop_tuning_dual_right.yaml
+2201 /usr/bin/python3 /home/noah/ws_moveit/install/teleop_bridge/lib/teleop_bridge/servo_command_bridge --ros-args -r __ns:=/left_arm --params-file /home/noah/ws_moveit/src/teleop_bridge/config/teleop_tuning_dual_left.yaml
+2202 /usr/bin/python3 /home/noah/ws_moveit/install/teleop_bridge/lib/teleop_bridge/hand_pose_mapper --ros-args -r __ns:=/left_arm --params-file /home/noah/ws_moveit/src/teleop_bridge/config/teleop_tuning_dual_left.yaml
+2203 /usr/bin/python3 /home/noah/ws_moveit/install/teleop_bridge/lib/teleop_bridge/hand_pose_mapper --ros-args -r __ns:=/right_arm --params-file /home/noah/ws_moveit/src/teleop_bridge/config/teleop_tuning_dual_right.yaml
+2204 /usr/bin/python3 /home/noah/ws_moveit/install/teleop_bridge/lib/teleop_bridge/coupled_gripper_controller --ros-args -r __ns:=/left_arm --params-file /home/noah/ws_moveit/src/teleop_bridge/config/teleop_tuning_dual_left.yaml
+2205 /usr/bin/python3 /home/noah/ws_moveit/install/teleop_bridge/lib/teleop_bridge/coupled_gripper_controller --ros-args -r __ns:=/right_arm --params-file /home/noah/ws_moveit/src/teleop_bridge/config/teleop_tuning_dual_right.yaml
+2206 /usr/bin/python3 /home/noah/ws_moveit/install/teleop_bridge/lib/teleop_bridge/reset_manager --ros-args -r __ns:=/left_arm --params-file /home/noah/ws_moveit/src/teleop_bridge/config/teleop_tuning_dual_left.yaml
+2722 /usr/bin/python3 /opt/ros/humble/bin/ros2 launch ros_tcp_endpoint endpoint.py
+2723 /usr/bin/python3 /opt/ros/humble/bin/ros2 run ros_gz_bridge parameter_bridge /world/ur_hande_dual_arm_tabletop/dynamic_pose/info@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V
+2724 /usr/bin/python3 /opt/ros/humble/bin/ros2 run teleop_bridge runtime_task_manager --ros-args -p repo_root:=/home/noah/ws_moveit -p active_scene_profile_file:=profiles/active_scene_profile.txt -p world_output:=simulation/worlds/ur_hande_dual_arm_tabletop.sdf
+2725 /usr/bin/python3 /opt/ros/humble/bin/ros2 run teleop_bridge task_pose_sync_publisher --ros-args -p target_frame:=world -p gz_dynamic_pose_topic:=/world/ur_hande_dual_arm_tabletop/dynamic_pose/info -p scene_layout_sdf_path:=/home/noah/ws_moveit/simulation/worlds/ur_hande_dual_arm_tabletop.sdf -p publish_rate_hz:=60.0
+2727 /usr/bin/python3 /opt/ros/humble/bin/ros2 run teleop_bridge contact_haptic_publisher --ros-args -p gz_dynamic_pose_topic:=/world/ur_hande_dual_arm_tabletop/dynamic_pose/info -p scene_layout_sdf_path:=/home/noah/ws_moveit/simulation/worlds/ur_hande_dual_arm_tabletop.sdf -p publish_rate_hz:=60.0 -p pulse_amplitude:=0.55 -p continuous_contact_amplitude:=0.0 -p proximity_amplitude:=0.0 -p enable_servo_collision_gap_haptics:=true -p collision_gap_amplitude:=0.35 -p collision_gap_activation_threshold_m:=0.08 -p collision_gap_release_threshold_m:=0.045 -p collision_gap_hold_sec:=0.25 -p require_both_finger_contact_for_pulse:=true -p enable_empty_close_contact_pulse:=true
+2728 bash -lc echo '--- processes'; pgrep -fa 'quest_controller_receiver|hand_pose_mapper|servo_command_bridge|simple_gripper_command_bridge|coupled_gripper_controller|reset_manager|keyboard_servo_override|debug_hand_generator|servo_response_sampler|task_pose_sync_publisher|contact_haptic_publisher|rubik_task_controller|runtime_task_manager|received_pose_to_target_twist|target_twist_to_servo_cmd|target_twist_to_gripper_cmd|coupled_hande_gripper_controller|target_twist_reset_manager|keyboard_servo_cmd|dual_debug_hand_generator|cube_pose_sync_publisher|gazebo_contact_haptic_publisher|rubik2x2_mechanism_controller|task_manager|ros_tcp_endpoint.*endpoint.py|default_server_endpoint|run_tabletop_sim.sh|run_dual_arm_tabletop_sim.sh|servo_gz.launch.py|servo_dual_gz.launch.py|servo_node_main|joint_states_filter|ros_gz_bridge.* /clock@|ros_gz_bridge.*dynamic_pose/info' || true
+2734 /usr/bin/python3 /home/noah/ws_moveit/install/teleop_bridge/lib/teleop_bridge/runtime_task_manager --ros-args -p repo_root:=/home/noah/ws_moveit -p active_scene_profile_file:=profiles/active_scene_profile.txt -p world_output:=simulation/worlds/ur_hande_dual_arm_tabletop.sdf
+--- tcp listen
+tcp        0      0 0.0.0.0:5005            0.0.0.0:*               LISTEN     
+--- recent logs
+=====  /tmp/qcr.log
+[INFO] [1781236116.218951631] [quest_controller_receiver]: QuestControllerReceiver listening on TCP 0.0.0.0:5005, publishing /received_pose_states @ 60.0 Hz
+[INFO] [1781236116.219365733] [quest_controller_receiver]: Dual-arm fanout enabled: left=/left_arm/received_pose_states, right=/right_arm/received_pose_states
+[INFO] [1781236116.219684403] [quest_controller_receiver]: stale_timeout_sec=0.250, analog_press_threshold=0.55, client_idle_disconnect_sec=1.50, frame_id=unity_world
+[INFO] [1781236118.201176856] [quest_controller_receiver]: RX 0.0 Hz from none, bytes=0, decode_errors=0, stale=True, right_tracked=False, left_tracked=False, right teleop/rot/close/open/attach=(False,False,False,False,False), left teleop/rot/close/open/attach=(False,False,False,False,False), arm_reset(L/R)=(False,False), reset=False, reset_robot=False, reset_scene=False, recenter=False, mode_switch=False, control_mode=unspecified, grip=0.00, trigger=0.00, left_stick=(0.00,0.00), right_stick=(0.00,0.00), left_grip=0.00, left_trigger=0.00
+[INFO] [1781236120.202045246] [quest_controller_receiver]: RX 0.0 Hz from none, bytes=0, decode_errors=0, stale=True, right_tracked=False, left_tracked=False, right teleop/rot/close/open/attach=(False,False,False,False,False), left teleop/rot/close/open/attach=(False,False,False,False,False), arm_reset(L/R)=(False,False), reset=False, reset_robot=False, reset_scene=False, recenter=False, mode_switch=False, control_mode=unspecified, grip=0.00, trigger=0.00, left_stick=(0.00,0.00), right_stick=(0.00,0.00), left_grip=0.00, left_trigger=0.00
+=====  /tmp/part2_mapper.log
+missing
+=====  /tmp/part3_target_to_servo.log
+missing
+=====  /tmp/part3_target_to_gripper.log
+missing
+=====  /tmp/part3_reset_manager.log
+missing
+=====  /tmp/part4_tcp_endpoint.log
+missing
+=====  /tmp/part4_gz_tf_bridge.log
+missing
+=====  /tmp/part4_cube_pose.log
+missing
+=====  /tmp/run_tabletop_sim.log
+missing
+=====  /tmp/run_dual_arm_tabletop_sim.log
+[INFO] [1781236117.345900247] [spawner_left_joint_group_velocity_controller]: [96mSetting controller param "params_file" to "['/home/noah/ws_moveit/simulation/config/ur5e_gz_controllers_left.yaml']" for [1mleft_joint_group_velocity_controller[0m
+[INFO] [1781236117.392960963] [spawner_left_joint_group_velocity_controller]: [94mLoaded [1mleft_joint_group_velocity_controller[0m
+[INFO] [1781236117.704264427] [spawner_left_joint_group_velocity_controller]: [92mConfigured and activated [1mleft_joint_group_velocity_controller[0m
+[INFO] [1781236118.842711444] [spawner_left_hande_position_controller]: waiting for service /left_controller_manager/list_controllers to become available...
+[INFO] [1781236119.095049272] [spawner_left_hande_position_controller]: [96mSetting controller param "params_file" to "['/home/noah/ws_moveit/simulation/config/ur5e_gz_controllers_left.yaml']" for [1mleft_hande_position_controller[0m
+[INFO] [1781236119.113258444] [spawner_left_hande_position_controller]: [94mLoaded [1mleft_hande_position_controller[0m
+[INFO] [1781236119.415513251] [spawner_left_hande_position_controller]: [92mConfigured and activated [1mleft_hande_position_controller[0m
+[INFO] [1781236120.856266392] [spawner_right_joint_state_broadcaster]: waiting for service /right_controller_manager/list_controllers to become available...
+=====  /tmp/gz_clock_bridge.log
+missing
+=====  /tmp/gz_dual_arm_clock_bridge.log
+[INFO] [1781236111.212214707] [ros_gz_bridge]: Creating GZ->ROS Bridge: [/clock (ignition.msgs.Clock) -> /clock (rosgraph_msgs/msg/Clock)] (Lazy 0)
+=====  /tmp/servo_gz.log
+missing
+=====  /tmp/servo_dual_gz.log
+[servo_node_main-2] [INFO] [1781236112.470002404] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Starting world geometry update monitor for collision objects, attached objects, octomap updates.
+[servo_node_main-2] [INFO] [1781236112.470217851] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Listening to 'collision_object'
+[servo_node_main-2] [INFO] [1781236112.470425994] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Listening to 'planning_scene_world' for planning scene world geometry
+[servo_node_main-2] [WARN] [1781236112.470580618] [moveit.ros.occupancy_map_monitor.middleware_handle]: Resolution not specified for Octomap. Assuming resolution = 0.1 instead
+[servo_node_main-2] [ERROR] [1781236112.470591418] [moveit.ros.occupancy_map_monitor.middleware_handle]: No 3D sensor plugin(s) defined for octomap updates
+[servo_node_main-2] [INFO] [1781236112.473476844] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Publishing maintained planning scene on '/left_arm/servo_node/publish_planning_scene'
+[joint_states_filter-1] [INFO] [1781236112.732751604] [left_arm.joint_states_filter]: Filtering /joint_states -> /left_arm/joint_states_servo, keep_prefixes=('left_',), dropping suffixes=('_mimic',)
+[joint_states_filter-3] [INFO] [1781236112.802452696] [right_arm.joint_states_filter]: Filtering /joint_states -> /right_arm/joint_states_servo, keep_prefixes=('right_',), dropping suffixes=('_mimic',)
+=====  /tmp/dual_left_mapper.log
+[INFO] [1781236118.862259692] [left_arm.hand_pose_mapper]: Mapping /left_arm/received_pose_states -> /left_arm/target_twist_states, target_frame=left_base_link, ee_frame=left_tool0, stale_timeout_sec=0.250
+[INFO] [1781236118.862863085] [left_arm.hand_pose_mapper]: linear: kp=6.000, max=0.850, deadband=0.005 | angular: kp=8.000, max=6.000, deadband=0.020
+[INFO] [1781236118.863342649] [left_arm.hand_pose_mapper]: control_mode_default=hand_pose, gamepad_deadband=0.150, gamepad_linear_speed_xyz=[0.42, 0.42, 0.42], gamepad_linear_sign_xyz=[1.0, -1.0, 1.0], gamepad_angular_speed_xyz=[0.0, 2.4, 2.4], gamepad_angular_sign_xyz=[1.0, 1.0, -1.0]
+[INFO] [1781236118.863853473] [left_arm.hand_pose_mapper]: pos_map_axes=['z', 'x', 'y'], pos_map_signs=[1.0, -1.0, 1.0], position_mapping_mode=unity_world_delta, rot_map_axes=['z', 'x', 'y'], rot_map_signs=[-1.0, 1.0, -1.0], rot_scale_xyz=[1.0, 1.0, 1.0], debug_rotation_mapping=False, debug_rotation_log_period_sec=0.250, scale_xyz=[1.0, 1.0, 1.0], offset_xyz=[0.0, 0.0, 0.0], min_xyz=[-1.0, -1.0, -1.0], max_xyz=[1.0, 1.0, 1.0]
+[INFO] [1781236118.864330951] [left_arm.hand_pose_mapper]: attachment absolute: position=True, enable_rotation=True, rotation=True, attachment_kp_angular=3.000, attachment_max_angular_speed=3.500, attachment_angular_deadband=0.0300, base_xyz=[0.0, 0.6, 0.0], base_xyzw=[0.0, 0.0, 0.0, 1.0], tool_pos_offset_xyz=[0.0, 0.0, 0.0], tool_rot_offset_xyzw=[0.5, 0.5, 0.5, 0.5]
+[INFO] [1781236120.856981048] [left_arm.hand_pose_mapper]: RX 32.2 Hz, mode=hand_pose, stale=False, tracked=False, tf_ok=False, rotate=False, reset=False, reset_robot=False, reset_scene=False, teleop=False, attachment=False, clutch=False, gripper_cmd=0, lin=(0.000,0.000,0.000), ang=(0.000,0.000,0.000)
+=====  /tmp/dual_left_target_to_servo.log
+[INFO] [1781236118.860008338] [left_arm.servo_command_bridge]: TargetTwist->Servo bridge started: /left_arm/target_twist_states -> /left_arm/servo_node/delta_twist_cmds, publish_rate_hz=60.0, stale_timeout_sec=0.250, require_tracked=True, auto_start_servo=True, start_on_reset_release=True
+[INFO] [1781236119.495672975] [left_arm.servo_command_bridge]: Servo start acknowledged via /left_arm/servo_node/start_servo (auto-start): success
+[INFO] [1781236120.856900027] [left_arm.servo_command_bridge]: RX 6.4 Hz, stale=False, tracked=False, reset=False, active=False, twist=lin(0.000,0.000,0.000) ang(0.000,0.000,0.000)
+=====  /tmp/dual_left_target_to_gripper.log
+[INFO] [1781236118.884511459] [left_arm.coupled_gripper_controller]: Coupled Hand-E gripper controller started: /left_arm/target_twist_states -> /left_hande_position_controller/commands, joints=['left_robotiq_hande_left_finger_joint', 'left_robotiq_hande_right_finger_joint'], range=[-0.0250,0.0000], speed=0.2200, close_speed=0.4000, open_speed=0.2200, squeeze_margin=0.0030, initialize_from_joint_state=True, joint_count=2, second_joint_negate=False, require_tracked=False
+[INFO] [1781236120.973886010] [left_arm.coupled_gripper_controller]: RX 7.1 Hz, stale=False, tracked=False, reset=False, hold_cmd=0, target_pos=-0.0000, fingers=[-2.8458460151821933e-09, -4.189270247405165e-09], output=array('d', [-3.1827313179681635e-09, -3.1827313179681635e-09])
+=====  /tmp/dual_left_reset_manager.log
+[INFO] [1781236118.887290203] [left_arm.reset_manager]: Reset manager started: input=/left_arm/target_twist_states, arm_topic=/left_joint_group_velocity_controller/commands, gripper_topic=/left_hande_position_controller/commands, home=[0.0, -1.57, 1.57, 0.0, 1.57, 0.0], kick=[0.35, -0.18, -0.28, 0.18, -0.28, 0.0], gripper_command_mode=position, gripper_joint_count=2, gripper_second_joint_negate=False, cube=@[0.6, 0.25, 0.023], scene_reset_targets=7, scene_reset_lift_z=0.0100, scene_reset_repeat_count=4, scene_reset_repeat_interval_sec=0.060
+=====  /tmp/dual_right_mapper.log
+[INFO] [1781236118.863386556] [right_arm.hand_pose_mapper]: Mapping /right_arm/received_pose_states -> /right_arm/target_twist_states, target_frame=right_base_link, ee_frame=right_tool0, stale_timeout_sec=0.250
+[INFO] [1781236118.864030952] [right_arm.hand_pose_mapper]: linear: kp=6.000, max=0.850, deadband=0.005 | angular: kp=8.000, max=6.000, deadband=0.020
+[INFO] [1781236118.864660778] [right_arm.hand_pose_mapper]: control_mode_default=hand_pose, gamepad_deadband=0.150, gamepad_linear_speed_xyz=[0.42, 0.42, 0.42], gamepad_linear_sign_xyz=[1.0, -1.0, 1.0], gamepad_angular_speed_xyz=[0.0, 2.4, 2.4], gamepad_angular_sign_xyz=[1.0, 1.0, -1.0]
+[INFO] [1781236118.865229421] [right_arm.hand_pose_mapper]: pos_map_axes=['z', 'x', 'y'], pos_map_signs=[1.0, -1.0, 1.0], position_mapping_mode=unity_world_delta, rot_map_axes=['z', 'x', 'y'], rot_map_signs=[-1.0, 1.0, -1.0], rot_scale_xyz=[1.0, 1.0, 1.0], debug_rotation_mapping=False, debug_rotation_log_period_sec=0.250, scale_xyz=[1.0, 1.0, 1.0], offset_xyz=[0.0, 0.0, 0.0], min_xyz=[-1.0, -1.0, -1.0], max_xyz=[1.0, 1.0, 1.0]
+[INFO] [1781236118.865821089] [right_arm.hand_pose_mapper]: attachment absolute: position=True, enable_rotation=True, rotation=True, attachment_kp_angular=3.000, attachment_max_angular_speed=3.500, attachment_angular_deadband=0.0300, base_xyz=[0.0, -0.6, 0.0], base_xyzw=[0.0, 0.0, 0.0, 1.0], tool_pos_offset_xyz=[0.0, 0.0, 0.0], tool_rot_offset_xyzw=[0.5, 0.5, 0.5, 0.5]
+[INFO] [1781236120.858236383] [right_arm.hand_pose_mapper]: RX 60.4 Hz, mode=hand_pose, stale=False, tracked=False, tf_ok=False, rotate=False, reset=False, reset_robot=False, reset_scene=False, teleop=False, attachment=False, clutch=False, gripper_cmd=0, lin=(0.000,0.000,0.000), ang=(0.000,0.000,0.000)
+=====  /tmp/dual_right_target_to_servo.log
+[INFO] [1781236118.842342673] [right_arm.servo_command_bridge]: TargetTwist->Servo bridge started: /right_arm/target_twist_states -> /right_arm/servo_node/delta_twist_cmds, publish_rate_hz=60.0, stale_timeout_sec=0.250, require_tracked=True, auto_start_servo=True, start_on_reset_release=True
+[INFO] [1781236118.844000280] [right_arm.servo_command_bridge]: Waiting for /right_arm/servo_node/start_servo service before start request (auto-start).
+[INFO] [1781236120.856874855] [right_arm.servo_command_bridge]: RX 10.8 Hz, stale=False, tracked=False, reset=False, active=False, twist=lin(0.000,0.000,0.000) ang(0.000,0.000,0.000)
+=====  /tmp/dual_right_target_to_gripper.log
+[INFO] [1781236118.886090677] [right_arm.coupled_gripper_controller]: Coupled Hand-E gripper controller started: /right_arm/target_twist_states -> /right_hande_position_controller/commands, joints=['right_robotiq_hande_left_finger_joint', 'right_robotiq_hande_right_finger_joint'], range=[-0.0250,0.0000], speed=0.2200, close_speed=0.4000, open_speed=0.2200, squeeze_margin=0.0030, initialize_from_joint_state=True, joint_count=2, second_joint_negate=False, require_tracked=False
+[INFO] [1781236120.961991274] [right_arm.coupled_gripper_controller]: RX 11.0 Hz, stale=False, tracked=False, reset=False, hold_cmd=0, target_pos=0.0000, fingers=[], output=array('d', [0.0, 0.0])
+=====  /tmp/dual_right_reset_manager.log
+[INFO] [1781236118.890972931] [right_arm.reset_manager]: Reset manager started: input=/right_arm/target_twist_states, arm_topic=/right_joint_group_velocity_controller/commands, gripper_topic=/right_hande_position_controller/commands, home=[0.0, -1.57, 1.57, 0.0, 1.57, 0.0], kick=[0.35, -0.18, -0.28, 0.18, -0.28, 0.0], gripper_command_mode=position, gripper_joint_count=2, gripper_second_joint_negate=False, cube=@[0.6, 0.25, 0.023], scene_reset_targets=7, scene_reset_lift_z=0.0100, scene_reset_repeat_count=3, scene_reset_repeat_interval_sec=0.060
+=====  /tmp/dual_part4_tcp_endpoint.log
+[INFO] [launch]: All log files can be found below /home/noah/.ros/log/2026-06-12-03-48-40-915815-286de80abdf5-2722
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [default_server_endpoint-1]: process started with pid [2801]
+=====  /tmp/dual_part4_gz_tf_bridge.log
+[INFO] [1781236120.969356886] [ros_gz_bridge]: Creating GZ->ROS Bridge: [/world/ur_hande_dual_arm_tabletop/dynamic_pose/info (ignition.msgs.Pose_V) -> /world/ur_hande_dual_arm_tabletop/dynamic_pose/info (tf2_msgs/msg/TFMessage)] (Lazy 0)
+=====  /tmp/dual_part4_task_manager.log
+=====  /tmp/dual_part4_cube_pose.log
+=====  /tmp/dual_part4_rubik.log
+[info] Rubik task is not active; skipping rubik_task_controller.
+=====  /tmp/dual_part4_haptics.log
