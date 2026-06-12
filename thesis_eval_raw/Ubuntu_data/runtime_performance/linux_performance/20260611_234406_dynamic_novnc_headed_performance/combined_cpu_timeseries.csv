@@ -1,0 +1,91 @@
+condition_id,condition_label,time_sec,cpu_percent
+plain_backend,Plain backend,0.0,1163.9
+plain_backend,Plain backend,2.036594867706299,604.73
+plain_backend,Plain backend,4.070643424987793,599.48
+plain_backend,Plain backend,6.1065051555633545,534.04
+plain_backend,Plain backend,8.142922163009644,543.93
+plain_backend,Plain backend,10.179621696472168,541.72
+plain_backend,Plain backend,12.215116262435913,537.39
+plain_backend,Plain backend,14.24947714805603,516.12
+plain_backend,Plain backend,16.2855064868927,488.9
+plain_backend,Plain backend,18.321608066558838,555.89
+plain_backend,Plain backend,20.355790376663208,546.0
+plain_backend,Plain backend,22.390137195587158,541.87
+plain_backend,Plain backend,24.424590826034546,524.04
+plain_backend,Plain backend,26.459870100021362,549.39
+plain_backend,Plain backend,28.497328519821167,546.02
+plain_backend,Plain backend,30.530697107315063,595.65
+plain_backend,Plain backend,32.56606340408325,538.72
+plain_backend,Plain backend,34.60173034667969,583.87
+plain_backend,Plain backend,36.63605308532715,510.01
+plain_backend,Plain backend,38.66947317123413,486.31
+plain_backend,Plain backend,40.703046560287476,538.75
+plain_backend,Plain backend,42.7406644821167,570.43
+plain_backend,Plain backend,44.77878546714783,526.14
+plain_backend,Plain backend,46.814494132995605,530.67
+plain_backend,Plain backend,48.84882688522339,533.82
+plain_backend,Plain backend,50.88473463058472,536.95
+plain_backend,Plain backend,52.91232347488403,555.02
+plain_backend,Plain backend,54.94795775413513,538.18
+plain_backend,Plain backend,56.9839870929718,568.17
+plain_backend,Plain backend,59.020204305648804,493.75
+novnc_only,noVNC only,0.0,1107.71
+novnc_only,noVNC only,2.0373194217681885,552.43
+novnc_only,noVNC only,4.069610595703125,617.88
+novnc_only,noVNC only,6.103618621826172,599.69
+novnc_only,noVNC only,8.12974762916565,548.21
+novnc_only,noVNC only,10.162569999694824,532.62
+novnc_only,noVNC only,12.199941635131836,638.68
+novnc_only,noVNC only,14.236371755599976,547.09
+novnc_only,noVNC only,16.271739959716797,584.25
+novnc_only,noVNC only,18.30876874923706,574.02
+novnc_only,noVNC only,20.344356536865234,595.38
+novnc_only,noVNC only,22.38093066215515,540.08
+novnc_only,noVNC only,24.415297746658325,531.78
+novnc_only,noVNC only,26.450727701187134,624.33
+novnc_only,noVNC only,28.487046480178833,548.86
+novnc_only,noVNC only,30.52145528793335,519.53
+novnc_only,noVNC only,32.557846546173096,553.37
+novnc_only,noVNC only,34.591912508010864,538.01
+novnc_only,noVNC only,36.627970457077026,542.26
+novnc_only,noVNC only,38.664979219436646,549.24
+novnc_only,noVNC only,40.703455448150635,565.18
+novnc_only,noVNC only,42.73469114303589,590.2
+novnc_only,noVNC only,44.77163124084473,538.67
+novnc_only,noVNC only,46.80625796318054,593.62
+novnc_only,noVNC only,48.839956760406494,556.71
+novnc_only,noVNC only,50.875428199768066,502.08
+novnc_only,noVNC only,52.906776905059814,563.16
+novnc_only,noVNC only,54.94350528717041,594.33
+novnc_only,noVNC only,56.98034071922302,512.64
+novnc_only,noVNC only,59.01382303237915,526.24
+novnc_headed,noVNC + headed Gazebo,0.0,1248.81
+novnc_headed,noVNC + headed Gazebo,2.036646604537964,802.66
+novnc_headed,noVNC + headed Gazebo,4.072333335876465,826.17
+novnc_headed,noVNC + headed Gazebo,6.106000900268555,711.14
+novnc_headed,noVNC + headed Gazebo,8.13978385925293,723.31
+novnc_headed,noVNC + headed Gazebo,10.174023389816284,778.49
+novnc_headed,noVNC + headed Gazebo,12.209109544754028,745.87
+novnc_headed,noVNC + headed Gazebo,14.247876644134521,767.33
+novnc_headed,noVNC + headed Gazebo,16.28253483772278,711.4
+novnc_headed,noVNC + headed Gazebo,18.318424940109253,740.21
+novnc_headed,noVNC + headed Gazebo,20.35490870475769,726.74
+novnc_headed,noVNC + headed Gazebo,22.39068579673767,761.6
+novnc_headed,noVNC + headed Gazebo,24.424006938934326,767.35
+novnc_headed,noVNC + headed Gazebo,26.459115028381348,759.71
+novnc_headed,noVNC + headed Gazebo,28.491560220718384,769.41
+novnc_headed,noVNC + headed Gazebo,30.52828860282898,720.37
+novnc_headed,noVNC + headed Gazebo,32.55975818634033,733.41
+novnc_headed,noVNC + headed Gazebo,34.597957611083984,755.08
+novnc_headed,noVNC + headed Gazebo,36.62898588180542,733.39
+novnc_headed,noVNC + headed Gazebo,38.66033577919006,736.11
+novnc_headed,noVNC + headed Gazebo,40.69711899757385,748.89
+novnc_headed,noVNC + headed Gazebo,42.72879481315613,740.21
+novnc_headed,noVNC + headed Gazebo,44.76532173156738,722.23
+novnc_headed,noVNC + headed Gazebo,46.80364799499512,738.12
+novnc_headed,noVNC + headed Gazebo,48.83965992927551,772.54
+novnc_headed,noVNC + headed Gazebo,50.87521243095398,751.65
+novnc_headed,noVNC + headed Gazebo,52.90957045555115,759.61
+novnc_headed,noVNC + headed Gazebo,54.942683696746826,770.41
+novnc_headed,noVNC + headed Gazebo,56.97702360153198,727.25
+novnc_headed,noVNC + headed Gazebo,59.01459455490112,741.21

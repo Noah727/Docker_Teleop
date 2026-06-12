@@ -1,6 +1,6 @@
 # Agent Handoff Context
 
-Last updated: 2026-06-10
+Last updated: 2026-06-12
 
 This file is for future coding agents taking over this project. Read this before changing code. It captures the practical context that is easy to lose between chats.
 
@@ -53,6 +53,55 @@ docker_teleop git@github.com:Noah727/Docker_Teleop.git
 ```
 
 Use normal feature-branch discipline if doing larger work. Do not commit captures, videos, Unity `Library/`, temp files, or generated caches.
+
+## Thesis / Evaluation Material State
+
+The thesis/evaluation material is now organized around a curated/raw split:
+
+```text
+TODO.md
+complete_material/
+thesis_eval_raw/06_11/
+thesis_eval_raw/Ubuntu_data/
+thesis_eval_raw/Windows_data/
+```
+
+Read these first before touching evaluation scripts or thesis evidence:
+
+```text
+TODO.md
+complete_material/README.md
+complete_material/material_verification_06_11.md
+```
+
+Current accepted material in `complete_material/`:
+
+- Setup snapshot and backend status for the Mac development machine.
+- Mac runtime performance comparison: plain headless backend, noVNC-only headless backend, and noVNC + headed Gazebo.
+- Task profile/SDF/Unity JSON consistency and saved-scene smoke checks.
+- Mac portability snapshot.
+- Demo source video, v2 topic-level clips, screenshots, contact sheet, checksums, and draft captions.
+- Headset backend latency traces, with caveat: ROS/container arrival-time latency after receiver publication, not optical end-to-end display latency.
+- RedCube MR sync/visual alignment, with caveat: RedCube object sync is usable; old EE absolute alignment rows are not usable because they compare mixed reference points.
+- Wrist-camera recording file verification, with caveat: confirms recording and estimates capture rate, but does not measure Unity FPS/sync latency.
+- No-headset backend scripted checks, with caveat: synthetic receiver is debug/supporting evidence, not the primary controller evaluation.
+
+Still-needed thesis material is tracked in `TODO.md`, not by memory:
+
+- Human-reviewed captions and final 5-8 second README teaser clips.
+- Cable insertion trial rows.
+- Pick/place trial rows and optional dual-arm handoff rows.
+- Valid recording-on FPS/sync-latency trace after deploying an app that publishes `/unity_eval/recording_state` and `/unity_eval/fps_sample`.
+- Linux/Ubuntu performance and portability data.
+- Optional Windows/WSL portability data.
+- Optional new EE visual alignment trace if quantitative EE visual alignment is needed.
+
+Do not present these as passing thesis results unless fixed and rerun:
+
+- Current gripper timing/symmetry script output; it did not exercise the coupled gripper path.
+- Current reset reliability stress script output; it reported object-pose failures despite the user-facing reset button working during headset testing.
+- Old EE absolute alignment rows from MR sync traces.
+- Recording FPS traces that ended `max_wait_elapsed_without_recording`.
 
 ## Backend Bringup
 
@@ -284,7 +333,7 @@ If the gripper is too slow, tune the controller parameters in the dual tuning YA
 Current coupled gripper speed defaults are:
 
 ```yaml
-close_speed_m_per_s: 0.22
+close_speed_m_per_s: 0.40
 open_speed_m_per_s: 0.22
 ```
 
@@ -533,12 +582,12 @@ Current goals:
 - Header/title remains fixed.
 - Page buttons at the bottom.
 - Action buttons near the top of each page.
-- Scrollable content area in the middle.
+- Current preferred layout is reduced fixed content, not complex scrolling. The code disables stale `ScrollRect` children and uses `FixedContent` under `ContentScrollArea`.
 - Drag handle should look like a semi-transparent Meta/Vision-Pro-style rounded dash below the panel.
 - Resize handles should be small rounded L-shaped semi-transparent corner notches outside the panel and appear on ray hover.
 - Panel should face or tilt toward the headset after drag release, without forcing awkward vertical-only behavior.
-- Controls page includes mode, hand swap, and reset buttons.
-- Camera page includes Left Wrist, Right Wrist, and Floating preview options.
+- Controls page should keep reset actions simple: left arm reset, right arm reset, object reset, overhead/workspace reset, plus `Swap Hands`.
+- Camera page includes Left Wrist, Right Wrist, and Floating camera selection.
 - Task page publishes task selections to `/task_manager/select_task`.
 
 If the editor still shows old `teleop_button_instructions` or old debug panels, those are likely stale objects and should be removed once the new panel is confirmed stable.
@@ -560,8 +609,12 @@ Current Unity camera goals:
 - Wrist/gripper camera for recording.
 - Movable floating camera with ray interaction and 3-axis rotation rings.
 - Camera visual cone should be semi-transparent light blue, small enough not to dominate the scene or appear in its own camera view.
-- Camera page in the control panel supports Left Wrist, Right Wrist, and Floating camera preview selection.
-- Floating camera is preview-only for now; wrist cameras are used for recording/capture.
+- Camera page in the control panel supports Left Wrist, Right Wrist, and Floating camera selection.
+- Floating camera now has its own runtime `GripperCameraRecorder` via `FloatingSceneCameraController`; record/capture should work for the selected floating camera through the central panel.
+- `RecordingPerformanceTraceLogger` publishes recording/FPS evaluation topics when present in the deployed app:
+  - `/unity_eval/recording_state`
+  - `/unity_eval/fps_sample`
+- If recording-FPS tests see no messages on those topics, rebuild/redeploy the Quest app before rerunning `16_recording_fps_sync_latency_trace.py`.
 
 Quest recordings/captures should not be committed. Recent retrieved Quest videos are under ignored local capture folders such as:
 
@@ -658,7 +711,7 @@ docker exec "$CONTAINER" bash -lc 'tail -n 80 /tmp/dual_part4_task_manager.log'
 If Unity app behavior is unclear on Quest:
 
 ```bash
-adb logcat -d "Unity:I" "*:S" | rg -n "HandPoseSender|NetworkSender|MRCentralControlPanel|WorkspaceDrag|Haptic|Error|Exception" -m 160
+adb logcat -d "Unity:I" "*:S" | rg -n "HandPoseSender|NetworkSender|MRCentralControlPanel|WorkspaceDrag|Haptic|MREvaluationTracePublisher|RecordingPerformanceTraceLogger|Error|Exception" -m 160
 ```
 
 If Unity MCP is available:
@@ -684,6 +737,32 @@ If headset input is inconvenient, use the fake hand/debug tools instead of askin
 ```text
 ros_backend1.1/src/teleop_bridge/teleop_bridge/test_tools/debug_hand_generator.py
 ros_backend1.1/src/teleop_bridge/teleop_bridge/servo_response_sampler.py
+```
+
+Current evaluation scripts live under:
+
+```text
+ros_backend1.1/scripts/test_tools/eval_scripts/
+ros_backend1.1/scripts/test_tools/performance_test_scripts/
+```
+
+Most important current scripts:
+
+```text
+13_dynamic_novnc_headed_performance_test.py
+14_headset_backend_latency_trace.py
+15_mr_sync_visual_latency_trace.py
+16_recording_fps_sync_latency_trace.py
+run_dynamic_backend_performance_linux.sh
+run_dynamic_backend_performance_windows.ps1
+```
+
+Unity-side evaluation publishers:
+
+```text
+UnityApp/Assets/Scripts/MREvaluationTracePublisher.cs
+UnityApp/Assets/Scripts/RecordingPerformanceTraceLogger.cs
+UnityApp/Assets/Scripts/QuestMRFeatureBootstrap.cs
 ```
 
 If the Unity editor cannot build scripts from command line because `project.assets.json` is missing, this usually means the generated Unity `Temp/obj/.../project.assets.json` file is absent outside the editor. It usually does not affect manual editor builds.

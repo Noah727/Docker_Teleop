@@ -1,0 +1,2 @@
+[ok] Stopped teleop/simulation processes inside motion_planner_11.
+[ok] Compose stack is down and stale containers are cleaned.

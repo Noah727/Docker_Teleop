@@ -734,7 +734,6 @@ public class GazeboReplicaDualArmSceneBuilder : MonoBehaviour
         RemoveRubikVisuals(root.transform);
 
         Vector3 size = taskObject.Size;
-        EnsurePortBoxVisibleShell(root.transform, size, taskObject.Color);
         List<PortRect> ports = BuildPortRects(taskObject);
         ports.Sort((a, b) => (a.centerX - a.width * 0.5f).CompareTo(b.centerX - b.width * 0.5f));
 
@@ -883,18 +882,6 @@ public class GazeboReplicaDualArmSceneBuilder : MonoBehaviour
         piece.transform.localScale = localScale;
         ApplyTaskMaterial(piece, "PortBox_Frame", color);
         DisableCollider(piece);
-    }
-
-    private static void EnsurePortBoxVisibleShell(Transform parent, Vector3 size, Color color)
-    {
-        GameObject shell = EnsureChildCube(parent, "PortBoxVisibleShell");
-        shell.transform.localPosition = Vector3.zero;
-        shell.transform.localRotation = Quaternion.identity;
-        shell.transform.localScale = size * 1.012f;
-
-        Color shellColor = new Color(color.r, color.g, color.b, Mathf.Clamp(color.a * 0.22f, 0.14f, 0.30f));
-        ApplyTaskMaterial(shell, "PortBox_VisibleShell", shellColor);
-        DisableCollider(shell);
     }
 
     private static void ConfigureCableRodVisual(GameObject root, UnityTaskObject taskObject)

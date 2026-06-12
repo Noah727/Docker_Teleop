@@ -1,0 +1,149 @@
+{
+  "duration_sec": 20.0,
+  "topics": [
+    {
+      "max_gap_sec": 0.014170773327350616,
+      "mean_hz": 198.70939814705352,
+      "messages": 3975,
+      "min_gap_sec": 0.0003627147525548935,
+      "topic": "/clock",
+      "type": "rosgraph_msgs/msg/Clock"
+    },
+    {
+      "max_gap_sec": 0.1428643330000341,
+      "mean_hz": 23.313737266941985,
+      "messages": 444,
+      "min_gap_sec": 0.002248284872621298,
+      "topic": "/joint_states",
+      "type": "sensor_msgs/msg/JointState"
+    },
+    {
+      "max_gap_sec": 0.15437543718144298,
+      "mean_hz": 11.638263872415148,
+      "messages": 233,
+      "min_gap_sec": 0.06079574581235647,
+      "topic": "/left_arm/joint_states_servo",
+      "type": "sensor_msgs/msg/JointState"
+    },
+    {
+      "max_gap_sec": 0.1535761933773756,
+      "mean_hz": 11.638998512874103,
+      "messages": 233,
+      "min_gap_sec": 0.060487554874271154,
+      "topic": "/right_arm/joint_states_servo",
+      "type": "sensor_msgs/msg/JointState"
+    },
+    {
+      "max_gap_sec": 0.019209107849746943,
+      "mean_hz": 60.00003755971145,
+      "messages": 1200,
+      "min_gap_sec": 0.01451134029775858,
+      "topic": "/left_arm/received_pose_states",
+      "type": "teleop_bridge_msgs/msg/ReceivedPoseStates"
+    },
+    {
+      "max_gap_sec": 0.019384220708161592,
+      "mean_hz": 59.999670351649385,
+      "messages": 1200,
+      "min_gap_sec": 0.01447221077978611,
+      "topic": "/right_arm/received_pose_states",
+      "type": "teleop_bridge_msgs/msg/ReceivedPoseStates"
+    },
+    {
+      "max_gap_sec": 0.15416302205994725,
+      "mean_hz": 11.863263136599338,
+      "messages": 237,
+      "min_gap_sec": 0.056939702946692705,
+      "topic": "/left_arm/target_twist_states",
+      "type": "teleop_bridge_msgs/msg/TargetTwistStates"
+    },
+    {
+      "max_gap_sec": 0.15340304095298052,
+      "mean_hz": 11.86326108999509,
+      "messages": 237,
+      "min_gap_sec": 0.05655970890074968,
+      "topic": "/right_arm/target_twist_states",
+      "type": "teleop_bridge_msgs/msg/TargetTwistStates"
+    },
+    {
+      "max_gap_sec": 0.15153951523825526,
+      "mean_hz": 11.863291724429958,
+      "messages": 237,
+      "min_gap_sec": 0.056379081681370735,
+      "topic": "/left_arm/servo_node/delta_twist_cmds",
+      "type": "geometry_msgs/msg/TwistStamped"
+    },
+    {
+      "max_gap_sec": 0.1516387239098549,
+      "mean_hz": 11.863316413538639,
+      "messages": 237,
+      "min_gap_sec": 0.056260235607624054,
+      "topic": "/right_arm/servo_node/delta_twist_cmds",
+      "type": "geometry_msgs/msg/TwistStamped"
+    },
+    {
+      "max_gap_sec": 0.018753946293145418,
+      "mean_hz": 60.00996627679546,
+      "messages": 1201,
+      "min_gap_sec": 0.012767869047820568,
+      "topic": "/left_joint_group_velocity_controller/commands",
+      "type": "std_msgs/msg/Float64MultiArray"
+    },
+    {
+      "max_gap_sec": 0.019752622116357088,
+      "mean_hz": 59.99902410769432,
+      "messages": 1200,
+      "min_gap_sec": 0.013302434235811234,
+      "topic": "/right_joint_group_velocity_controller/commands",
+      "type": "std_msgs/msg/Float64MultiArray"
+    },
+    {
+      "max_gap_sec": 0.024949168786406517,
+      "mean_hz": 60.01394296738196,
+      "messages": 1201,
+      "min_gap_sec": 0.00809934688732028,
+      "topic": "/unity_sync/Sync_RedCube_pose",
+      "type": "geometry_msgs/msg/PoseStamped"
+    },
+    {
+      "max_gap_sec": 0.021916219033300877,
+      "mean_hz": 60.01808050127887,
+      "messages": 1201,
+      "min_gap_sec": 0.010589479934424162,
+      "topic": "/unity_sync/Sync_CableRod_pose",
+      "type": "geometry_msgs/msg/PoseStamped"
+    },
+    {
+      "max_gap_sec": 0.023462037090212107,
+      "mean_hz": 59.99763575033932,
+      "messages": 1200,
+      "min_gap_sec": 0.007520066108554602,
+      "topic": "/left_arm/haptics/contact_amplitude",
+      "type": "std_msgs/msg/Float32"
+    },
+    {
+      "max_gap_sec": 0.023475788068026304,
+      "mean_hz": 59.99738737998796,
+      "messages": 1200,
+      "min_gap_sec": 0.007443408947438002,
+      "topic": "/right_arm/haptics/contact_amplitude",
+      "type": "std_msgs/msg/Float32"
+    },
+    {
+      "max_gap_sec": 1.0015776441432536,
+      "mean_hz": 0.9999758459972026,
+      "messages": 20,
+      "min_gap_sec": 0.9986247038468719,
+      "topic": "/task_manager/status",
+      "type": "std_msgs/msg/String"
+    },
+    {
+      "max_gap_sec": 1.0014533060602844,
+      "mean_hz": 0.9999740822585971,
+      "messages": 20,
+      "min_gap_sec": 0.9985719323158264,
+      "topic": "/task_manager/active_task_manifest",
+      "type": "std_msgs/msg/String"
+    }
+  ]
+}
