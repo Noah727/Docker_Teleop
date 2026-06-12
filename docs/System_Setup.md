@@ -68,7 +68,7 @@ The preferred development connection mode is wired Quest mode over USB using `ad
 | Unity | `6000.2.10f1` |
 | Headset | Meta Quest 3 |
 | Unity target platform | Android / Quest |
-| Unity app package ID | `com.noahli.handtrackingunity` |
+| Unity app package ID | `com.noahli.ROSUNITY` |
 | Backend | Dockerized ROS 2 workspace |
 | ROS | Humble inside container |
 | Robot | UR5e + Robotiq Hand-E |
@@ -249,17 +249,12 @@ Right controller:
 
 Left controller:
 
-- `X tap`: start / stop wrist-camera recording.
-- `Y tap`: switch hand-pose mode and thumbstick/gamepad mode.
+- `Grip hold`: engage left-arm teleop.
+- `Trigger tap`: toggle left gripper open / close.
+- `X hold`: left-arm rotation mode.
+- `Y tap`: toggle left-arm attachment mode.
 
-Thumbstick/gamepad mode:
-
-- `Left stick Y`: forward / back.
-- `Left stick X`: left / right.
-- `Left trigger`: move up.
-- `Left grip`: move down.
-- `Right stick Y`: rotate around robot angular Y.
-- `Right stick X`: rotate around robot angular Z.
+Optional thumbstick/gamepad and keyboard controls are terminal-driven right-arm overrides. See `docs/Getting_Started.md`.
 
 Floating panel:
 
@@ -273,13 +268,13 @@ Floating panel:
 Wrist-camera recordings are stored on Quest under:
 
 ```text
-/storage/emulated/0/Android/data/com.noahli.handtrackingunity/files/GripperCameraRecordings
+/storage/emulated/0/Android/data/com.noahli.ROSUNITY/files/GripperCameraRecordings
 ```
 
 Pull recordings to the host:
 
 ```bash
-adb pull "/storage/emulated/0/Android/data/com.noahli.handtrackingunity/files/GripperCameraRecordings" ./GripperCameraRecordings
+adb pull "/storage/emulated/0/Android/data/com.noahli.ROSUNITY/files/GripperCameraRecordings" ./GripperCameraRecordings
 ```
 
 Do not commit recordings or videos to Git. Put demos in GitHub Releases, YouTube, Google Drive, or lab storage and link them from the README.
@@ -292,7 +287,7 @@ Do not commit recordings or videos to Git. Put demos in GitHub Releases, YouTube
 - Robot does not move: run `./scripts/backend10_lifecycle.sh status`.
 - Unity receives no sync: confirm Part 4 is running.
 - Gripper visual jitters: confirm Unity gripper is visual-only and not physics-driven.
-- Recording path is empty: confirm package ID is `com.noahli.handtrackingunity`.
+- Recording path is empty: confirm package ID is `com.noahli.ROSUNITY`.
 
 ## Known Limitations
 

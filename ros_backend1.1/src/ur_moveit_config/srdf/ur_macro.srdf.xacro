@@ -46,6 +46,41 @@
     <disable_collisions link1="${prefix}tool0" link2="${prefix}wrist_1_link" reason="Never" />
     <disable_collisions link1="${prefix}tool0" link2="${prefix}wrist_2_link" reason="Never" />
     <disable_collisions link1="${prefix}tool0" link2="${prefix}wrist_3_link" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_coupler" link2="${prefix}wrist_3_link" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_coupler" link2="${prefix}tool0" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_coupler" link2="${prefix}robotiq_hande_link" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_link" link2="${prefix}tool0" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_link" link2="${prefix}wrist_3_link" reason="Never" />
+    <!-- Hand-E internal/tool adjacency. These links are part of the gripper assembly and can otherwise create false Servo self-collision reports in normal open/closed poses. -->
+    <disable_collisions link1="${prefix}robotiq_hande_left_finger" link2="${prefix}robotiq_hande_right_finger" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_left_finger" link2="${prefix}robotiq_hande_link" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_right_finger" link2="${prefix}robotiq_hande_link" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_left_finger" link2="${prefix}robotiq_hande_coupler" reason="Never" />
+    <disable_collisions link1="${prefix}robotiq_hande_right_finger" link2="${prefix}robotiq_hande_coupler" reason="Never" />
+    <disable_collisions link1="${prefix}robotiq_hande_left_finger" link2="${prefix}tool0" reason="Never" />
+    <disable_collisions link1="${prefix}robotiq_hande_right_finger" link2="${prefix}tool0" reason="Never" />
+    <!-- The Hand-E is bolted to the UR wrist flange. Its simplified collision
+         cylinders/boxes sit inside the wrist clearance envelope, so Servo can
+         falsely slow down against the compact wrist links even when the visual
+         robot is clear. -->
+    <disable_collisions link1="${prefix}robotiq_hande_coupler" link2="${prefix}wrist_1_link" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_link" link2="${prefix}wrist_1_link" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_left_finger" link2="${prefix}wrist_1_link" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_right_finger" link2="${prefix}wrist_1_link" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_coupler" link2="${prefix}wrist_2_link" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_link" link2="${prefix}wrist_2_link" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_left_finger" link2="${prefix}wrist_2_link" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_right_finger" link2="${prefix}wrist_2_link" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_left_finger" link2="${prefix}wrist_3_link" reason="Never" />
+    <disable_collisions link1="${prefix}robotiq_hande_right_finger" link2="${prefix}wrist_3_link" reason="Never" />
+    <disable_collisions link1="${prefix}robotiq_hande_end" link2="${prefix}robotiq_hande_link" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_end" link2="${prefix}robotiq_hande_coupler" reason="Never" />
+    <disable_collisions link1="${prefix}robotiq_hande_end" link2="${prefix}robotiq_hande_left_finger" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_end" link2="${prefix}robotiq_hande_right_finger" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_end" link2="${prefix}tool0" reason="Never" />
+    <disable_collisions link1="${prefix}robotiq_hande_end" link2="${prefix}wrist_1_link" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_end" link2="${prefix}wrist_2_link" reason="Adjacent" />
+    <disable_collisions link1="${prefix}robotiq_hande_end" link2="${prefix}wrist_3_link" reason="Never" />
     <disable_collisions link1="${prefix}forearm_link" link2="${prefix}upper_arm_link" reason="Adjacent" />
     <disable_collisions link1="${prefix}forearm_link" link2="${prefix}wrist_1_link" reason="Adjacent" />
     <disable_collisions link1="${prefix}shoulder_link" link2="${prefix}upper_arm_link" reason="Adjacent" />

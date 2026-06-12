@@ -106,6 +106,42 @@ def mat_vec_mul(m, v):
     return tuple(sum(m[i][j] * v[j] for j in range(3)) for i in range(3))
 
 
+def mat_transpose(m):
+    return tuple(tuple(m[j][i] for j in range(3)) for i in range(3))
+
+
+UNITY_TO_GAZEBO_ROT = (
+    (0.0, 0.0, 1.0),
+    (-1.0, 0.0, 0.0),
+    (0.0, 1.0, 0.0),
+)
+
+
+def clamp(value: float, low: float, high: float) -> float:
+    if low > high:
+        return 0.5 * (low + high)
+    return min(max(value, low), high)
+
+
+def matrix_to_rpy(m) -> tuple[float, float, float]:
+    # Standard SDF/Gazebo convention: R = Rz(yaw) * Ry(pitch) * Rx(roll).
+    if abs(m[2][0]) < 0.999999:
+        pitch = math.asin(-m[2][0])
+        roll = math.atan2(m[2][1], m[2][2])
+        yaw = math.atan2(m[1][0], m[0][0])
+    else:
+        pitch = math.pi * 0.5 if m[2][0] <= -0.999999 else -math.pi * 0.5
+        roll = math.atan2(-m[0][1], m[1][1])
+        yaw = 0.0
+    return roll, pitch, yaw
+
+
+def unity_euler_to_gazebo_rpy(euler_xyz_deg: tuple[float, float, float]) -> tuple[float, float, float]:
+    unity_rot = rpy_deg_to_matrix(euler_xyz_deg)
+    gazebo_rot = mat_mul(UNITY_TO_GAZEBO_ROT, mat_mul(unity_rot, mat_transpose(UNITY_TO_GAZEBO_ROT)))
+    return matrix_to_rpy(gazebo_rot)
+
+
 def rgba_text(rgba: tuple[float, float, float, float]) -> str:
     return fmt_values(rgba)
 
@@ -167,6 +203,209 @@ def add_friction(collision: ET.Element, mu: float, mu2: float):
     sub(ode, "mu2", fmt_float(mu2))
 
 
+def add_box_collision(link: ET.Element, name: str, size_xyz, pose_xyz, mu: float, mu2: float):
+    collision = sub(link, "collision", attrib={"name": name})
+    sub(collision, "pose", fmt_values((*pose_xyz, 0.0, 0.0, 0.0)))
+    add_box_geometry(collision, size_xyz)
+    add_friction(collision, mu, mu2)
+    return collision
+
+
+def safe_name(value: str, fallback: str) -> str:
+    cleaned = "".join(ch if ch.isalnum() or ch in {"_", "-"} else "_" for ch in str(value).strip())
+    return cleaned or fallback
+
+
+def gazebo_port_defs_from_unity(obj: dict[str, Any]) -> list[dict[str, float | str]]:
+    raw_ports = obj.get("ports")
+    if not isinstance(raw_ports, list) or not raw_ports:
+        raw_ports = [
+            {
+                "label": "default",
+                "center_xy": [0.0, 0.0],
+                "size_xyz": obj.get("port_size_xyz", (0.018, 0.012, 0.018)),
+            }
+        ]
+
+    ports = []
+    for index, port in enumerate(raw_ports):
+        if not isinstance(port, dict):
+            continue
+        label = safe_name(str(port.get("label", f"port_{index}")), f"port_{index}")
+        size_gz = unity_size_to_gazebo(vec3(port.get("size_xyz"), obj.get("port_size_xyz", (0.018, 0.012, 0.018))))
+        center_xy = port.get("center_xy", port.get("center", (0.0, 0.0, 0.0)))
+        if isinstance(center_xy, (list, tuple)) and len(center_xy) >= 2:
+            center_x = float(center_xy[0])
+            center_y = float(center_xy[1])
+        else:
+            center_x = 0.0
+            center_y = 0.0
+        ports.append(
+            {
+                "label": label,
+                "center_y": -center_x,
+                "center_z": center_y,
+                "width": abs(float(size_gz[1])),
+                "height": abs(float(size_gz[2])),
+            }
+        )
+
+    return ports or gazebo_port_defs_from_unity({"port_size_xyz": obj.get("port_size_xyz", (0.018, 0.012, 0.018))})
+
+
+def normalize_port_rects(size_xyz, port_defs: list[dict[str, float | str]]) -> list[dict[str, float | str]]:
+    sx, sy, sz = (abs(float(v)) for v in size_xyz)
+    rects = []
+    for index, port in enumerate(port_defs):
+        width = min(max(float(port.get("width", 0.001)), 0.001), sy * 0.90)
+        height = min(max(float(port.get("height", 0.001)), 0.001), sz * 0.90)
+        cy = clamp(float(port.get("center_y", 0.0)), -sy * 0.5 + width * 0.5, sy * 0.5 - width * 0.5)
+        cz = clamp(float(port.get("center_z", 0.0)), -sz * 0.5 + height * 0.5, sz * 0.5 - height * 0.5)
+        rects.append(
+            {
+                "label": safe_name(str(port.get("label", f"port_{index}")), f"port_{index}"),
+                "center_y": cy,
+                "center_z": cz,
+                "width": width,
+                "height": height,
+            }
+        )
+    return rects
+
+
+def add_port_box_frame_collisions(link: ET.Element, size_xyz, port_defs: list[dict[str, float | str]], mu: float, mu2: float):
+    sx, sy, sz = (abs(float(v)) for v in size_xyz)
+    ports = normalize_port_rects(size_xyz, port_defs)
+    back_wall_depth = min(max(sx * 0.12, 0.003), sx * 0.35)
+    back_wall_x = -(sx * 0.5) + back_wall_depth * 0.5
+
+    current_y = -sy * 0.5
+    for index, port in enumerate(sorted(ports, key=lambda p: float(p["center_y"]) - float(p["width"]) * 0.5)):
+        start_y = float(port["center_y"]) - float(port["width"]) * 0.5
+        end_y = float(port["center_y"]) + float(port["width"]) * 0.5
+        if start_y > current_y + 0.001:
+            gap_width = start_y - current_y
+            add_box_collision(
+                link,
+                f"port_frame_gap_{index}_collision",
+                (sx, gap_width, sz),
+                (0.0, current_y + gap_width * 0.5, 0.0),
+                mu,
+                mu2,
+            )
+        current_y = max(current_y, end_y)
+    if current_y < sy * 0.5 - 0.001:
+        gap_width = sy * 0.5 - current_y
+        add_box_collision(
+            link,
+            "port_frame_gap_end_collision",
+            (sx, gap_width, sz),
+            (0.0, current_y + gap_width * 0.5, 0.0),
+            mu,
+            mu2,
+        )
+
+    for port in ports:
+        label = str(port["label"])
+        center_y = float(port["center_y"])
+        center_z = float(port["center_z"])
+        port_width = float(port["width"])
+        port_height = float(port["height"])
+        top_height = sz * 0.5 - (center_z + port_height * 0.5)
+        bottom_height = (center_z - port_height * 0.5) + sz * 0.5
+        if top_height > 0.001:
+            add_box_collision(
+                link,
+                f"port_frame_{label}_top_collision",
+                (sx, port_width, top_height),
+                (0.0, center_y, center_z + port_height * 0.5 + top_height * 0.5),
+                mu,
+                mu2,
+            )
+        if bottom_height > 0.001:
+            add_box_collision(
+                link,
+                f"port_frame_{label}_bottom_collision",
+                (sx, port_width, bottom_height),
+                (0.0, center_y, center_z - port_height * 0.5 - bottom_height * 0.5),
+                mu,
+                mu2,
+            )
+
+    add_box_collision(
+        link,
+        "port_back_wall_collision",
+        (back_wall_depth, sy, sz),
+        (back_wall_x, 0.0, 0.0),
+        mu,
+        mu2,
+    )
+
+
+def add_port_box_frame_visuals(link: ET.Element, size_xyz, port_defs: list[dict[str, float | str]], rgba):
+    sx, sy, sz = (abs(float(v)) for v in size_xyz)
+    ports = normalize_port_rects(size_xyz, port_defs)
+    back_wall_depth = min(max(sx * 0.12, 0.003), sx * 0.35)
+    back_wall_x = -(sx * 0.5) + back_wall_depth * 0.5
+
+    current_y = -sy * 0.5
+    for index, port in enumerate(sorted(ports, key=lambda p: float(p["center_y"]) - float(p["width"]) * 0.5)):
+        start_y = float(port["center_y"]) - float(port["width"]) * 0.5
+        end_y = float(port["center_y"]) + float(port["width"]) * 0.5
+        if start_y > current_y + 0.001:
+            gap_width = start_y - current_y
+            add_box_visual(
+                link,
+                f"port_frame_gap_{index}_visual",
+                (sx, gap_width, sz),
+                (0.0, current_y + gap_width * 0.5, 0.0),
+                rgba,
+            )
+        current_y = max(current_y, end_y)
+    if current_y < sy * 0.5 - 0.001:
+        gap_width = sy * 0.5 - current_y
+        add_box_visual(
+            link,
+            "port_frame_gap_end_visual",
+            (sx, gap_width, sz),
+            (0.0, current_y + gap_width * 0.5, 0.0),
+            rgba,
+        )
+
+    for port in ports:
+        label = str(port["label"])
+        center_y = float(port["center_y"])
+        center_z = float(port["center_z"])
+        port_width = float(port["width"])
+        port_height = float(port["height"])
+        top_height = sz * 0.5 - (center_z + port_height * 0.5)
+        bottom_height = (center_z - port_height * 0.5) + sz * 0.5
+        if top_height > 0.001:
+            add_box_visual(
+                link,
+                f"port_frame_{label}_top_visual",
+                (sx, port_width, top_height),
+                (0.0, center_y, center_z + port_height * 0.5 + top_height * 0.5),
+                rgba,
+            )
+        if bottom_height > 0.001:
+            add_box_visual(
+                link,
+                f"port_frame_{label}_bottom_visual",
+                (sx, port_width, bottom_height),
+                (0.0, center_y, center_z - port_height * 0.5 - bottom_height * 0.5),
+                rgba,
+            )
+
+    add_box_visual(
+        link,
+        "port_back_wall_visual",
+        (back_wall_depth, sy, sz),
+        (back_wall_x, 0.0, 0.0),
+        rgba,
+    )
+
+
 def add_material(visual: ET.Element, rgba):
     material = sub(visual, "material")
     sub(material, "ambient", rgba_text(rgba))
@@ -179,6 +418,40 @@ def add_box_visual(link: ET.Element, name: str, size_xyz, pose_xyz, rgba):
     sub(visual, "pose", fmt_values((*pose_xyz, 0.0, 0.0, 0.0)))
     add_box_geometry(visual, size_xyz)
     add_material(visual, rgba)
+
+
+def wood_enabled(obj: dict[str, Any]) -> bool:
+    return str(obj.get("material_style", "")).strip().lower() in {"wood", "wooden"}
+
+
+def add_wood_grain_visuals(
+    link: ET.Element,
+    base_name: str,
+    size_xyz,
+    center_xyz=(0.0, 0.0, 0.0),
+    rgba=(0.30, 0.15, 0.06, 1.0),
+    face_axis: str = "z",
+    stripe_count: int = 6,
+):
+    sx, sy, sz = (abs(float(v)) for v in size_xyz)
+    cx, cy, cz = (float(v) for v in center_xyz)
+    stripe_count = max(1, int(stripe_count))
+    min_size = max(0.0001, min(sx, sy, sz))
+    line_thickness = max(min_size * 0.045, 0.00035)
+    surface_thickness = max(min_size * 0.018, 0.00020)
+
+    for index in range(stripe_count):
+        offset = ((index + 0.5) / stripe_count - 0.5) * 0.82
+        if face_axis == "x":
+            stripe_size = (surface_thickness, max(sy * 0.72, line_thickness), line_thickness)
+            stripe_pose = (cx + sx * 0.5 + surface_thickness * 0.5, cy, cz + offset * sz)
+        elif face_axis == "y":
+            stripe_size = (max(sx * 0.72, line_thickness), surface_thickness, line_thickness)
+            stripe_pose = (cx, cy + sy * 0.5 + surface_thickness * 0.5, cz + offset * sz)
+        else:
+            stripe_size = (max(sx * 0.72, line_thickness), line_thickness, surface_thickness)
+            stripe_pose = (cx, cy + offset * sy, cz + sz * 0.5 + surface_thickness * 0.5)
+        add_box_visual(link, f"{base_name}_{index:02d}", stripe_size, stripe_pose, rgba)
 
 
 def rubik_face_colors():
@@ -382,16 +655,18 @@ def add_task_object(world: ET.Element, obj: dict[str, Any], task_group: dict[str
     local_pos = vec3(obj.get("local_position_xyz"))
     unity_world_pos = add_vec(group_pos, mat_vec_mul(group_rot, local_pos))
     gazebo_pose_xyz = unity_vector_to_gazebo(unity_world_pos)
+    gazebo_pose_rpy = unity_euler_to_gazebo_rpy(vec3(obj.get("local_euler_xyz")))
 
     model = sub(world, "model", attrib={"name": object_id})
     sub(model, "static", "true" if is_static else "false")
-    sub(model, "pose", fmt_values((*gazebo_pose_xyz, 0.0, 0.0, 0.0)))
+    sub(model, "pose", fmt_values((*gazebo_pose_xyz, *gazebo_pose_rpy)))
     link = sub(model, "link", attrib={"name": link_name})
     if not is_static:
         add_inertial(link, object_type, float(obj.get("mass_kg", 0.03)))
 
     collision = sub(link, "collision", attrib={"name": "collision"})
     visual = sub(link, "visual", attrib={"name": "visual"})
+    default_collision_friction = True
     if object_type == "cylinder":
         radius = float(obj.get("radius", 0.01))
         height = float(obj.get("height", 0.048))
@@ -411,39 +686,50 @@ def add_task_object(world: ET.Element, obj: dict[str, Any], task_group: dict[str
         )
     elif object_type == "port_box":
         size = unity_size_to_gazebo(vec3(obj.get("size_xyz"), (0.04, 0.04, 0.04)))
-        add_box_geometry(collision, size)
-        add_box_geometry(visual, size)
-        add_material(visual, color)
-        port_unity_size = vec3(obj.get("port_size_xyz"), (0.018, 0.006, 0.014))
-        port_size = unity_size_to_gazebo(port_unity_size)
-        port_color = vec4(obj.get("port_color_rgba"), (0.01, 0.01, 0.012, 1.0))
-        add_box_visual(
+        port_defs = gazebo_port_defs_from_unity(obj)
+        link.remove(collision)
+        link.remove(visual)
+        default_collision_friction = False
+        add_port_box_frame_collisions(
             link,
-            "port_visual",
-            (0.0008, port_size[1], port_size[2]),
-            (size[0] * 0.5 + 0.00045, 0.0, 0.0),
-            port_color,
+            size,
+            port_defs,
+            1.0 if is_static else 0.9,
+            1.0 if is_static else 0.9,
         )
+        add_port_box_frame_visuals(link, size, port_defs, color)
+        if wood_enabled(obj):
+            grain_color = vec4(obj.get("wood_grain_color_rgba"), (0.30, 0.15, 0.06, 1.0))
+            add_wood_grain_visuals(link, "port_box_wood_top", size, rgba=grain_color, face_axis="z")
+            add_wood_grain_visuals(link, "port_box_wood_side", size, rgba=grain_color, face_axis="y", stripe_count=5)
     elif object_type == "cable_rod":
         size = unity_size_to_gazebo(vec3(obj.get("size_xyz"), (0.009, 0.009, 0.075)))
         add_box_geometry(collision, size)
         add_box_geometry(visual, size)
         add_material(visual, color)
+        grain_color = vec4(obj.get("wood_grain_color_rgba"), (0.33, 0.18, 0.08, 1.0))
+        if wood_enabled(obj):
+            add_wood_grain_visuals(link, "cable_rod_wood_top", size, rgba=grain_color, face_axis="z", stripe_count=4)
         plug_size = unity_size_to_gazebo(vec3(obj.get("plug_size_xyz"), (0.016, 0.010, 0.016)))
         plug_color = vec4(obj.get("plug_color_rgba"), (0.12, 0.12, 0.13, 1.0))
+        plug_center = (-(size[0] * 0.5 + plug_size[0] * 0.5), 0.0, 0.0)
+        add_box_collision(link, "plug_end_collision", plug_size, plug_center, 0.9, 0.9)
         add_box_visual(
             link,
             "plug_end_visual",
             plug_size,
-            (-(size[0] * 0.5 + plug_size[0] * 0.5), 0.0, 0.0),
+            plug_center,
             plug_color,
         )
+        if wood_enabled(obj):
+            add_wood_grain_visuals(link, "cable_plug_wood_top", plug_size, center_xyz=plug_center, rgba=grain_color, face_axis="z", stripe_count=3)
     else:
         size = unity_size_to_gazebo(vec3(obj.get("size_xyz"), (0.02, 0.04, 0.02)))
         add_box_geometry(collision, size)
         add_box_geometry(visual, size)
         add_material(visual, color)
-    add_friction(collision, 1.0 if is_static else 0.9, 1.0 if is_static else 0.9)
+    if default_collision_friction:
+        add_friction(collision, 1.0 if is_static else 0.9, 1.0 if is_static else 0.9)
 
 
 def indent(elem: ET.Element, level: int = 0):
@@ -514,6 +800,28 @@ def write_unity_task_json(scene_profile_path: Path, unity_output_path: Path):
         r, g, b, a = vec4(values)
         return {"r": r, "g": g, "b": b, "a": a}
 
+    def json_ports(obj: dict[str, Any]):
+        raw_ports = obj.get("ports")
+        if not isinstance(raw_ports, list) or not raw_ports:
+            return []
+        out = []
+        for index, port in enumerate(raw_ports):
+            if not isinstance(port, dict):
+                continue
+            center_xy = port.get("center_xy", port.get("center", (0.0, 0.0, 0.0)))
+            if isinstance(center_xy, (list, tuple)) and len(center_xy) >= 2:
+                center = (float(center_xy[0]), float(center_xy[1]), 0.0)
+            else:
+                center = (0.0, 0.0, 0.0)
+            out.append(
+                {
+                    "label": str(port.get("label", f"port_{index}")),
+                    "center": json_vec3(center),
+                    "size": json_vec3(port.get("size_xyz", obj.get("port_size_xyz", (0.018, 0.012, 0.018)))),
+                }
+            )
+        return out
+
     unity_task = {
         "taskProfile": str(task.get("task_profile", "unnamed_task")),
         "taskGroupName": task_group_name,
@@ -537,11 +845,14 @@ def write_unity_task_json(scene_profile_path: Path, unity_output_path: Path):
                 "rubikY": int(obj.get("rubik_y", 0)),
                 "rubikZ": int(obj.get("rubik_z", 0)),
                 "stickerGap": float(obj.get("sticker_gap_m", 0.002)),
-                "portSize": json_vec3(obj.get("port_size_xyz", (0.018, 0.006, 0.014))),
+                "portSize": json_vec3(obj.get("port_size_xyz", (0.018, 0.012, 0.018))),
+                "ports": json_ports(obj),
                 "portColor": json_color(obj.get("port_color_rgba", (0.01, 0.01, 0.012, 1.0))),
                 "plugSize": json_vec3(obj.get("plug_size_xyz", (0.016, 0.010, 0.016))),
                 "plugColor": json_color(obj.get("plug_color_rgba", (0.12, 0.12, 0.13, 1.0))),
                 "color": json_color(obj.get("color_rgba", (0.8, 0.8, 0.8, 1.0))),
+                "materialStyle": str(obj.get("material_style", "")),
+                "woodGrainColor": json_color(obj.get("wood_grain_color_rgba", (0.30, 0.15, 0.06, 1.0))),
             }
         )
 

@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using Unity.Robotics.ROSTCPConnector;
 using Unity.Robotics.ROSTCPConnector.ROSGeometry;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using RosMessageTypes.Geometry;
+using RosMessageTypes.Std;
 
 public class SceneObjectPoseSyncManager : MonoBehaviour
 {
@@ -27,6 +29,9 @@ public class SceneObjectPoseSyncManager : MonoBehaviour
     [Tooltip("Prefer the generated task profile created from ros_backend1.1/profiles instead of the fallback bindings below.")]
     public bool loadBindingsFromGeneratedTaskProfile = true;
     public string taskProfileResourcePath = "TaskProfiles/active_task";
+    [Tooltip("Subscribe to the backend task manager manifest so runtime task switches rebuild only the task group.")]
+    public bool subscribeToRuntimeTaskManifest = true;
+    public string runtimeTaskManifestTopic = "/task_manager/active_task_manifest";
 
     [Header("Workspace placement")]
     [Tooltip("When present, incoming Gazebo-world poses are placed relative to this movable Unity workspace root.")]
@@ -49,20 +54,27 @@ public class SceneObjectPoseSyncManager : MonoBehaviour
     [Header("Bindings")]
     public SyncBinding[] bindings =
     {
+        new SyncBinding { objectName = "Sync_TaskPlatform", topicName = "/unity_sync/Sync_TaskPlatform_pose", applyOrientation = true },
         new SyncBinding { objectName = "Sync_RedCube", topicName = "/unity_sync/Sync_RedCube_pose", applyOrientation = true },
         new SyncBinding { objectName = "Sync_GreenCube", topicName = "/unity_sync/Sync_GreenCube_pose", applyOrientation = true },
         new SyncBinding { objectName = "Sync_RedCylinder", topicName = "/unity_sync/Sync_RedCylinder_pose", applyOrientation = true },
         new SyncBinding { objectName = "Sync_GreenCylinder", topicName = "/unity_sync/Sync_GreenCylinder_pose", applyOrientation = true },
         new SyncBinding { objectName = "Sync_Plate_A", topicName = "/unity_sync/Sync_Plate_A_pose", applyOrientation = true },
         new SyncBinding { objectName = "Sync_Plate_B", topicName = "/unity_sync/Sync_Plate_B_pose", applyOrientation = true },
+        new SyncBinding { objectName = "Sync_CableReceiverBox", topicName = "/unity_sync/Sync_CableReceiverBox_pose", applyOrientation = true },
+        new SyncBinding { objectName = "Sync_CableReceiverBox_Fixed", topicName = "/unity_sync/Sync_CableReceiverBox_Fixed_pose", applyOrientation = true },
+        new SyncBinding { objectName = "Sync_CableRod", topicName = "/unity_sync/Sync_CableRod_pose", applyOrientation = true },
+        new SyncBinding { objectName = "Sync_CableRod_B", topicName = "/unity_sync/Sync_CableRod_B_pose", applyOrientation = true },
     };
 
     private readonly Dictionary<string, Transform> targetByTopic = new Dictionary<string, Transform>();
     private readonly Dictionary<string, bool> applyOrientationByTopic = new Dictionary<string, bool>();
     private readonly Dictionary<string, PoseState> latestPoseByTopic = new Dictionary<string, PoseState>();
     private readonly HashSet<string> firstPoseAppliedByTopic = new HashSet<string>();
+    private readonly HashSet<string> subscribedTopics = new HashSet<string>();
     private readonly object poseLock = new object();
     private ROSConnection ros;
+    private string lastRuntimeTaskManifestJson = "";
 
 #pragma warning disable 0649
     [Serializable]
@@ -87,6 +99,8 @@ public class SceneObjectPoseSyncManager : MonoBehaviour
 
     private void Awake()
     {
+        EnsureTaskVisualsExist();
+
         if (referenceFrame == null)
         {
             var go = GameObject.Find("base_link") ?? GameObject.Find("UR5e") ?? GameObject.Find("ur5e");
@@ -108,8 +122,29 @@ public class SceneObjectPoseSyncManager : MonoBehaviour
 
     private void Start()
     {
-        ros = ROSConnection.GetOrCreateInstance();
+        EnsureTaskVisualsExist();
 
+        if (loadBindingsFromGeneratedTaskProfile)
+            LoadBindingsFromGeneratedTaskProfile();
+
+        if (autoPopulateDefaultBindings)
+            TryBindTargetsByName();
+
+        if (disableTargetCollidersForVisualization)
+            DisableBoundTargetColliders();
+
+        ros = ROSConnection.GetOrCreateInstance();
+        if (subscribeToRuntimeTaskManifest && !string.IsNullOrWhiteSpace(runtimeTaskManifestTopic))
+            ros.Subscribe<StringMsg>(runtimeTaskManifestTopic, OnRuntimeTaskManifestReceived);
+
+        ConfigureBindingsAndSubscriptions();
+    }
+
+    private void ConfigureBindingsAndSubscriptions()
+    {
+        targetByTopic.Clear();
+        applyOrientationByTopic.Clear();
+        HashSet<string> activeTopics = new HashSet<string>();
         foreach (var binding in bindings)
         {
             if (binding == null || string.IsNullOrWhiteSpace(binding.topicName))
@@ -122,12 +157,64 @@ public class SceneObjectPoseSyncManager : MonoBehaviour
             }
 
             string topic = binding.topicName;
+            activeTopics.Add(topic);
             targetByTopic[topic] = binding.target;
             applyOrientationByTopic[topic] = binding.applyOrientation;
-            latestPoseByTopic[topic] = default;
-            ros.Subscribe<PoseStampedMsg>(topic, msg => OnPoseReceived(topic, msg));
-            Debug.Log($"[SceneObjectPoseSyncManager] Subscribed {binding.objectName} <- {topic}");
+            if (!latestPoseByTopic.ContainsKey(topic))
+                latestPoseByTopic[topic] = default;
+            if (subscribedTopics.Add(topic))
+            {
+                ros.Subscribe<PoseStampedMsg>(topic, msg => OnPoseReceived(topic, msg));
+                Debug.Log($"[SceneObjectPoseSyncManager] Subscribed {binding.objectName} <- {topic}");
+            }
         }
+
+        List<string> staleTopics = new List<string>();
+        foreach (string topic in latestPoseByTopic.Keys)
+        {
+            if (!activeTopics.Contains(topic))
+                staleTopics.Add(topic);
+        }
+        foreach (string topic in staleTopics)
+        {
+            latestPoseByTopic.Remove(topic);
+            firstPoseAppliedByTopic.Remove(topic);
+        }
+    }
+
+    private void EnsureTaskVisualsExist()
+    {
+        GazeboReplicaDualArmSceneBuilder builder = FindFirstObjectByType<GazeboReplicaDualArmSceneBuilder>();
+        if (builder == null)
+        {
+            foreach (GazeboReplicaDualArmSceneBuilder candidate in FindObjectsByType<GazeboReplicaDualArmSceneBuilder>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                builder = candidate;
+                break;
+            }
+        }
+
+        if (builder == null && IsActiveDualArmScene())
+        {
+            GameObject builderObject = new GameObject("GazeboReplicaDualArmSceneBuilder");
+            builder = builderObject.AddComponent<GazeboReplicaDualArmSceneBuilder>();
+        }
+
+        if (builder == null)
+            return;
+
+        if (!builder.gameObject.activeSelf)
+            builder.gameObject.SetActive(true);
+        if (!builder.enabled)
+            builder.enabled = true;
+
+        builder.BuildOrUpdateScene();
+    }
+
+    private static bool IsActiveDualArmScene()
+    {
+        Scene scene = SceneManager.GetActiveScene();
+        return scene.IsValid() && scene.name.IndexOf("DualArm", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     private void LoadBindingsFromGeneratedTaskProfile()
@@ -159,8 +246,38 @@ public class SceneObjectPoseSyncManager : MonoBehaviour
             return;
         }
 
-        List<SyncBinding> generatedBindings = new List<SyncBinding>();
+        ApplyBindingsFromTaskProfile(profile, $"Resources/{taskProfileResourcePath}");
+    }
+
+    private void LoadBindingsFromRuntimeTaskManifest(string manifestJson)
+    {
+        if (string.IsNullOrWhiteSpace(manifestJson))
+            return;
+
+        UnityTaskProfile profile;
+        try
+        {
+            profile = JsonUtility.FromJson<UnityTaskProfile>(manifestJson);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[SceneObjectPoseSyncManager] Could not parse runtime task manifest: {ex.Message}");
+            return;
+        }
+
+        ApplyBindingsFromTaskProfile(profile, runtimeTaskManifestTopic);
+    }
+
+    private void ApplyBindingsFromTaskProfile(UnityTaskProfile profile, string sourceLabel)
+    {
         HashSet<string> seenObjectNames = new HashSet<string>();
+        if (profile == null || profile.objects == null || profile.objects.Length == 0)
+        {
+            Debug.LogWarning($"[SceneObjectPoseSyncManager] Task profile {sourceLabel} has no objects; keeping existing bindings.");
+            return;
+        }
+
+        List<SyncBinding> generatedBindings = new List<SyncBinding>();
         foreach (UnityTaskObject taskObject in profile.objects)
         {
             string objectName = taskObject?.id;
@@ -185,7 +302,27 @@ public class SceneObjectPoseSyncManager : MonoBehaviour
         }
 
         bindings = generatedBindings.ToArray();
-        Debug.Log($"[SceneObjectPoseSyncManager] Loaded {bindings.Length} sync bindings from Resources/{taskProfileResourcePath}.");
+        Debug.Log($"[SceneObjectPoseSyncManager] Loaded {bindings.Length} sync bindings from {sourceLabel}.");
+    }
+
+    private void OnRuntimeTaskManifestReceived(StringMsg msg)
+    {
+        if (msg == null || string.IsNullOrWhiteSpace(msg.data))
+            return;
+        if (string.Equals(lastRuntimeTaskManifestJson, msg.data, StringComparison.Ordinal))
+            return;
+
+        lastRuntimeTaskManifestJson = msg.data;
+        GazeboReplicaDualArmSceneBuilder builder = FindFirstObjectByType<GazeboReplicaDualArmSceneBuilder>();
+        if (builder != null && builder.isActiveAndEnabled)
+            builder.ApplyRuntimeTaskManifestJson(msg.data);
+
+        LoadBindingsFromRuntimeTaskManifest(msg.data);
+        if (autoPopulateDefaultBindings)
+            TryBindTargetsByName();
+        if (disableTargetCollidersForVisualization)
+            DisableBoundTargetColliders();
+        ConfigureBindingsAndSubscriptions();
     }
 
     private SyncBinding FindBindingByObjectName(string objectName)

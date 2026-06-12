@@ -40,6 +40,8 @@ public class WorkspaceDragController : MonoBehaviour
 
     [Header("Drag Input")]
     public OVRInput.Controller dragController = OVRInput.Controller.RTouch;
+    [Tooltip("Let either Quest controller select/drag workspace handles. The serialized dragController remains the fallback/preferred hand.")]
+    public bool allowEitherController = true;
     [Range(0.05f, 0.95f)] public float dragTriggerThreshold = 0.55f;
     [Range(0.05f, 0.95f)] public float rightGripTeleopBlockThreshold = 0.55f;
     public bool requireRightGripReleased = true;
@@ -67,8 +69,8 @@ public class WorkspaceDragController : MonoBehaviour
     public float hoverTriggerThreshold = 0.05f;
     public float contactMarkerScale = 0.035f;
     public float contactMarkerSurfaceOffset = 0.006f;
-    public Color translateContactColor = new Color(0.20f, 0.85f, 1.0f, 0.92f);
-    public Color rotateContactColor = new Color(0.92f, 0.92f, 0.92f, 0.88f);
+    public Color translateContactColor = new Color(1.0f, 0.85f, 0.20f, 0.92f);
+    public Color rotateContactColor = new Color(1.0f, 0.85f, 0.20f, 0.92f);
     [Range(0.0f, 1.0f)] public float occludedContactAlphaMultiplier = 0.55f;
 
     [Header("Handle Visibility")]
@@ -94,6 +96,7 @@ public class WorkspaceDragController : MonoBehaviour
     private float rotationPlaneY;
     private float rotationStartAngle;
     private bool triggerWasHeld;
+    private OVRInput.Controller activeDragController = OVRInput.Controller.None;
     private float nextRootRefreshTime;
     private string activeHandleName = "none";
     private ManipulationMode activeMode = ManipulationMode.None;
@@ -121,7 +124,7 @@ public class WorkspaceDragController : MonoBehaviour
 
     private void Start()
     {
-        ResolveControllerTransform();
+        ResolveActiveControllerTransform();
         ResolveWorkspaceRoot();
         UpdateWorkspaceHandleInteractivity(false);
         UpdateWorkspaceHandleRenderVisibility(false);
@@ -129,24 +132,26 @@ public class WorkspaceDragController : MonoBehaviour
 
     private void Update()
     {
-        ResolveControllerTransform();
+        ResolveActiveControllerTransform();
 
         if (autoResolveWorkspaceRoot && Time.unscaledTime >= nextRootRefreshTime)
             ResolveWorkspaceRoot();
 
         EnsureOperationalRootsParented();
 
-        bool teleopHeld = OVRInput.Get(OVRInput.Axis1D.PrimaryHandTrigger, OVRInput.Controller.RTouch) >= rightGripTeleopBlockThreshold;
-        float triggerValue = OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, dragController);
+        bool activeControllerReady = controllerTransform != null
+            && activeDragController != OVRInput.Controller.None
+            && IsControllerConnected(activeDragController);
+        bool teleopHeld = activeControllerReady && GetGripValue(activeDragController) >= rightGripTeleopBlockThreshold;
+        float triggerValue = activeControllerReady ? GetTriggerValue(activeDragController) : 0f;
         bool triggerHeld = triggerValue >= dragTriggerThreshold;
-        bool controllerRayVisualVisible = IsControllerRayVisualVisible();
+        bool controllerRayVisualVisible = activeControllerReady && IsControllerRayVisualVisible(activeDragController);
         bool hoverIntent = showContactMarkerOnHover
             && (triggerValue >= Mathf.Max(0.0f, hoverTriggerThreshold)
                 || (showContactMarkerWhileRayVisualVisible && controllerRayVisualVisible));
         bool blocked = requireRightGripReleased && teleopHeld;
-        bool controllerReady = controllerTransform != null && IsControllerConnected(dragController);
         bool controllerRayActive = !blocked
-            && controllerReady
+            && activeControllerReady
             && workspaceRoot != null
             && (triggerHeld || hoverIntent || controllerRayVisualVisible);
 
@@ -155,7 +160,7 @@ public class WorkspaceDragController : MonoBehaviour
         bool contactHit = false;
         ManipulationMode contactMode = ManipulationMode.None;
         Vector3 contactPoint = Vector3.zero;
-        if (!blocked && controllerReady && workspaceRoot != null && (triggerHeld || hoverIntent))
+        if (!blocked && activeControllerReady && workspaceRoot != null && (triggerHeld || hoverIntent))
         {
             contactHit = RayHitsWorkspaceHandle(
                 out _,
@@ -165,14 +170,14 @@ public class WorkspaceDragController : MonoBehaviour
         }
         UpdateHandleContactMarker(contactHit, contactPoint, contactMode);
 
-        if (blocked || !triggerHeld || !controllerReady || workspaceRoot == null)
+        if (blocked || !triggerHeld || !activeControllerReady || workspaceRoot == null)
         {
             EndDrag();
             UpdateWorkspaceHandleRenderVisibility(controllerRayActive || (keepHandlesVisibleWhileDragging && IsDragging));
             if (!controllerRayActive)
                 UpdateWorkspaceHandleInteractivity(false);
             triggerWasHeld = triggerHeld;
-            LastStatus = $"idle root={(workspaceRoot ? workspaceRoot.name : "NULL")}, handle={activeHandleName}, mode={activeMode}, trigger={triggerHeld}, teleopHeld={teleopHeld}, controller={(controllerTransform ? controllerTransform.name : "NULL")}";
+            LastStatus = $"idle root={(workspaceRoot ? workspaceRoot.name : "NULL")}, handle={activeHandleName}, mode={activeMode}, trigger={triggerHeld}, teleopHeld={teleopHeld}, controller={ActiveControllerLabel()}";
             return;
         }
 
@@ -185,7 +190,7 @@ public class WorkspaceDragController : MonoBehaviour
         UpdateWorkspaceHandleRenderVisibility(controllerRayActive || (keepHandlesVisibleWhileDragging && IsDragging));
 
         triggerWasHeld = triggerHeld;
-        LastStatus = $"dragging={IsDragging}, mode={activeMode}, root={(workspaceRoot ? workspaceRoot.name : "NULL")}, handle={activeHandleName}, teleopHeld={teleopHeld}";
+        LastStatus = $"dragging={IsDragging}, mode={activeMode}, root={(workspaceRoot ? workspaceRoot.name : "NULL")}, handle={activeHandleName}, teleopHeld={teleopHeld}, controller={ActiveControllerLabel()}";
     }
 
     private void UpdateWorkspaceHandleInteractivity(bool interactive)
@@ -298,7 +303,7 @@ public class WorkspaceDragController : MonoBehaviour
         rotationStartAngle = HorizontalAngle(workspaceStartPosition, hitPoint);
         CaptureOperationalRootStartPoses();
         IsDragging = true;
-        Debug.Log($"[WorkspaceDragController] Drag started on {activeHandleName} ({activeMode}).");
+        Debug.Log($"[WorkspaceDragController] Drag started on {activeHandleName} ({activeMode}) with {ActiveControllerLabel()}.");
     }
 
     private void ApplyDrag()
@@ -645,14 +650,19 @@ public class WorkspaceDragController : MonoBehaviour
 
     private bool RayHitsWorkspaceHandle(out string hitName, out ManipulationMode hitMode, out Vector3 hitPoint, out float hitDistance)
     {
+        return RayHitsWorkspaceHandle(controllerTransform, out hitName, out hitMode, out hitPoint, out hitDistance);
+    }
+
+    private bool RayHitsWorkspaceHandle(Transform rayController, out string hitName, out ManipulationMode hitMode, out Vector3 hitPoint, out float hitDistance)
+    {
         hitName = "none";
         hitMode = ManipulationMode.None;
         hitPoint = Vector3.zero;
         hitDistance = 0f;
-        if (controllerTransform == null)
+        if (rayController == null)
             return false;
 
-        Ray ray = new Ray(controllerTransform.position, controllerTransform.forward);
+        Ray ray = new Ray(rayController.position, rayController.forward);
         RaycastHit[] hits = Physics.RaycastAll(ray, Mathf.Max(0.05f, rayMaxDistance), ~0, QueryTriggerInteraction.Collide);
         if (hits == null || hits.Length == 0)
             return false;
@@ -722,17 +732,80 @@ public class WorkspaceDragController : MonoBehaviour
         return Mathf.Atan2(delta.z, delta.x) * Mathf.Rad2Deg;
     }
 
-    private void ResolveControllerTransform()
+    private void ResolveActiveControllerTransform()
     {
-        if (controllerTransform != null && controllerTransform.gameObject.activeInHierarchy)
+        OVRInput.Controller selected = SelectActiveController();
+        if (selected == OVRInput.Controller.None)
+        {
+            controllerTransform = null;
+            activeDragController = OVRInput.Controller.None;
             return;
+        }
 
-        GameObject controllerObject = dragController == OVRInput.Controller.LTouch
+        Transform selectedTransform = FindControllerTransform(selected);
+        if (selectedTransform == null)
+        {
+            controllerTransform = null;
+            activeDragController = OVRInput.Controller.None;
+            return;
+        }
+
+        activeDragController = selected;
+        controllerTransform = selectedTransform;
+    }
+
+    private OVRInput.Controller SelectActiveController()
+    {
+        if (IsDragging && activeDragController != OVRInput.Controller.None && FindControllerTransform(activeDragController) != null)
+            return activeDragController;
+
+        OVRInput.Controller preferred = NormalizeController(dragController);
+        if (!allowEitherController)
+            return preferred;
+
+        OVRInput.Controller other = preferred == OVRInput.Controller.LTouch ? OVRInput.Controller.RTouch : OVRInput.Controller.LTouch;
+        float preferredScore = ControllerSelectionScore(preferred, preferBonus: 0.1f);
+        float otherScore = ControllerSelectionScore(other, preferBonus: 0.0f);
+
+        if (otherScore > preferredScore)
+            return other;
+        if (preferredScore >= 0.0f)
+            return preferred;
+        if (otherScore >= 0.0f)
+            return other;
+        return OVRInput.Controller.None;
+    }
+
+    private float ControllerSelectionScore(OVRInput.Controller controller, float preferBonus)
+    {
+        Transform candidate = FindControllerTransform(controller);
+        if (candidate == null || !IsControllerConnected(controller))
+            return -1f;
+
+        float triggerValue = GetTriggerValue(controller);
+        bool rayVisible = IsControllerRayVisualVisible(controller);
+        bool handleHit = RayHitsWorkspaceHandle(candidate, out _, out _, out _, out _);
+
+        float score = preferBonus;
+        if (triggerValue >= dragTriggerThreshold)
+            score += 100f + triggerValue;
+        else if (triggerValue >= Mathf.Max(0.0f, hoverTriggerThreshold))
+            score += 50f + triggerValue;
+        if (rayVisible)
+            score += 20f;
+        if (handleHit)
+            score += 10f;
+        return score;
+    }
+
+    private Transform FindControllerTransform(OVRInput.Controller controller)
+    {
+        OVRInput.Controller normalized = NormalizeController(controller);
+        GameObject controllerObject = normalized == OVRInput.Controller.LTouch
             ? GameObject.Find("OVRCameraRig/TrackingSpace/LeftControllerAnchor") ?? GameObject.Find("LeftControllerAnchor")
             : GameObject.Find("OVRCameraRig/TrackingSpace/RightControllerAnchor") ?? GameObject.Find("RightControllerAnchor");
 
-        if (controllerObject != null)
-            controllerTransform = controllerObject.transform;
+        return controllerObject != null && controllerObject.activeInHierarchy ? controllerObject.transform : null;
     }
 
     private static float GetYaw(Quaternion rotation)
@@ -742,22 +815,57 @@ public class WorkspaceDragController : MonoBehaviour
 
     private static bool IsControllerConnected(OVRInput.Controller controller)
     {
-        return (OVRInput.GetConnectedControllers() & controller) != OVRInput.Controller.None;
+        OVRInput.Controller normalized = NormalizeController(controller);
+        return (OVRInput.GetConnectedControllers() & normalized) != OVRInput.Controller.None;
     }
 
-    private bool IsControllerRayVisualVisible()
+    private static OVRInput.Controller NormalizeController(OVRInput.Controller controller)
+    {
+        return controller == OVRInput.Controller.LTouch ? OVRInput.Controller.LTouch : OVRInput.Controller.RTouch;
+    }
+
+    private static float GetTriggerValue(OVRInput.Controller controller)
+    {
+        OVRInput.Controller normalized = NormalizeController(controller);
+        if (normalized == OVRInput.Controller.LTouch)
+        {
+            return Mathf.Max(
+                OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.LTouch),
+                OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.Touch));
+        }
+
+        return Mathf.Max(
+            OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.RTouch),
+            OVRInput.Get(OVRInput.Axis1D.SecondaryIndexTrigger, OVRInput.Controller.Touch));
+    }
+
+    private static float GetGripValue(OVRInput.Controller controller)
+    {
+        OVRInput.Controller normalized = NormalizeController(controller);
+        if (normalized == OVRInput.Controller.LTouch)
+        {
+            return Mathf.Max(
+                OVRInput.Get(OVRInput.Axis1D.PrimaryHandTrigger, OVRInput.Controller.LTouch),
+                OVRInput.Get(OVRInput.Axis1D.PrimaryHandTrigger, OVRInput.Controller.Touch));
+        }
+
+        return Mathf.Max(
+            OVRInput.Get(OVRInput.Axis1D.PrimaryHandTrigger, OVRInput.Controller.RTouch),
+            OVRInput.Get(OVRInput.Axis1D.SecondaryHandTrigger, OVRInput.Controller.Touch));
+    }
+
+    private string ActiveControllerLabel()
+    {
+        if (controllerTransform == null || activeDragController == OVRInput.Controller.None)
+            return "NULL";
+        return $"{activeDragController}:{controllerTransform.name}";
+    }
+
+    private bool IsControllerRayVisualVisible(OVRInput.Controller controller)
     {
         GameObject activeControllerRay = GameObject.Find(
-            dragController == OVRInput.Controller.LTouch ? "LeftControllerAimRay" : "RightControllerAimRay");
-        if (activeControllerRay != null && activeControllerRay.activeInHierarchy)
-            return true;
-
-        GameObject leftRay = GameObject.Find("LeftControllerAimRay");
-        if (leftRay != null && leftRay.activeInHierarchy)
-            return true;
-
-        GameObject rightRay = GameObject.Find("RightControllerAimRay");
-        return rightRay != null && rightRay.activeInHierarchy;
+            NormalizeController(controller) == OVRInput.Controller.LTouch ? "LeftControllerAimRay" : "RightControllerAimRay");
+        return activeControllerRay != null && activeControllerRay.activeInHierarchy;
     }
 
     private static T[] FindAll<T>() where T : Object

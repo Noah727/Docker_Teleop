@@ -67,6 +67,8 @@ recordings/
 demo_media/
 .quest_screenshots/
 debug/
+.debug_live/
+_backups/
 *.apk
 *.aab
 *.bag

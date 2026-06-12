@@ -1,0 +1,15 @@
+[ok] Workspace already built (teleop_bridge + servo_test_config found).
+[ok] Workspace already built (teleop_bridge + servo_test_config found).
+[ok] Started dual debug hand generator (log: /tmp/debug_hand_generator.log).
+     arm=both, pattern=circle_xy, duration=14.0, period=4.0, amp=(0.12,0.0,0.0), workspace_yaw=0.0
+     quest_controller_receiver was stopped to avoid competing headset/stale messages.
+     Run ./scripts/backend11_lifecycle.sh start_receiver to restore headset input.
+[ok] Workspace already built (teleop_bridge + servo_test_config found).
+=== Servo response summary ===
+left: target_msgs=18 active=18 max_target_lin=0.7914 max_target_ang=0.0000
+left: cmd_msgs=721 nonzero_cmd=60 max_cmd_norm=2.8097 max_joint=1.8549
+left: status_counts={0: 721} scale_min=1.0 scale_max=1.0 scale_last=1.0
+right: target_msgs=18 active=18 max_target_lin=0.7718 max_target_ang=0.0000
+right: cmd_msgs=720 nonzero_cmd=40 max_cmd_norm=2.5800 max_joint=1.8368
+right: status_counts={0: 720} scale_min=1.0 scale_max=1.0 scale_last=1.0
+[ok] Stopped dual debug hand generator.

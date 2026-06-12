@@ -1,0 +1,1 @@
+[INFO] [1781223962.650545844] [servo_response_sampler]: Sampling Servo response for 12.0s on arms=['left', 'right']

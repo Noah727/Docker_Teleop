@@ -35,7 +35,7 @@ attachment_angular_deadband: 0.03
 The mapper code that consumes this is:
 
 ```text
-ros_backend1.1/src/teleop_bridge/teleop_bridge/received_pose_to_target_twist.py
+ros_backend1.1/src/teleop_bridge/teleop_bridge/mapping/hand_pose_mapper.py
 ```
 
 Look for:

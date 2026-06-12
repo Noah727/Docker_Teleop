@@ -1,0 +1,5 @@
+topic,type,messages,mean_hz,min_gap_sec,max_gap_sec
+/left_arm/received_pose_states,teleop_bridge_msgs/msg/ReceivedPoseStates,815,60.0031121742115,0.014347709016874433,0.020144416019320488
+/right_arm/received_pose_states,teleop_bridge_msgs/msg/ReceivedPoseStates,815,60.002728104593075,0.014394249999895692,0.020200291997753084
+/left_arm/target_twist_states,teleop_bridge_msgs/msg/TargetTwistStates,56,3.729378368745405,0.24848387495148927,0.29495291702914983
+/right_arm/target_twist_states,teleop_bridge_msgs/msg/TargetTwistStates,56,3.729271436222729,0.24816700001247227,0.29790725000202656

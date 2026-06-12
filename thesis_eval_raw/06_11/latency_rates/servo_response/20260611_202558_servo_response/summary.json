@@ -1,0 +1,6 @@
+{
+  "arm": "both",
+  "duration_sec": 12.0,
+  "pattern": "circle_xy",
+  "returncode": 0
+}

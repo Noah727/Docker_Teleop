@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System.Collections;
 using System.Collections.Generic;
 
 #if UNITY_EDITOR
@@ -25,14 +26,20 @@ public class GazeboReplicaDualArmSceneBuilder : MonoBehaviour
     public string taskProfileResourcePath = "TaskProfiles/active_task";
     public bool deleteObjectsNotInActiveTask = true;
 
+    [Header("Player Startup")]
+    [Tooltip("In Quest/player builds, rebuild the generated task visuals for a few startup frames so the task exists before ROS/Gazebo publishes any manifest or pose.")]
+    public bool rebuildDuringPlayerStartup = true;
+    [Tooltip("Number of startup frames to repeat the generated-profile rebuild in player mode. This protects against scene/ROS initialization order races.")]
+    public int playerStartupRebuildFrames = 3;
+
     [Header("Base Gazebo Replica")]
     public bool configureBaseReplicaScene = true;
 
     [Header("Robot Placement")]
     public Vector3 leftRobotLocalPosition = new Vector3(-0.60f, 0f, 0f);
     public Vector3 rightRobotLocalPosition = new Vector3(0.60f, 0f, 0f);
-    public Vector3 leftRobotLocalEuler = new Vector3(0f, 90f, 0f);
-    public Vector3 rightRobotLocalEuler = new Vector3(0f, -90f, 0f);
+    public Vector3 leftRobotLocalEuler = Vector3.zero;
+    public Vector3 rightRobotLocalEuler = Vector3.zero;
 
     [Header("Task Object Placement")]
     public Vector3 taskGroupLocalPosition = new Vector3(0f, 0f, 0.64f);
@@ -83,6 +90,29 @@ public class GazeboReplicaDualArmSceneBuilder : MonoBehaviour
             BuildOrUpdateScene();
     }
 
+    private void Start()
+    {
+        if (!Application.isPlaying || !rebuildDuringPlayerStartup || !IsDualArmScene())
+            return;
+
+        StartCoroutine(RebuildForPlayerStartup());
+    }
+
+    private IEnumerator RebuildForPlayerStartup()
+    {
+        int frames = Mathf.Max(1, playerStartupRebuildFrames);
+        for (int i = 0; i < frames; i++)
+        {
+            yield return null;
+            BuildOrUpdateScene();
+        }
+
+        UnityTaskProfile taskProfile = LoadTaskProfile();
+        int expected = taskProfile != null && taskProfile.objects != null ? taskProfile.objects.Length : 0;
+        int present = CountGeneratedTaskObjects();
+        Debug.Log($"[GazeboReplicaDualArmSceneBuilder] Player startup task rebuild complete: present={present}, expected={expected}, resource=Resources/{taskProfileResourcePath}");
+    }
+
     public void BuildOrUpdateScene()
     {
         if (!IsDualArmScene())
@@ -98,6 +128,7 @@ public class GazeboReplicaDualArmSceneBuilder : MonoBehaviour
         UnityTaskProfile taskProfile = LoadTaskProfile();
         Transform activeTaskGroup = EnsureTaskGroup(workspace, taskProfile);
         RepositionTaskObjects(activeTaskGroup, taskProfile);
+        ConfigureSceneObjectSyncManager(workspace, activeTaskGroup, taskProfile);
         ConfigureWorkspaceDragController(workspace);
         EnsureOverheadPovCamera(workspace);
         CleanupLegacyUi();
@@ -111,6 +142,24 @@ public class GazeboReplicaDualArmSceneBuilder : MonoBehaviour
             EditorSceneManager.MarkSceneDirty(gameObject.scene);
         }
 #endif
+    }
+
+    public bool ApplyRuntimeTaskManifestJson(string manifestJson)
+    {
+        UnityTaskProfile taskProfile = ParseTaskProfileJson(manifestJson, "runtime task manifest");
+        if (taskProfile == null)
+            return false;
+
+        Transform workspace = ResolveWorkspaceRoot();
+        if (workspace == null)
+            return false;
+
+        Transform activeTaskGroup = EnsureTaskGroup(workspace, taskProfile);
+        RepositionTaskObjects(activeTaskGroup, taskProfile);
+        ConfigureSceneObjectSyncManager(workspace, activeTaskGroup, taskProfile);
+        ConfigureWorkspaceDragController(workspace);
+        Debug.Log($"[GazeboReplicaDualArmSceneBuilder] Applied runtime task manifest: {taskProfile.taskProfile}");
+        return true;
     }
 
     private bool IsDualArmScene()
@@ -388,16 +437,36 @@ public class GazeboReplicaDualArmSceneBuilder : MonoBehaviour
             return null;
 
         TextAsset asset = Resources.Load<TextAsset>(taskProfileResourcePath);
-        if (asset == null || string.IsNullOrWhiteSpace(asset.text))
+        if (asset == null)
+        {
+            Debug.LogWarning($"[GazeboReplicaDualArmSceneBuilder] Missing generated task profile at Resources/{taskProfileResourcePath}. Default task objects will not be generated until a runtime task manifest arrives.");
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(asset.text))
+        {
+            Debug.LogWarning($"[GazeboReplicaDualArmSceneBuilder] Generated task profile at Resources/{taskProfileResourcePath} is empty. Default task objects will not be generated until a runtime task manifest arrives.");
+            return null;
+        }
+
+        return ParseTaskProfileJson(asset.text, taskProfileResourcePath);
+    }
+
+    private UnityTaskProfile ParseTaskProfileJson(string json, string sourceLabel)
+    {
+        if (string.IsNullOrWhiteSpace(json))
             return null;
 
         try
         {
-            return JsonUtility.FromJson<UnityTaskProfile>(asset.text);
+            UnityTaskProfile taskProfile = JsonUtility.FromJson<UnityTaskProfile>(json);
+            if (taskProfile == null || taskProfile.objects == null || taskProfile.objects.Length == 0)
+                return null;
+            return taskProfile;
         }
         catch (System.Exception ex)
         {
-            Debug.LogWarning($"[GazeboReplicaDualArmSceneBuilder] Failed to parse task profile '{taskProfileResourcePath}': {ex.Message}");
+            Debug.LogWarning($"[GazeboReplicaDualArmSceneBuilder] Failed to parse task profile '{sourceLabel}': {ex.Message}");
             return null;
         }
     }
@@ -516,14 +585,81 @@ public class GazeboReplicaDualArmSceneBuilder : MonoBehaviour
             return;
         renderer.enabled = true;
         Material material = renderer.sharedMaterial;
-        if (material == null || material.name != materialName)
+        if (material == null || material.name != materialName || material.shader == null)
         {
-            Shader shader = Shader.Find("Standard");
-            material = new Material(shader != null ? shader : Shader.Find("Diffuse"));
+            Shader shader = ResolveTaskShader(color.a < 0.999f);
+            material = new Material(shader);
             material.name = materialName;
             renderer.sharedMaterial = material;
         }
+        if (material.HasProperty("_BaseColor"))
+            material.SetColor("_BaseColor", color);
+        if (material.HasProperty("_Color"))
+            material.SetColor("_Color", color);
         material.color = color;
+        if (color.a < 0.999f)
+            ConfigureTransparentMaterial(material);
+        else
+            ConfigureOpaqueMaterial(material);
+    }
+
+    private static Shader ResolveTaskShader(bool transparent)
+    {
+        Shader shader =
+            Shader.Find("Universal Render Pipeline/Lit") ??
+            Shader.Find("Universal Render Pipeline/Unlit") ??
+            Shader.Find("Standard") ??
+            Shader.Find("Diffuse") ??
+            Shader.Find("Sprites/Default");
+        return shader;
+    }
+
+    private static void ConfigureOpaqueMaterial(Material material)
+    {
+        if (material == null)
+            return;
+
+        material.renderQueue = -1;
+        material.SetOverrideTag("RenderType", "Opaque");
+        if (material.HasProperty("_Mode"))
+            material.SetFloat("_Mode", 0f);
+        if (material.HasProperty("_Surface"))
+            material.SetFloat("_Surface", 0f);
+        if (material.HasProperty("_AlphaClip"))
+            material.SetFloat("_AlphaClip", 0f);
+        if (material.HasProperty("_ZWrite"))
+            material.SetFloat("_ZWrite", 1f);
+        material.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        material.DisableKeyword("_ALPHABLEND_ON");
+    }
+
+    private static void ConfigureTransparentMaterial(Material material)
+    {
+        if (material == null)
+            return;
+
+        material.renderQueue = 3000;
+        material.SetOverrideTag("RenderType", "Transparent");
+        if (material.HasProperty("_Mode"))
+            material.SetFloat("_Mode", 3f);
+        if (material.HasProperty("_Surface"))
+            material.SetFloat("_Surface", 1f);
+        if (material.HasProperty("_Blend"))
+            material.SetFloat("_Blend", 0f);
+        if (material.HasProperty("_AlphaClip"))
+            material.SetFloat("_AlphaClip", 0f);
+        if (material.HasProperty("_Cull"))
+            material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+        if (material.HasProperty("_SrcBlend"))
+            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        if (material.HasProperty("_DstBlend"))
+            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        if (material.HasProperty("_ZWrite"))
+            material.SetFloat("_ZWrite", 0f);
+        material.DisableKeyword("_ALPHATEST_ON");
+        material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+        material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        material.EnableKeyword("_ALPHABLEND_ON");
     }
 
     private static void ConfigureRubikVisual(GameObject root, UnityTaskObject taskObject)
@@ -597,20 +733,168 @@ public class GazeboReplicaDualArmSceneBuilder : MonoBehaviour
         DisableCollider(root);
         RemoveRubikVisuals(root.transform);
 
-        GameObject body = EnsureChildCube(root.transform, "PortBoxBody");
-        body.transform.localPosition = Vector3.zero;
-        body.transform.localRotation = Quaternion.identity;
-        body.transform.localScale = taskObject.Size;
-        ApplyTaskMaterial(body, "PortBox_Body", taskObject.Color);
-        DisableCollider(body);
+        Vector3 size = taskObject.Size;
+        EnsurePortBoxVisibleShell(root.transform, size, taskObject.Color);
+        List<PortRect> ports = BuildPortRects(taskObject);
+        ports.Sort((a, b) => (a.centerX - a.width * 0.5f).CompareTo(b.centerX - b.width * 0.5f));
 
-        Vector3 portSize = taskObject.PortSize;
-        GameObject port = EnsureChildCube(root.transform, "PortVisual");
-        port.transform.localPosition = new Vector3(0f, 0f, taskObject.Size.z * 0.5f + 0.0005f);
-        port.transform.localRotation = Quaternion.identity;
-        port.transform.localScale = new Vector3(portSize.x, portSize.y, 0.001f);
-        ApplyTaskMaterial(port, "PortBox_Port", taskObject.PortColor);
-        DisableCollider(port);
+        float currentX = -Mathf.Abs(size.x) * 0.5f;
+        for (int i = 0; i < ports.Count; i++)
+        {
+            PortRect port = ports[i];
+            float startX = port.centerX - port.width * 0.5f;
+            float endX = port.centerX + port.width * 0.5f;
+            if (startX > currentX + 0.001f)
+            {
+                float gapWidth = startX - currentX;
+                EnsurePortFramePiece(
+                    root.transform,
+                    $"PortBoxFrameGap_{i}",
+                    new Vector3(currentX + gapWidth * 0.5f, 0f, 0f),
+                    new Vector3(gapWidth, size.y, size.z),
+                    taskObject.Color);
+            }
+            currentX = Mathf.Max(currentX, endX);
+        }
+        if (currentX < Mathf.Abs(size.x) * 0.5f - 0.001f)
+        {
+            float gapWidth = Mathf.Abs(size.x) * 0.5f - currentX;
+            EnsurePortFramePiece(
+                root.transform,
+                "PortBoxFrameGap_End",
+                new Vector3(currentX + gapWidth * 0.5f, 0f, 0f),
+                new Vector3(gapWidth, size.y, size.z),
+                taskObject.Color);
+        }
+
+        foreach (PortRect port in ports)
+        {
+            float topHeight = Mathf.Abs(size.y) * 0.5f - (port.centerY + port.height * 0.5f);
+            float bottomHeight = (port.centerY - port.height * 0.5f) + Mathf.Abs(size.y) * 0.5f;
+            if (topHeight > 0.001f)
+            {
+                EnsurePortFramePiece(
+                    root.transform,
+                    $"PortBoxFrame_{port.label}_Top",
+                    new Vector3(port.centerX, port.centerY + port.height * 0.5f + topHeight * 0.5f, 0f),
+                    new Vector3(port.width, topHeight, size.z),
+                    taskObject.Color);
+            }
+            if (bottomHeight > 0.001f)
+            {
+                EnsurePortFramePiece(
+                    root.transform,
+                    $"PortBoxFrame_{port.label}_Bottom",
+                    new Vector3(port.centerX, port.centerY - port.height * 0.5f - bottomHeight * 0.5f, 0f),
+                    new Vector3(port.width, bottomHeight, size.z),
+                    taskObject.Color);
+            }
+        }
+
+        float backWallDepth = Mathf.Clamp(Mathf.Abs(size.z) * 0.12f, 0.003f, Mathf.Abs(size.z) * 0.35f);
+        EnsurePortFramePiece(
+            root.transform,
+            "PortBoxBackWall",
+            new Vector3(0f, 0f, -(Mathf.Abs(size.z) * 0.5f) + backWallDepth * 0.5f),
+            new Vector3(size.x, size.y, backWallDepth),
+            taskObject.Color);
+
+        if (taskObject.UsesWoodMaterial)
+        {
+            EnsureWoodGrain(root.transform, "PortBoxWoodGrainFront", Vector3.zero, taskObject.Size, taskObject.WoodGrainColor, Axis.Z, 6);
+            EnsureWoodGrain(root.transform, "PortBoxWoodGrainSide", Vector3.zero, taskObject.Size, taskObject.WoodGrainColor, Axis.X, 5);
+        }
+    }
+
+    private struct PortRect
+    {
+        public string label;
+        public float centerX;
+        public float centerY;
+        public float width;
+        public float height;
+    }
+
+    private static List<PortRect> BuildPortRects(UnityTaskObject taskObject)
+    {
+        Vector3 boxSize = taskObject.Size;
+        List<PortRect> ports = new List<PortRect>();
+        if (taskObject.ports != null && taskObject.ports.Length > 0)
+        {
+            for (int i = 0; i < taskObject.ports.Length; i++)
+            {
+                UnityPortDefinition port = taskObject.ports[i];
+                Vector3 size = port.Size;
+                Vector3 center = port.Center;
+                ports.Add(NormalizePortRect(
+                    boxSize,
+                    string.IsNullOrWhiteSpace(port.label) ? $"port_{i}" : port.label,
+                    center.x,
+                    center.y,
+                    size.x,
+                    size.y));
+            }
+        }
+
+        if (ports.Count == 0)
+        {
+            Vector3 size = taskObject.PortSize;
+            ports.Add(NormalizePortRect(boxSize, "default", 0f, 0f, size.x, size.y));
+        }
+
+        return ports;
+    }
+
+    private static PortRect NormalizePortRect(Vector3 boxSize, string label, float centerX, float centerY, float width, float height)
+    {
+        float absX = Mathf.Abs(boxSize.x);
+        float absY = Mathf.Abs(boxSize.y);
+        float clampedWidth = Mathf.Clamp(Mathf.Abs(width), 0.001f, absX * 0.90f);
+        float clampedHeight = Mathf.Clamp(Mathf.Abs(height), 0.001f, absY * 0.90f);
+        return new PortRect
+        {
+            label = SanitizeName(label),
+            centerX = Mathf.Clamp(centerX, -absX * 0.5f + clampedWidth * 0.5f, absX * 0.5f - clampedWidth * 0.5f),
+            centerY = Mathf.Clamp(centerY, -absY * 0.5f + clampedHeight * 0.5f, absY * 0.5f - clampedHeight * 0.5f),
+            width = clampedWidth,
+            height = clampedHeight,
+        };
+    }
+
+    private static string SanitizeName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "port";
+        char[] chars = value.Trim().ToCharArray();
+        for (int i = 0; i < chars.Length; i++)
+        {
+            char c = chars[i];
+            if (!char.IsLetterOrDigit(c) && c != '_' && c != '-')
+                chars[i] = '_';
+        }
+        return new string(chars);
+    }
+
+    private static void EnsurePortFramePiece(Transform parent, string name, Vector3 localPosition, Vector3 localScale, Color color)
+    {
+        GameObject piece = EnsureChildCube(parent, name);
+        piece.transform.localPosition = localPosition;
+        piece.transform.localRotation = Quaternion.identity;
+        piece.transform.localScale = localScale;
+        ApplyTaskMaterial(piece, "PortBox_Frame", color);
+        DisableCollider(piece);
+    }
+
+    private static void EnsurePortBoxVisibleShell(Transform parent, Vector3 size, Color color)
+    {
+        GameObject shell = EnsureChildCube(parent, "PortBoxVisibleShell");
+        shell.transform.localPosition = Vector3.zero;
+        shell.transform.localRotation = Quaternion.identity;
+        shell.transform.localScale = size * 1.012f;
+
+        Color shellColor = new Color(color.r, color.g, color.b, Mathf.Clamp(color.a * 0.22f, 0.14f, 0.30f));
+        ApplyTaskMaterial(shell, "PortBox_VisibleShell", shellColor);
+        DisableCollider(shell);
     }
 
     private static void ConfigureCableRodVisual(GameObject root, UnityTaskObject taskObject)
@@ -630,14 +914,19 @@ public class GazeboReplicaDualArmSceneBuilder : MonoBehaviour
         rod.transform.localScale = taskObject.Size;
         ApplyTaskMaterial(rod, "CableRod_Body", taskObject.Color);
         DisableCollider(rod);
+        if (taskObject.UsesWoodMaterial)
+            EnsureWoodGrain(root.transform, "CableRodWoodGrain", Vector3.zero, taskObject.Size, taskObject.WoodGrainColor, Axis.X, 4);
 
         Vector3 plugSize = taskObject.PlugSize;
         GameObject plug = EnsureChildCube(root.transform, "CablePlugEnd");
-        plug.transform.localPosition = new Vector3(0f, 0f, -(taskObject.Size.z * 0.5f + plugSize.z * 0.5f));
+        Vector3 plugPosition = new Vector3(0f, 0f, -(taskObject.Size.z * 0.5f + plugSize.z * 0.5f));
+        plug.transform.localPosition = plugPosition;
         plug.transform.localRotation = Quaternion.identity;
         plug.transform.localScale = plugSize;
         ApplyTaskMaterial(plug, "CableRod_Plug", taskObject.PlugColor);
         DisableCollider(plug);
+        if (taskObject.UsesWoodMaterial)
+            EnsureWoodGrain(root.transform, "CablePlugWoodGrain", plugPosition, plugSize, taskObject.WoodGrainColor, Axis.Z, 3);
     }
 
     private static GameObject EnsureChildCube(Transform parent, string name)
@@ -657,6 +946,46 @@ public class GazeboReplicaDualArmSceneBuilder : MonoBehaviour
         sticker.transform.localScale = localScale;
         ApplyTaskMaterial(sticker, name + "_Material", color);
         DisableCollider(sticker);
+    }
+
+    private static void EnsureWoodGrain(Transform parent, string prefix, Vector3 center, Vector3 size, Color color, Axis faceAxis, int stripeCount)
+    {
+        if (parent == null)
+            return;
+
+        stripeCount = Mathf.Max(1, stripeCount);
+        float minSize = Mathf.Max(0.0001f, Mathf.Min(Mathf.Abs(size.x), Mathf.Min(Mathf.Abs(size.y), Mathf.Abs(size.z))));
+        float lineThickness = Mathf.Max(minSize * 0.045f, 0.00035f);
+        float surfaceThickness = Mathf.Max(minSize * 0.018f, 0.00020f);
+
+        for (int i = 0; i < stripeCount; i++)
+        {
+            float offset = ((i + 0.5f) / stripeCount - 0.5f) * 0.82f;
+            Vector3 localPosition = center;
+            Vector3 localScale;
+            switch (faceAxis)
+            {
+                case Axis.X:
+                    localPosition += new Vector3(size.x * 0.5f + surfaceThickness * 0.5f, offset * size.y, 0f);
+                    localScale = new Vector3(surfaceThickness, lineThickness, Mathf.Max(size.z * 0.82f, lineThickness));
+                    break;
+                case Axis.Y:
+                    localPosition += new Vector3(offset * size.x, size.y * 0.5f + surfaceThickness * 0.5f, 0f);
+                    localScale = new Vector3(lineThickness, surfaceThickness, Mathf.Max(size.z * 0.82f, lineThickness));
+                    break;
+                default:
+                    localPosition += new Vector3(0f, offset * size.y, size.z * 0.5f + surfaceThickness * 0.5f);
+                    localScale = new Vector3(Mathf.Max(size.x * 0.82f, lineThickness), lineThickness, surfaceThickness);
+                    break;
+            }
+
+            GameObject stripe = EnsureChildCube(parent, prefix + "_" + i.ToString("00"));
+            stripe.transform.localPosition = localPosition;
+            stripe.transform.localRotation = Quaternion.identity;
+            stripe.transform.localScale = localScale;
+            ApplyTaskMaterial(stripe, prefix + "_Material", color);
+            DisableCollider(stripe);
+        }
     }
 
     private static void EnsureRubikCore(Transform cubeRoot, UnityTaskObject taskObject)
@@ -829,8 +1158,15 @@ public class GazeboReplicaDualArmSceneBuilder : MonoBehaviour
                 string.Equals(child.name, "RubikCubieCore", System.StringComparison.Ordinal) ||
                 string.Equals(child.name, "PortBoxBody", System.StringComparison.Ordinal) ||
                 string.Equals(child.name, "PortVisual", System.StringComparison.Ordinal) ||
+                string.Equals(child.name, "PortBoxVisibleShell", System.StringComparison.Ordinal) ||
+                child.name.StartsWith("PortBoxFrame", System.StringComparison.Ordinal) ||
+                child.name.StartsWith("PortBoxBack", System.StringComparison.Ordinal) ||
+                child.name.StartsWith("PortBoxTopOutline", System.StringComparison.Ordinal) ||
                 string.Equals(child.name, "CableRodBody", System.StringComparison.Ordinal) ||
-                string.Equals(child.name, "CablePlugEnd", System.StringComparison.Ordinal))
+                string.Equals(child.name, "CablePlugEnd", System.StringComparison.Ordinal) ||
+                child.name.StartsWith("PortBoxWoodGrain", System.StringComparison.Ordinal) ||
+                child.name.StartsWith("CableRodWoodGrain", System.StringComparison.Ordinal) ||
+                child.name.StartsWith("CablePlugWoodGrain", System.StringComparison.Ordinal))
                 DestroySceneObject(child.gameObject);
         }
     }
@@ -841,9 +1177,17 @@ public class GazeboReplicaDualArmSceneBuilder : MonoBehaviour
             return;
 
         if (Application.isPlaying)
+        {
+            // Destroy() is delayed in play mode. Rename first so immediate rebuilds do not
+            // re-bind a child that Unity will delete at the end of this frame.
+            go.name = go.name + "_Destroying";
+            go.SetActive(false);
             Destroy(go);
+        }
         else
+        {
             DestroyImmediate(go);
+        }
     }
 
     private static void DisableCollider(GameObject go)
@@ -866,6 +1210,48 @@ public class GazeboReplicaDualArmSceneBuilder : MonoBehaviour
         dragger.hideHandlesUnlessRayHovering = true;
         dragger.disableHandleCollidersWhenRayHidden = true;
         dragger.keepHandlesVisibleWhileDragging = true;
+    }
+
+    private void ConfigureSceneObjectSyncManager(Transform workspace, Transform activeTaskGroup, UnityTaskProfile taskProfile)
+    {
+        SceneObjectPoseSyncManager syncManager = FindAny<SceneObjectPoseSyncManager>();
+        if (syncManager == null || activeTaskGroup == null || taskProfile == null || taskProfile.objects == null)
+            return;
+
+        Transform syncGroup = activeTaskGroup.Find(syncGroupName);
+        if (syncGroup == null)
+            return;
+
+        List<SceneObjectPoseSyncManager.SyncBinding> bindings = new List<SceneObjectPoseSyncManager.SyncBinding>();
+        HashSet<string> seen = new HashSet<string>();
+        foreach (UnityTaskObject taskObject in taskProfile.objects)
+        {
+            if (taskObject == null || string.IsNullOrWhiteSpace(taskObject.id) || !seen.Add(taskObject.id))
+                continue;
+
+            Transform target = syncGroup.Find(taskObject.id);
+            bindings.Add(new SceneObjectPoseSyncManager.SyncBinding
+            {
+                objectName = taskObject.id,
+                topicName = $"/unity_sync/{taskObject.id}_pose",
+                target = target,
+                applyOrientation = true,
+            });
+        }
+
+        if (bindings.Count == 0)
+            return;
+
+        syncManager.workspaceRootName = workspaceRootName;
+        syncManager.workspaceRoot = workspace;
+        syncManager.taskProfileResourcePath = taskProfileResourcePath;
+        syncManager.loadBindingsFromGeneratedTaskProfile = true;
+        syncManager.bindings = bindings.ToArray();
+
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+            EditorUtility.SetDirty(syncManager);
+#endif
     }
 
     private void EnsureOverheadPovCamera(Transform workspace)
@@ -985,6 +1371,34 @@ public class GazeboReplicaDualArmSceneBuilder : MonoBehaviour
         member.keepWorldPoseWhenParented = true;
     }
 
+    private int CountGeneratedTaskObjects()
+    {
+        GameObject workspace = GameObject.Find(workspaceRootName);
+        if (workspace == null)
+            return 0;
+
+        Transform taskGroups = workspace.transform.Find(taskGroupsRootName);
+        if (taskGroups == null)
+            return 0;
+
+        Transform taskGroup = taskGroups.Find(activeTaskGroupName);
+        if (taskGroup == null)
+            return 0;
+
+        Transform syncGroup = taskGroup.Find(syncGroupName);
+        if (syncGroup == null)
+            return 0;
+
+        int count = 0;
+        for (int i = 0; i < syncGroup.childCount; i++)
+        {
+            Transform child = syncGroup.GetChild(i);
+            if (child != null && child.gameObject.activeInHierarchy && child.name.StartsWith("Sync_", System.StringComparison.OrdinalIgnoreCase))
+                count++;
+        }
+        return count;
+    }
+
     private static T FindAny<T>() where T : Object
     {
 #if UNITY_2023_1_OR_NEWER
@@ -1044,19 +1458,25 @@ public class GazeboReplicaDualArmSceneBuilder : MonoBehaviour
         public int rubikZ;
         public float stickerGap = 0.002f;
         public SerializableVector3 portSize;
+        public UnityPortDefinition[] ports;
         public SerializableColor portColor;
         public SerializableVector3 plugSize;
         public SerializableColor plugColor;
         public SerializableColor color;
+        public string materialStyle;
+        public SerializableColor woodGrainColor;
 
         public Vector3 LocalPosition => localPosition.ToVector3();
         public Vector3 LocalEuler => localEuler.ToVector3();
         public Vector3 Size => size.ToVector3(new Vector3(0.02f, 0.04f, 0.02f));
-        public Vector3 PortSize => portSize.ToVector3(new Vector3(0.018f, 0.006f, 0.014f));
+        public Vector3 PortSize => portSize.ToVector3(new Vector3(0.018f, 0.012f, 0.018f));
         public Vector3 PlugSize => plugSize.ToVector3(new Vector3(0.016f, 0.010f, 0.016f));
         public Color Color => color.ToColor(new Color(0.8f, 0.8f, 0.8f, 1f));
         public Color PortColor => portColor.ToColor(new Color(0.01f, 0.01f, 0.012f, 1f));
         public Color PlugColor => plugColor.ToColor(new Color(0.12f, 0.12f, 0.13f, 1f));
+        public bool UsesWoodMaterial => string.Equals(materialStyle, "wood", System.StringComparison.OrdinalIgnoreCase)
+            || string.Equals(materialStyle, "wooden", System.StringComparison.OrdinalIgnoreCase);
+        public Color WoodGrainColor => woodGrainColor.ToColor(new Color(0.30f, 0.15f, 0.06f, 1f));
         public bool IsCylinder => string.Equals(type, "cylinder", System.StringComparison.OrdinalIgnoreCase);
         public bool IsRubik => string.Equals(type, "rubik_2x2", System.StringComparison.OrdinalIgnoreCase)
             || string.Equals(type, "rubik", System.StringComparison.OrdinalIgnoreCase)
@@ -1064,6 +1484,17 @@ public class GazeboReplicaDualArmSceneBuilder : MonoBehaviour
         public bool IsRubikCubie => string.Equals(type, "rubik_cubie", System.StringComparison.OrdinalIgnoreCase);
         public bool IsPortBox => string.Equals(type, "port_box", System.StringComparison.OrdinalIgnoreCase);
         public bool IsCableRod => string.Equals(type, "cable_rod", System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    [System.Serializable]
+    private class UnityPortDefinition
+    {
+        public string label;
+        public SerializableVector3 center;
+        public SerializableVector3 size;
+
+        public Vector3 Center => center.ToVector3();
+        public Vector3 Size => size.ToVector3(new Vector3(0.018f, 0.012f, 0.018f));
     }
 
     [System.Serializable]

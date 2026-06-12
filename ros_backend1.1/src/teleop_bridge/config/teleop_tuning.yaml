@@ -1,7 +1,7 @@
 # Unified teleop tuning file
 # Edit values, then restart Part 2/3 nodes with scripts/backend11_lifecycle.sh start_part23.
 
-received_pose_to_target_twist:
+hand_pose_mapper:
   ros__parameters:
     use_sim_time: true
     target_frame: base_link
@@ -54,7 +54,7 @@ received_pose_to_target_twist:
     min_xyz: [-1.0, -1.0, -1.0]
     max_xyz: [1.0, 1.0, 1.0]
 
-target_twist_to_servo_cmd:
+servo_command_bridge:
   ros__parameters:
     use_sim_time: true
     publish_rate_hz: 60.0
@@ -63,12 +63,12 @@ target_twist_to_servo_cmd:
     auto_start_servo: true
     start_on_reset_release: true
 
-keyboard_servo_cmd:
+keyboard_servo_override:
   ros__parameters:
     use_sim_time: true
     output_topic: /servo_node/delta_twist_cmds
     frame_id: base_link
-    publish_rate_hz: 30.0
+    publish_rate_hz: 60.0
     key_timeout_sec: 0.25
     linear_speed_xyz: [0.15, 0.15, 0.15]
     linear_sign_xyz: [1.0, 1.0, 1.0]
@@ -77,10 +77,10 @@ keyboard_servo_cmd:
     auto_start_servo: true
     start_servo_service: /servo_node/start_servo
 
-target_twist_to_gripper_cmd:
+simple_gripper_command_bridge:
   ros__parameters:
     use_sim_time: true
-    publish_rate_hz: 30.0
+    publish_rate_hz: 60.0
     speed_m_per_s: 0.03
     min_pos: 0.0
     max_pos: 0.025
@@ -90,10 +90,10 @@ target_twist_to_gripper_cmd:
     stale_timeout_sec: 0.25
     require_tracked: true
 
-target_twist_reset_manager:
+reset_manager:
   ros__parameters:
     use_sim_time: true
-    control_rate_hz: 40.0
+    control_rate_hz: 60.0
 
     # Reset "kick" when B is pressed
     kick_velocities: [0.35, -0.18, -0.28, 0.18, -0.28, 0.0]

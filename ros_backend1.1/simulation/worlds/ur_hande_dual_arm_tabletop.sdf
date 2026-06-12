@@ -63,9 +63,42 @@
       </link>
     </model>
     <!-- Task objects generated from workspace/task profiles; Gazebo keeps them as top-level models for physics. -->
+    <model name="Sync_TaskPlatform">
+      <static>true</static>
+      <pose>0.25 0 0.05 0 0 0</pose>
+      <link name="platform_link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.462 0.462 0.1</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1</mu>
+                <mu2>1</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.462 0.462 0.1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.38 0.38 0.36 1</ambient>
+            <diffuse>0.38 0.38 0.36 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
     <model name="Sync_RedCube">
       <static>false</static>
-      <pose>0.19 0.055 0.02 0 0 0</pose>
+      <pose>0.235 0.055 0.12 0 0 0</pose>
       <link name="body_link">
         <inertial>
           <mass>0.03</mass>
@@ -109,7 +142,7 @@
     </model>
     <model name="Sync_GreenCube">
       <static>false</static>
-      <pose>0.19 -0.055 0.02 0 0 0</pose>
+      <pose>0.235 -0.055 0.12 0 0 0</pose>
       <link name="body_link">
         <inertial>
           <mass>0.03</mass>
@@ -153,7 +186,7 @@
     </model>
     <model name="Sync_RedCylinder">
       <static>false</static>
-      <pose>0.31 0.055 0.024 0 0 0</pose>
+      <pose>0.31 0.055 0.124 0 0 0</pose>
       <link name="body_link">
         <inertial>
           <mass>0.03</mass>
@@ -199,7 +232,7 @@
     </model>
     <model name="Sync_GreenCylinder">
       <static>false</static>
-      <pose>0.31 -0.055 0.024 0 0 0</pose>
+      <pose>0.31 -0.055 0.124 0 0 0</pose>
       <link name="body_link">
         <inertial>
           <mass>0.03</mass>
@@ -245,7 +278,7 @@
     </model>
     <model name="Sync_Plate_A">
       <static>true</static>
-      <pose>0.25 0.16 0.0025 0 0 0</pose>
+      <pose>0.25 0.16 0.1025 0 0 0</pose>
       <link name="plate_link">
         <collision name="collision">
           <geometry>
@@ -278,7 +311,7 @@
     </model>
     <model name="Sync_Plate_B">
       <static>true</static>
-      <pose>0.25 -0.16 0.0025 0 0 0</pose>
+      <pose>0.25 -0.16 0.1025 0 0 0</pose>
       <link name="plate_link">
         <collision name="collision">
           <geometry>
@@ -304,6 +337,1161 @@
           <material>
             <ambient>0.6 0.8 0.95 1</ambient>
             <diffuse>0.6 0.8 0.95 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="Sync_CableReceiverBox">
+      <static>true</static>
+      <pose>0.085 0 0.1225 0 -1.5708 0</pose>
+      <link name="body_link">
+        <collision name="port_frame_gap_0_collision">
+          <pose>0 -0.0696 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0108 0.04</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1</mu>
+                <mu2>1</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_gap_1_collision">
+          <pose>0 -0.04215 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0113 0.04</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1</mu>
+                <mu2>1</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_gap_2_collision">
+          <pose>0 -0.01425 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0105 0.04</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1</mu>
+                <mu2>1</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_gap_3_collision">
+          <pose>0 0.01375 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0095 0.04</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1</mu>
+                <mu2>1</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_gap_4_collision">
+          <pose>0 0.04175 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0085 0.04</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1</mu>
+                <mu2>1</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_gap_end_collision">
+          <pose>0 0.0705 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.009 0.04</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1</mu>
+                <mu2>1</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_loose_2p0mm_top_collision">
+          <pose>0 0.056 0.0135 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.02 0.013</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1</mu>
+                <mu2>1</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_loose_2p0mm_bottom_collision">
+          <pose>0 0.056 -0.0135 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.02 0.013</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1</mu>
+                <mu2>1</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_loose_1p5mm_top_collision">
+          <pose>0 0.028 0.01325 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.019 0.0135</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1</mu>
+                <mu2>1</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_loose_1p5mm_bottom_collision">
+          <pose>0 0.028 -0.01325 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.019 0.0135</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1</mu>
+                <mu2>1</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_default_1p0mm_top_collision">
+          <pose>0 0 0.013 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.018 0.014</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1</mu>
+                <mu2>1</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_default_1p0mm_bottom_collision">
+          <pose>0 0 -0.013 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.018 0.014</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1</mu>
+                <mu2>1</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_tight_0p5mm_top_collision">
+          <pose>0 -0.028 0.01275 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.017 0.0145</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1</mu>
+                <mu2>1</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_tight_0p5mm_bottom_collision">
+          <pose>0 -0.028 -0.01275 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.017 0.0145</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1</mu>
+                <mu2>1</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_tight_0p2mm_top_collision">
+          <pose>0 -0.056 0.0126 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0164 0.0148</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1</mu>
+                <mu2>1</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_tight_0p2mm_bottom_collision">
+          <pose>0 -0.056 -0.0126 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0164 0.0148</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1</mu>
+                <mu2>1</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_back_wall_collision">
+          <pose>-0.0198 0 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.0054 0.15 0.04</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1</mu>
+                <mu2>1</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="port_frame_gap_0_visual">
+          <pose>0 -0.0696 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0108 0.04</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_gap_1_visual">
+          <pose>0 -0.04215 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0113 0.04</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_gap_2_visual">
+          <pose>0 -0.01425 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0105 0.04</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_gap_3_visual">
+          <pose>0 0.01375 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0095 0.04</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_gap_4_visual">
+          <pose>0 0.04175 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0085 0.04</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_gap_end_visual">
+          <pose>0 0.0705 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.009 0.04</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_loose_2p0mm_top_visual">
+          <pose>0 0.056 0.0135 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.02 0.013</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_loose_2p0mm_bottom_visual">
+          <pose>0 0.056 -0.0135 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.02 0.013</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_loose_1p5mm_top_visual">
+          <pose>0 0.028 0.01325 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.019 0.0135</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_loose_1p5mm_bottom_visual">
+          <pose>0 0.028 -0.01325 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.019 0.0135</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_default_1p0mm_top_visual">
+          <pose>0 0 0.013 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.018 0.014</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_default_1p0mm_bottom_visual">
+          <pose>0 0 -0.013 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.018 0.014</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_tight_0p5mm_top_visual">
+          <pose>0 -0.028 0.01275 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.017 0.0145</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_tight_0p5mm_bottom_visual">
+          <pose>0 -0.028 -0.01275 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.017 0.0145</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_tight_0p2mm_top_visual">
+          <pose>0 -0.056 0.0126 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0164 0.0148</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_tight_0p2mm_bottom_visual">
+          <pose>0 -0.056 -0.0126 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0164 0.0148</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_back_wall_visual">
+          <pose>-0.0198 0 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.0054 0.15 0.04</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="Sync_CableReceiverBox_Fixed">
+      <static>false</static>
+      <pose>0.155 0 0.1225 0 -1.5708 0</pose>
+      <link name="body_link">
+        <inertial>
+          <mass>0.045</mass>
+          <inertia>
+            <ixx>2e-06</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>2e-06</iyy>
+            <iyz>0</iyz>
+            <izz>2e-06</izz>
+          </inertia>
+        </inertial>
+        <collision name="port_frame_gap_0_collision">
+          <pose>0 -0.0696 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0108 0.04</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_gap_1_collision">
+          <pose>0 -0.04215 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0113 0.04</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_gap_2_collision">
+          <pose>0 -0.01425 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0105 0.04</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_gap_3_collision">
+          <pose>0 0.01375 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0095 0.04</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_gap_4_collision">
+          <pose>0 0.04175 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0085 0.04</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_gap_end_collision">
+          <pose>0 0.0705 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.009 0.04</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_loose_2p0mm_top_collision">
+          <pose>0 0.056 0.0135 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.02 0.013</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_loose_2p0mm_bottom_collision">
+          <pose>0 0.056 -0.0135 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.02 0.013</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_loose_1p5mm_top_collision">
+          <pose>0 0.028 0.01325 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.019 0.0135</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_loose_1p5mm_bottom_collision">
+          <pose>0 0.028 -0.01325 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.019 0.0135</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_default_1p0mm_top_collision">
+          <pose>0 0 0.013 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.018 0.014</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_default_1p0mm_bottom_collision">
+          <pose>0 0 -0.013 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.018 0.014</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_tight_0p5mm_top_collision">
+          <pose>0 -0.028 0.01275 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.017 0.0145</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_tight_0p5mm_bottom_collision">
+          <pose>0 -0.028 -0.01275 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.017 0.0145</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_tight_0p2mm_top_collision">
+          <pose>0 -0.056 0.0126 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0164 0.0148</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_frame_tight_0p2mm_bottom_collision">
+          <pose>0 -0.056 -0.0126 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0164 0.0148</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <collision name="port_back_wall_collision">
+          <pose>-0.0198 0 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.0054 0.15 0.04</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="port_frame_gap_0_visual">
+          <pose>0 -0.0696 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0108 0.04</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_gap_1_visual">
+          <pose>0 -0.04215 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0113 0.04</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_gap_2_visual">
+          <pose>0 -0.01425 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0105 0.04</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_gap_3_visual">
+          <pose>0 0.01375 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0095 0.04</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_gap_4_visual">
+          <pose>0 0.04175 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0085 0.04</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_gap_end_visual">
+          <pose>0 0.0705 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.009 0.04</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_loose_2p0mm_top_visual">
+          <pose>0 0.056 0.0135 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.02 0.013</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_loose_2p0mm_bottom_visual">
+          <pose>0 0.056 -0.0135 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.02 0.013</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_loose_1p5mm_top_visual">
+          <pose>0 0.028 0.01325 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.019 0.0135</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_loose_1p5mm_bottom_visual">
+          <pose>0 0.028 -0.01325 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.019 0.0135</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_default_1p0mm_top_visual">
+          <pose>0 0 0.013 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.018 0.014</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_default_1p0mm_bottom_visual">
+          <pose>0 0 -0.013 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.018 0.014</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_tight_0p5mm_top_visual">
+          <pose>0 -0.028 0.01275 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.017 0.0145</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_tight_0p5mm_bottom_visual">
+          <pose>0 -0.028 -0.01275 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.017 0.0145</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_tight_0p2mm_top_visual">
+          <pose>0 -0.056 0.0126 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0164 0.0148</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_frame_tight_0p2mm_bottom_visual">
+          <pose>0 -0.056 -0.0126 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.045 0.0164 0.0148</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <visual name="port_back_wall_visual">
+          <pose>-0.0198 0 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.0054 0.15 0.04</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.48 0.05 1</ambient>
+            <diffuse>1 0.48 0.05 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="Sync_CableRod">
+      <static>false</static>
+      <pose>0.385 0.055 0.1045 0 0 0</pose>
+      <link name="body_link">
+        <inertial>
+          <mass>0.018</mass>
+          <inertia>
+            <ixx>2e-06</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>2e-06</iyy>
+            <iyz>0</iyz>
+            <izz>2e-06</izz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.075 0.009 0.009</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.075 0.009 0.009</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.9 0.35 1</ambient>
+            <diffuse>1 0.9 0.35 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <collision name="plug_end_collision">
+          <pose>-0.0455 0 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.016 0.016 0.01</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="plug_end_visual">
+          <pose>-0.0455 0 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.016 0.016 0.01</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.94 0.45 1</ambient>
+            <diffuse>1 0.94 0.45 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="Sync_CableRod_B">
+      <static>false</static>
+      <pose>0.385 -0.055 0.154 0 -1.5708 0</pose>
+      <link name="body_link">
+        <inertial>
+          <mass>0.018</mass>
+          <inertia>
+            <ixx>2e-06</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>2e-06</iyy>
+            <iyz>0</iyz>
+            <izz>2e-06</izz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.075 0.009 0.009</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.075 0.009 0.009</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.9 0.35 1</ambient>
+            <diffuse>1 0.9 0.35 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+        <collision name="plug_end_collision">
+          <pose>-0.0455 0 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.016 0.016 0.01</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.9</mu>
+                <mu2>0.9</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="plug_end_visual">
+          <pose>-0.0455 0 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.016 0.016 0.01</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0.94 0.45 1</ambient>
+            <diffuse>1 0.94 0.45 1</diffuse>
             <specular>0.1 0.1 0.1 1</specular>
           </material>
         </visual>

@@ -16,12 +16,13 @@ Already accepted into `complete_material/`:
 | Done | Task profile/SDF/Unity JSON consistency | `complete_material/scripted_backend_checks/06_11_offline_validation/` | Confirms the generated task objects agree across task YAML, Gazebo SDF, and Unity `active_task.json`. |
 | Done | Unity saved-scene smoke check | `complete_material/scripted_backend_checks/06_11_offline_validation/` | Confirms the saved dual-arm Unity scene contains the expected generated task/sync names. |
 | Done | Mac platform bringup snapshot | `complete_material/portability/mac_bringup_snapshot/` | Gives a macOS host/tooling report for the portability section. |
+| Done with caveats | Mac no-headset backend scripted batch | `complete_material/latency_rates/no_headset_backend_06_11/` and raw review in `thesis_eval_raw/06_11/scripted_backend_checks/no_headset_backend_results_review.md` | Topic rates, haptic idle baseline, Servo response, and mapping sanity are usable. The synthetic receiver run is debug-only, not a thesis-facing eval result. Gripper timing and reset reliability are not accepted as pass results yet. |
 
 Still missing for thesis-safe evaluation:
 
 - Headset backend latency trace.
 - MR visual sync/alignment trace.
-- Recording-on FPS/sync-latency trace.
+- Recording-on FPS/sync-latency trace. The 2026-06-11 run confirmed wrist-camera JPG recording happened, but Unity did not publish `/unity_eval/recording_state` or `/unity_eval/fps_sample`, so rerun after rebuilding/deploying the app with the fixed `RecordingPerformanceTraceLogger`.
 - Cable insertion precision trials.
 - Pick/place task trials.
 - Short demo videos and screenshots.
@@ -30,7 +31,11 @@ Still missing for thesis-safe evaluation:
 
 ## Current Scripted Tests Runnable On This Mac
 
-The backend container was not running when this checklist was updated, so only offline checks were run automatically. Start the backend before running live ROS/Gazebo tests.
+The no-headset backend batch has now been inspected. The usable outputs were copied to `complete_material/latency_rates/no_headset_backend_06_11/`. The detailed pass/fail review is in `thesis_eval_raw/06_11/scripted_backend_checks/no_headset_backend_results_review.md`.
+
+Do not use the current gripper timing or reset reliability runs as passing thesis results. The gripper test did not move the coupled gripper path, and reset reliability still had object-pose failures.
+
+Output-folder note: the eval scripts do not normally overwrite old runs. They call `results_dir(...)`, which creates timestamped folders such as `20260611_213433_mr_sync_visual_latency_trace/` under the requested `--output-root`. Keep the latest good run for thesis figures, but do not assume older runs were replaced.
 
 ### Already Run Today Without Backend
 
@@ -45,7 +50,7 @@ python3 scripts/test_tools/eval_scripts/12_cross_platform_backend_bringup_check.
 
 ### Runnable On Mac After Backend Is Up, No Headset Needed
 
-Run these when you are not actively doing headset trials. Some synthetic tests take over the receiver or move the robots.
+Status: run and inspected on 2026-06-11. Rerun only if the backend code changes or after fixing the reset/gripper test paths. Some synthetic tests take over the receiver or move the robots.
 
 ```bash
 cd /Users/noahli/ros_unity_project/ros_backend1.1
@@ -76,12 +81,9 @@ Haptic topic-logic monitor:
 python3 scripts/test_tools/eval_scripts/11_haptic_publisher_topic_logic_test.py --duration 20 --output-root ../thesis_eval_raw/06_11/latency_rates/haptic_logic
 ```
 
-Synthetic receiver/mapping/Servo tests. These can disturb live Quest control, so restart the receiver afterward:
+Optional backend debug/load tests. These can disturb live Quest control, so restart the receiver afterward. Do not use the synthetic receiver run as a thesis-facing controller evaluation; real controller modes should be tested with the headset, keyboard, or gamepad paths instead.
 
 ```bash
-python3 scripts/test_tools/eval_scripts/04_synthetic_hand_receiver_test.py --arm both --pattern line_x --duration 15 --output-root ../thesis_eval_raw/06_11/latency_rates/synthetic_receiver
-./scripts/backend11_lifecycle.sh start_receiver
-
 python3 scripts/test_tools/eval_scripts/05_servo_step_sine_response_test.py --arm both --pattern circle_xy --duration 12 --output-root ../thesis_eval_raw/06_11/latency_rates/servo_response
 ./scripts/backend11_lifecycle.sh start_receiver
 
@@ -146,6 +148,12 @@ Primary files:
 
 Purpose: numeric Gazebo-authoritative pose versus Unity/MR visual pose error, plus sync onset latency.
 
+Before running after the latest trace update, confirm the deployed Quest app publishes the expanded Unity visual trace topics:
+
+```bash
+docker exec motion_planner_11 bash -lc 'source /opt/ros/humble/setup.bash && source /home/noah/ws_moveit/install/setup.bash && ros2 topic list | grep -E "Sync_RedCube_visual|tool0_visual|wrist_3_visual|hande_end_visual"'
+```
+
 ```bash
 cd /Users/noahli/ros_unity_project/ros_backend1.1
 python3 scripts/test_tools/eval_scripts/15_mr_sync_visual_latency_trace.py --duration 30 --object-id Sync_RedCube --output-root ../thesis_eval_raw/06_11/sync_precision/mr_sync_trace
@@ -160,16 +168,24 @@ While it runs:
 Primary files:
 
 - `pose_alignment_samples.csv`
-- `pose_alignment_summary.csv`
+- `pose_alignment_summary.csv`, including `mean_still_position_error_m` and `mean_moving_position_error_m`
 - `motion_events.csv`
 - `pose_samples.csv`
 - `topic_rates.csv`
+
+Interpretation note: the existing red-cube traces show near-zero error when the cube is still, but millimeter-level mean error during motion. Treat this as a sync/latency sampling measurement, not a static spatial calibration error. The expanded EE trace now records Unity `tool0`, `wrist_3_link`, and `robotiq_hande_end` visual poses separately so old EE absolute alignment numbers should be replaced with a new run.
 
 This makes the old manual MR alignment row mostly optional. Keep screenshots as visual evidence, but use this trace as the numeric evidence when available.
 
 ### 5. Recording FPS And Sync-Latency Trace
 
 Purpose: directly tests the lag/FPS drop when camera recording starts.
+
+Before running after the latest trace update, confirm the deployed Quest app publishes recording/FPS trace topics:
+
+```bash
+docker exec motion_planner_11 bash -lc 'source /opt/ros/humble/setup.bash && source /home/noah/ws_moveit/install/setup.bash && ros2 topic list | grep -E "recording_state|fps_sample"'
+```
 
 Run this before pressing record in the headset:
 
@@ -190,7 +206,7 @@ Primary files:
 
 - `recording_fps_samples.csv`
 - `recording_events.csv`
-- `pose_alignment_summary.csv`
+- `pose_alignment_summary.csv`, including still-vs-moving alignment error columns
 - `motion_events.csv`
 - `topic_rates.csv`
 

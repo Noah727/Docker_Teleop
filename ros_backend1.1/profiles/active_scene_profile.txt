@@ -1,0 +1,1 @@
+profiles/scenes/dual_arm_tabletop/scene.yaml

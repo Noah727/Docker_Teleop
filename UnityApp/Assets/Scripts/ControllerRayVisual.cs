@@ -16,7 +16,7 @@ public class ControllerRayVisual : MonoBehaviour
         public bool enabled = true;
         public string rayObjectName = "RightControllerAimRay";
         public Color idleColor = new Color(0.25f, 0.85f, 1.0f, 0.24f);
-        public Color hitColor = new Color(0.25f, 1.0f, 0.35f, 0.45f);
+        public Color hitColor = new Color(1.0f, 0.85f, 0.20f, 0.45f);
     }
 
     [Header("Rays")]
@@ -26,7 +26,7 @@ public class ControllerRayVisual : MonoBehaviour
         enabled = true,
         rayObjectName = "LeftControllerAimRay",
         idleColor = new Color(0.55f, 0.80f, 1.0f, 0.22f),
-        hitColor = new Color(0.25f, 1.0f, 0.35f, 0.45f),
+        hitColor = new Color(1.0f, 0.85f, 0.20f, 0.45f),
     };
 
     public RaySpec rightRay = new RaySpec
@@ -57,9 +57,11 @@ public class ControllerRayVisual : MonoBehaviour
         "WorkspaceDragHandle",
         "WorkspaceRotateHandle",
         "DragHandle",
+        "ResizeHandle",
         "ToggleRecordingButton",
         "CaptureFrameButton",
-        "FloatingCameraBody"
+        "FloatingCameraBody",
+        "FloatingCameraRotateRing"
     };
 
     public string LastStatus { get; private set; } = "not initialized";
@@ -181,14 +183,29 @@ public class ControllerRayVisual : MonoBehaviour
             }
         }
 
+        FloatingSceneCameraController[] floatingCameras = FindAll<FloatingSceneCameraController>();
+        foreach (FloatingSceneCameraController floatingCamera in floatingCameras)
+        {
+            if (floatingCamera == null || !floatingCamera.isActiveAndEnabled)
+                continue;
+
+            if (floatingCamera.TryFindRayVisualHit(ray, maxDistance, out string floatingHitName, out float distance, out Vector3 point)
+                && distance < bestDistance)
+            {
+                bestDistance = distance;
+                hitPoint = point;
+                hitName = floatingHitName;
+                found = true;
+            }
+        }
+
         VRDraggableWindow[] windows = FindAll<VRDraggableWindow>();
         foreach (VRDraggableWindow window in windows)
         {
             if (window == null || !window.isActiveAndEnabled || window.windowRoot == null)
                 continue;
 
-            RectTransform target = FindWindowHandle(window);
-            if (target != null && RectRayHit(target, ray, out float distance, out Vector3 point) && distance < bestDistance)
+            if (TryFindWindowInteractableHit(window, ray, out RectTransform target, out float distance, out Vector3 point) && distance < bestDistance)
             {
                 bestDistance = distance;
                 hitPoint = point;
@@ -208,18 +225,35 @@ public class ControllerRayVisual : MonoBehaviour
         return found;
     }
 
-    private RectTransform FindWindowHandle(VRDraggableWindow window)
+    private bool TryFindWindowInteractableHit(VRDraggableWindow window, Ray ray, out RectTransform bestRect, out float bestDistance, out Vector3 bestPoint)
     {
+        bestRect = null;
+        bestDistance = Mathf.Max(0.05f, maxDistance) + 1.0f;
+        bestPoint = Vector3.zero;
+        if (window == null || window.windowRoot == null)
+            return false;
+
         RectTransform root = window.windowRoot;
         RectTransform[] rects = root.GetComponentsInChildren<RectTransform>(includeInactive: true);
         foreach (RectTransform rect in rects)
         {
             if (rect == null || rect == root)
                 continue;
-            if (string.IsNullOrWhiteSpace(window.handleNameContains) || rect.name.IndexOf(window.handleNameContains, System.StringComparison.OrdinalIgnoreCase) >= 0)
-                return rect;
+
+            bool isWindowHandle = string.IsNullOrWhiteSpace(window.handleNameContains) ||
+                rect.name.IndexOf(window.handleNameContains, System.StringComparison.OrdinalIgnoreCase) >= 0;
+            if (!isWindowHandle && !NameIsInteractable(rect.name))
+                continue;
+
+            if (RectRayHit(rect, ray, out float distance, out Vector3 point) && distance < bestDistance)
+            {
+                bestDistance = distance;
+                bestPoint = point;
+                bestRect = rect;
+            }
         }
-        return null;
+
+        return bestRect != null;
     }
 
     private bool RectRayHit(RectTransform rect, Ray ray, out float distance, out Vector3 point)

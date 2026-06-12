@@ -17,7 +17,7 @@ def load_yaml(package_name: str, relative_path: str):
         return yaml.safe_load(f)
 
 
-def make_robot_description(prefix: str, ur_type: str, controllers_file: str):
+def make_robot_description(prefix: str, ur_type: str, controllers_file: str, initial_positions_file: str):
     urdf_xacro = os.path.join(
         get_package_share_directory("ur_hande_description"), "urdf", "ur_hande.urdf.xacro"
     )
@@ -31,7 +31,7 @@ def make_robot_description(prefix: str, ur_type: str, controllers_file: str):
             "sim_gazebo": "false",
             "sim_ignition": "true",
             "simulation_controllers": controllers_file,
-            "initial_positions_file": "/home/noah/ws_moveit/src/ur_hande_description/config/initial_positions.yaml",
+            "initial_positions_file": initial_positions_file,
         },
     )
     return {"robot_description": robot_description_config.toxml()}
@@ -50,9 +50,33 @@ def make_kinematics(prefix: str):
     return {"robot_description_kinematics": {f"{prefix}ur_manipulator": solver}}
 
 
+def make_planning(prefix: str):
+    planning = load_yaml("ur_moveit_config", "config/joint_limits.yaml")
+    planning = copy.deepcopy(planning) if planning else {}
+    joint_limits = planning.get("joint_limits", {})
+    if joint_limits:
+        planning["joint_limits"] = {
+            f"{prefix}{joint_name}": limits for joint_name, limits in joint_limits.items()
+        }
+    return {"robot_description_planning": planning}
+
+
 def make_servo_params(prefix: str, namespace: str, command_topic: str):
     servo_yaml = load_yaml("servo_test_config", "config/servo_gz.yaml")
     servo = copy.deepcopy(servo_yaml)
+    check_collisions_override = os.environ.get("SERVO_CHECK_COLLISIONS", "").strip().lower()
+    if check_collisions_override in {"0", "false", "off", "no"}:
+        servo["check_collisions"] = False
+    elif check_collisions_override in {"1", "true", "on", "yes"}:
+        servo["check_collisions"] = True
+    for env_name, param_name in (
+        ("SERVO_SELF_COLLISION_THRESHOLD", "self_collision_proximity_threshold"),
+        ("SERVO_SCENE_COLLISION_THRESHOLD", "scene_collision_proximity_threshold"),
+        ("SERVO_COLLISION_CHECK_RATE", "collision_check_rate"),
+    ):
+        override = os.environ.get(env_name, "").strip()
+        if override:
+            servo[param_name] = float(override)
     servo["move_group_name"] = f"{prefix}ur_manipulator"
     servo["planning_frame"] = f"{prefix}base_link"
     servo["ee_frame_name"] = f"{prefix}tool0"
@@ -65,10 +89,18 @@ def make_servo_params(prefix: str, namespace: str, command_topic: str):
     return {"moveit_servo": servo}
 
 
-def make_arm_nodes(arm: str, prefix: str, controllers_file: str, command_topic: str, ur_type: str):
-    robot_description = make_robot_description(prefix, ur_type, controllers_file)
+def make_arm_nodes(
+    arm: str,
+    prefix: str,
+    controllers_file: str,
+    command_topic: str,
+    ur_type: str,
+    initial_positions_file: str,
+):
+    robot_description = make_robot_description(prefix, ur_type, controllers_file, initial_positions_file)
     robot_description_semantic = make_semantic_description(prefix)
     robot_description_kinematics = make_kinematics(prefix)
+    robot_description_planning = make_planning(prefix)
     servo_params = make_servo_params(prefix, arm, command_topic)
 
     joint_filter = Node(
@@ -98,6 +130,7 @@ def make_arm_nodes(arm: str, prefix: str, controllers_file: str, command_topic: 
             robot_description,
             robot_description_semantic,
             robot_description_kinematics,
+            robot_description_planning,
             {"use_sim_time": True},
         ],
     )
@@ -116,6 +149,7 @@ def _launch_setup(context, *args, **kwargs):
             left_controllers,
             "/left_joint_group_velocity_controller/commands",
             ur_type,
+            "/home/noah/ws_moveit/src/ur_hande_description/config/initial_positions.yaml",
         ),
         *make_arm_nodes(
             "right_arm",
@@ -123,6 +157,7 @@ def _launch_setup(context, *args, **kwargs):
             right_controllers,
             "/right_joint_group_velocity_controller/commands",
             ur_type,
+            "/home/noah/ws_moveit/src/ur_hande_description/config/initial_positions_right_180.yaml",
         ),
     ]
 

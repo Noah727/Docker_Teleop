@@ -18,6 +18,7 @@ public class GripperCameraRecorder : MonoBehaviour
     private const string RuntimeMarkerName = "GripperDataCamera_VisibleMarker";
     private const string FloatingPanelName = "GripperCameraFloatingPanel";
     private const string FloatingPanelPrefsPrefix = "GripperCameraRecorder.FloatingPanel.";
+    private const int UnityUiLayer = 5;
 
     public enum PanelDragController
     {
@@ -74,12 +75,12 @@ public class GripperCameraRecorder : MonoBehaviour
     public bool showSceneMarker = true;
     public bool createRuntimeSceneMarker = true;
     public bool rebuildSceneMarkerFromSettings = false;
-    public int runtimeSceneMarkerLayer = 0;
+    public int runtimeSceneMarkerLayer = UnityUiLayer;
     public Color markerColor = new Color(0.24f, 0.78f, 1.0f, 0.22f);
-    public Vector3 markerBoxSize = new Vector3(0.035f, 0.02f, 0.025f);
-    public float markerForwardLength = 0.06f;
-    public float markerFrustumHalfSize = 0.0175f;
-    public float markerLineWidth = 0.004f;
+    public Vector3 markerBoxSize = new Vector3(0.0175f, 0.01f, 0.0125f);
+    public float markerForwardLength = 0.03f;
+    public float markerFrustumHalfSize = 0.00875f;
+    public float markerLineWidth = 0.002f;
 
     [Header("Floating Control Panel")]
     public bool createFloatingPanel = true;
@@ -152,6 +153,7 @@ public class GripperCameraRecorder : MonoBehaviour
     private void OnEnable()
     {
         ResolveSourceCamera();
+        ApplyCameraCullingMask();
 
         if (!Application.isPlaying)
         {
@@ -186,6 +188,7 @@ public class GripperCameraRecorder : MonoBehaviour
         if (!Application.isPlaying)
         {
             ResolveSourceCamera();
+            ApplyCameraCullingMask();
 #if UNITY_EDITOR
             QueueEditorRefresh(rebuildMarker, rebuildPanel);
 #else
@@ -198,6 +201,7 @@ public class GripperCameraRecorder : MonoBehaviour
     private void Awake()
     {
         ResolveSourceCamera();
+        ApplyCameraCullingMask();
 
         if (!Application.isPlaying)
         {
@@ -205,9 +209,6 @@ public class GripperCameraRecorder : MonoBehaviour
             CreateOrUpdateFloatingPanel();
             return;
         }
-
-        if (excludeUnityUiLayerFromRecording && sourceCamera != null)
-            sourceCamera.cullingMask &= ~(1 << 5);
 
         captureEveryNFrames = Mathf.Max(1, captureEveryNFrames);
         width = Mathf.Max(16, width);
@@ -1070,6 +1071,14 @@ public class GripperCameraRecorder : MonoBehaviour
             SetLayerRecursively(child.gameObject, layer);
     }
 
+    private void ApplyCameraCullingMask()
+    {
+        if (!excludeUnityUiLayerFromRecording || sourceCamera == null)
+            return;
+
+        sourceCamera.cullingMask &= ~(1 << UnityUiLayer);
+    }
+
     private void CreateOrUpdateRuntimeSceneMarker(bool rebuildFromSettings = false)
     {
         ResolveRuntimeSceneMarker();
@@ -1102,7 +1111,11 @@ public class GripperCameraRecorder : MonoBehaviour
         bool shouldBuildDefaultMarker = createdMarker || rebuildFromSettings || runtimeSceneMarker.transform.childCount == 0;
         if (!shouldBuildDefaultMarker)
         {
+            SetLayerRecursively(runtimeSceneMarker, runtimeSceneMarkerLayer);
             EnsureExistingMarkerHasMaterial();
+#if UNITY_EDITOR
+            MarkSceneDirtyInEditor();
+#endif
             return;
         }
 

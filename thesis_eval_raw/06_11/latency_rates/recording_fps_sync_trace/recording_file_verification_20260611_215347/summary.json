@@ -1,0 +1,13 @@
+{
+  "recording_folder": "thesis_eval_raw/06_11/videos/wrist_camera_recordings/20260611_215347",
+  "frame_count": 1583,
+  "first_timestamp": "2026-06-11T21:53:47.885",
+  "last_timestamp": "2026-06-11T21:59:26.420",
+  "duration_sec": 338.535,
+  "estimated_capture_hz": 4.673076639047661,
+  "mean_inter_frame_gap_sec": 0.21399178255372947,
+  "min_inter_frame_gap_sec": 0.192,
+  "max_inter_frame_gap_sec": 0.257,
+  "total_size_bytes": 31466804,
+  "note": "File-based verification only. This confirms camera recording happened, but does not measure Unity FPS or ROS sync latency because /unity_eval/recording_state and /unity_eval/fps_sample were not published in this app run."
+}

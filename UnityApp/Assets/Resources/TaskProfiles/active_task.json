@@ -13,12 +13,74 @@
   },
   "objects": [
     {
+      "id": "Sync_TaskPlatform",
+      "type": "platform",
+      "localPosition": {
+        "x": 0.0,
+        "y": 0.05,
+        "z": 0.0
+      },
+      "localEuler": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "size": {
+        "x": 0.462,
+        "y": 0.1,
+        "z": 0.462
+      },
+      "radius": 0.01,
+      "height": 0.048,
+      "rubikOrder": 2,
+      "rubikX": 0,
+      "rubikY": 0,
+      "rubikZ": 0,
+      "stickerGap": 0.002,
+      "portSize": {
+        "x": 0.018,
+        "y": 0.012,
+        "z": 0.018
+      },
+      "ports": [],
+      "portColor": {
+        "r": 0.01,
+        "g": 0.01,
+        "b": 0.012,
+        "a": 1.0
+      },
+      "plugSize": {
+        "x": 0.016,
+        "y": 0.01,
+        "z": 0.016
+      },
+      "plugColor": {
+        "r": 0.12,
+        "g": 0.12,
+        "b": 0.13,
+        "a": 1.0
+      },
+      "color": {
+        "r": 0.38,
+        "g": 0.38,
+        "b": 0.36,
+        "a": 1.0
+      },
+      "materialStyle": "",
+      "woodGrainColor": {
+        "r": 0.3,
+        "g": 0.15,
+        "b": 0.06,
+        "a": 1.0
+      }
+    },
+    {
       "id": "Sync_RedCube",
       "type": "box",
       "localPosition": {
         "x": -0.055,
-        "y": 0.02,
-        "z": -0.06
+        "y": 0.12,
+        "z": -0.015
       },
       "localEuler": {
         "x": 0.0,
@@ -39,9 +101,10 @@
       "stickerGap": 0.002,
       "portSize": {
         "x": 0.018,
-        "y": 0.006,
-        "z": 0.014
+        "y": 0.012,
+        "z": 0.018
       },
+      "ports": [],
       "portColor": {
         "r": 0.01,
         "g": 0.01,
@@ -63,6 +126,13 @@
         "r": 0.85,
         "g": 0.12,
         "b": 0.12,
+        "a": 1.0
+      },
+      "materialStyle": "",
+      "woodGrainColor": {
+        "r": 0.3,
+        "g": 0.15,
+        "b": 0.06,
         "a": 1.0
       }
     },
@@ -71,8 +141,8 @@
       "type": "box",
       "localPosition": {
         "x": 0.055,
-        "y": 0.02,
-        "z": -0.06
+        "y": 0.12,
+        "z": -0.015
       },
       "localEuler": {
         "x": 0.0,
@@ -93,9 +163,10 @@
       "stickerGap": 0.002,
       "portSize": {
         "x": 0.018,
-        "y": 0.006,
-        "z": 0.014
+        "y": 0.012,
+        "z": 0.018
       },
+      "ports": [],
       "portColor": {
         "r": 0.01,
         "g": 0.01,
@@ -118,6 +189,13 @@
         "g": 0.7,
         "b": 0.18,
         "a": 1.0
+      },
+      "materialStyle": "",
+      "woodGrainColor": {
+        "r": 0.3,
+        "g": 0.15,
+        "b": 0.06,
+        "a": 1.0
       }
     },
     {
@@ -125,7 +203,7 @@
       "type": "cylinder",
       "localPosition": {
         "x": -0.055,
-        "y": 0.024,
+        "y": 0.124,
         "z": 0.06
       },
       "localEuler": {
@@ -147,9 +225,10 @@
       "stickerGap": 0.002,
       "portSize": {
         "x": 0.018,
-        "y": 0.006,
-        "z": 0.014
+        "y": 0.012,
+        "z": 0.018
       },
+      "ports": [],
       "portColor": {
         "r": 0.01,
         "g": 0.01,
@@ -172,6 +251,13 @@
         "g": 0.12,
         "b": 0.12,
         "a": 1.0
+      },
+      "materialStyle": "",
+      "woodGrainColor": {
+        "r": 0.3,
+        "g": 0.15,
+        "b": 0.06,
+        "a": 1.0
       }
     },
     {
@@ -179,7 +265,7 @@
       "type": "cylinder",
       "localPosition": {
         "x": 0.055,
-        "y": 0.024,
+        "y": 0.124,
         "z": 0.06
       },
       "localEuler": {
@@ -201,9 +287,10 @@
       "stickerGap": 0.002,
       "portSize": {
         "x": 0.018,
-        "y": 0.006,
-        "z": 0.014
+        "y": 0.012,
+        "z": 0.018
       },
+      "ports": [],
       "portColor": {
         "r": 0.01,
         "g": 0.01,
@@ -226,6 +313,13 @@
         "g": 0.7,
         "b": 0.18,
         "a": 1.0
+      },
+      "materialStyle": "",
+      "woodGrainColor": {
+        "r": 0.3,
+        "g": 0.15,
+        "b": 0.06,
+        "a": 1.0
       }
     },
     {
@@ -233,7 +327,7 @@
       "type": "plate",
       "localPosition": {
         "x": -0.16,
-        "y": 0.0025,
+        "y": 0.1025,
         "z": 0.0
       },
       "localEuler": {
@@ -255,9 +349,10 @@
       "stickerGap": 0.002,
       "portSize": {
         "x": 0.018,
-        "y": 0.006,
-        "z": 0.014
+        "y": 0.012,
+        "z": 0.018
       },
+      "ports": [],
       "portColor": {
         "r": 0.01,
         "g": 0.01,
@@ -279,6 +374,13 @@
         "r": 0.6,
         "g": 0.8,
         "b": 0.95,
+        "a": 1.0
+      },
+      "materialStyle": "",
+      "woodGrainColor": {
+        "r": 0.3,
+        "g": 0.15,
+        "b": 0.06,
         "a": 1.0
       }
     },
@@ -287,7 +389,7 @@
       "type": "plate",
       "localPosition": {
         "x": 0.16,
-        "y": 0.0025,
+        "y": 0.1025,
         "z": 0.0
       },
       "localEuler": {
@@ -309,9 +411,10 @@
       "stickerGap": 0.002,
       "portSize": {
         "x": 0.018,
-        "y": 0.006,
-        "z": 0.014
+        "y": 0.012,
+        "z": 0.018
       },
+      "ports": [],
       "portColor": {
         "r": 0.01,
         "g": 0.01,
@@ -333,6 +436,393 @@
         "r": 0.6,
         "g": 0.8,
         "b": 0.95,
+        "a": 1.0
+      },
+      "materialStyle": "",
+      "woodGrainColor": {
+        "r": 0.3,
+        "g": 0.15,
+        "b": 0.06,
+        "a": 1.0
+      }
+    },
+    {
+      "id": "Sync_CableReceiverBox",
+      "type": "port_box",
+      "localPosition": {
+        "x": 0.0,
+        "y": 0.1225,
+        "z": -0.165
+      },
+      "localEuler": {
+        "x": -90.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "size": {
+        "x": 0.15,
+        "y": 0.04,
+        "z": 0.045
+      },
+      "radius": 0.01,
+      "height": 0.048,
+      "rubikOrder": 2,
+      "rubikX": 0,
+      "rubikY": 0,
+      "rubikZ": 0,
+      "stickerGap": 0.002,
+      "portSize": {
+        "x": 0.018,
+        "y": 0.012,
+        "z": 0.018
+      },
+      "ports": [
+        {
+          "label": "loose_2p0mm",
+          "center": {
+            "x": -0.056,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "size": {
+            "x": 0.02,
+            "y": 0.014,
+            "z": 0.018
+          }
+        },
+        {
+          "label": "loose_1p5mm",
+          "center": {
+            "x": -0.028,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "size": {
+            "x": 0.019,
+            "y": 0.013,
+            "z": 0.018
+          }
+        },
+        {
+          "label": "default_1p0mm",
+          "center": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "size": {
+            "x": 0.018,
+            "y": 0.012,
+            "z": 0.018
+          }
+        },
+        {
+          "label": "tight_0p5mm",
+          "center": {
+            "x": 0.028,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "size": {
+            "x": 0.017,
+            "y": 0.011,
+            "z": 0.018
+          }
+        },
+        {
+          "label": "tight_0p2mm",
+          "center": {
+            "x": 0.056,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "size": {
+            "x": 0.0164,
+            "y": 0.0104,
+            "z": 0.018
+          }
+        }
+      ],
+      "portColor": {
+        "r": 0.015,
+        "g": 0.012,
+        "b": 0.01,
+        "a": 1.0
+      },
+      "plugSize": {
+        "x": 0.016,
+        "y": 0.01,
+        "z": 0.016
+      },
+      "plugColor": {
+        "r": 0.12,
+        "g": 0.12,
+        "b": 0.13,
+        "a": 1.0
+      },
+      "color": {
+        "r": 1.0,
+        "g": 0.48,
+        "b": 0.05,
+        "a": 1.0
+      },
+      "materialStyle": "",
+      "woodGrainColor": {
+        "r": 0.3,
+        "g": 0.15,
+        "b": 0.06,
+        "a": 1.0
+      }
+    },
+    {
+      "id": "Sync_CableReceiverBox_Fixed",
+      "type": "port_box",
+      "localPosition": {
+        "x": 0.0,
+        "y": 0.1225,
+        "z": -0.095
+      },
+      "localEuler": {
+        "x": -90.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "size": {
+        "x": 0.15,
+        "y": 0.04,
+        "z": 0.045
+      },
+      "radius": 0.01,
+      "height": 0.048,
+      "rubikOrder": 2,
+      "rubikX": 0,
+      "rubikY": 0,
+      "rubikZ": 0,
+      "stickerGap": 0.002,
+      "portSize": {
+        "x": 0.018,
+        "y": 0.012,
+        "z": 0.018
+      },
+      "ports": [
+        {
+          "label": "loose_2p0mm",
+          "center": {
+            "x": -0.056,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "size": {
+            "x": 0.02,
+            "y": 0.014,
+            "z": 0.018
+          }
+        },
+        {
+          "label": "loose_1p5mm",
+          "center": {
+            "x": -0.028,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "size": {
+            "x": 0.019,
+            "y": 0.013,
+            "z": 0.018
+          }
+        },
+        {
+          "label": "default_1p0mm",
+          "center": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "size": {
+            "x": 0.018,
+            "y": 0.012,
+            "z": 0.018
+          }
+        },
+        {
+          "label": "tight_0p5mm",
+          "center": {
+            "x": 0.028,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "size": {
+            "x": 0.017,
+            "y": 0.011,
+            "z": 0.018
+          }
+        },
+        {
+          "label": "tight_0p2mm",
+          "center": {
+            "x": 0.056,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "size": {
+            "x": 0.0164,
+            "y": 0.0104,
+            "z": 0.018
+          }
+        }
+      ],
+      "portColor": {
+        "r": 0.015,
+        "g": 0.012,
+        "b": 0.01,
+        "a": 1.0
+      },
+      "plugSize": {
+        "x": 0.016,
+        "y": 0.01,
+        "z": 0.016
+      },
+      "plugColor": {
+        "r": 0.12,
+        "g": 0.12,
+        "b": 0.13,
+        "a": 1.0
+      },
+      "color": {
+        "r": 1.0,
+        "g": 0.48,
+        "b": 0.05,
+        "a": 1.0
+      },
+      "materialStyle": "",
+      "woodGrainColor": {
+        "r": 0.3,
+        "g": 0.15,
+        "b": 0.06,
+        "a": 1.0
+      }
+    },
+    {
+      "id": "Sync_CableRod",
+      "type": "cable_rod",
+      "localPosition": {
+        "x": -0.055,
+        "y": 0.1045,
+        "z": 0.135
+      },
+      "localEuler": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "size": {
+        "x": 0.009,
+        "y": 0.009,
+        "z": 0.075
+      },
+      "radius": 0.01,
+      "height": 0.048,
+      "rubikOrder": 2,
+      "rubikX": 0,
+      "rubikY": 0,
+      "rubikZ": 0,
+      "stickerGap": 0.002,
+      "portSize": {
+        "x": 0.018,
+        "y": 0.012,
+        "z": 0.018
+      },
+      "ports": [],
+      "portColor": {
+        "r": 0.01,
+        "g": 0.01,
+        "b": 0.012,
+        "a": 1.0
+      },
+      "plugSize": {
+        "x": 0.016,
+        "y": 0.01,
+        "z": 0.016
+      },
+      "plugColor": {
+        "r": 1.0,
+        "g": 0.94,
+        "b": 0.45,
+        "a": 1.0
+      },
+      "color": {
+        "r": 1.0,
+        "g": 0.9,
+        "b": 0.35,
+        "a": 1.0
+      },
+      "materialStyle": "",
+      "woodGrainColor": {
+        "r": 0.3,
+        "g": 0.15,
+        "b": 0.06,
+        "a": 1.0
+      }
+    },
+    {
+      "id": "Sync_CableRod_B",
+      "type": "cable_rod",
+      "localPosition": {
+        "x": 0.055,
+        "y": 0.154,
+        "z": 0.135
+      },
+      "localEuler": {
+        "x": -90.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "size": {
+        "x": 0.009,
+        "y": 0.009,
+        "z": 0.075
+      },
+      "radius": 0.01,
+      "height": 0.048,
+      "rubikOrder": 2,
+      "rubikX": 0,
+      "rubikY": 0,
+      "rubikZ": 0,
+      "stickerGap": 0.002,
+      "portSize": {
+        "x": 0.018,
+        "y": 0.012,
+        "z": 0.018
+      },
+      "ports": [],
+      "portColor": {
+        "r": 0.01,
+        "g": 0.01,
+        "b": 0.012,
+        "a": 1.0
+      },
+      "plugSize": {
+        "x": 0.016,
+        "y": 0.01,
+        "z": 0.016
+      },
+      "plugColor": {
+        "r": 1.0,
+        "g": 0.94,
+        "b": 0.45,
+        "a": 1.0
+      },
+      "color": {
+        "r": 1.0,
+        "g": 0.9,
+        "b": 0.35,
+        "a": 1.0
+      },
+      "materialStyle": "",
+      "woodGrainColor": {
+        "r": 0.3,
+        "g": 0.15,
+        "b": 0.06,
         "a": 1.0
       }
     }

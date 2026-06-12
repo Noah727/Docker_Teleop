@@ -11,3 +11,5 @@ log/
 # Runtime logs/scripts output
 *.log
 tmp/
+eval_results/
+runtime/

@@ -11,7 +11,7 @@ public static class UICornerDragHandle
         TopRight
     }
 
-    private static Sprite roundedSprite;
+    private static readonly Sprite[] curvedNotchSprites = new Sprite[4];
 
     public static RectTransform Ensure(
         Transform parent,
@@ -102,70 +102,51 @@ public static class UICornerDragHandle
         DisableLegacyLine(handleRect, "NotchLine_1");
         DisableLegacyLine(handleRect, "NotchLine_2");
         DisableLegacyLine(handleRect, "NotchLine_3");
+        DisableLegacyLine(handleRect, "NotchCorner");
+        DisableLegacyLine(handleRect, "NotchLine_H");
+        DisableLegacyLine(handleRect, "NotchLine_V");
 
         Color lineColor = new Color(notchColor.r, notchColor.g, notchColor.b, Mathf.Clamp01(Mathf.Max(0.35f, notchColor.a)));
-        ConfigureCornerLines(handleRect, corner, lineColor);
+        EnsureCurvedNotch(handleRect, corner, lineColor);
     }
 
-    private static void ConfigureCornerLines(RectTransform parent, Corner corner, Color color)
+    private static void EnsureCurvedNotch(RectTransform parent, Corner corner, Color color)
     {
-        const float inset = 4f;
-        const float thickness = 4f;
-        const float length = 28f;
-
-        switch (corner)
-        {
-            case Corner.BottomLeft:
-                EnsureLine(parent, "NotchLine_H", new Vector2(0f, 0f), new Vector2(0f, 0.5f), new Vector2(inset, inset), new Vector2(length, thickness), color);
-                EnsureLine(parent, "NotchLine_V", new Vector2(0f, 0f), new Vector2(0.5f, 0f), new Vector2(inset, inset), new Vector2(thickness, length), color);
-                break;
-            case Corner.BottomRight:
-                EnsureLine(parent, "NotchLine_H", new Vector2(1f, 0f), new Vector2(1f, 0.5f), new Vector2(-inset, inset), new Vector2(length, thickness), color);
-                EnsureLine(parent, "NotchLine_V", new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(-inset, inset), new Vector2(thickness, length), color);
-                break;
-            case Corner.TopLeft:
-                EnsureLine(parent, "NotchLine_H", new Vector2(0f, 1f), new Vector2(0f, 0.5f), new Vector2(inset, -inset), new Vector2(length, thickness), color);
-                EnsureLine(parent, "NotchLine_V", new Vector2(0f, 1f), new Vector2(0.5f, 1f), new Vector2(inset, -inset), new Vector2(thickness, length), color);
-                break;
-            case Corner.TopRight:
-                EnsureLine(parent, "NotchLine_H", new Vector2(1f, 1f), new Vector2(1f, 0.5f), new Vector2(-inset, -inset), new Vector2(length, thickness), color);
-                EnsureLine(parent, "NotchLine_V", new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(-inset, -inset), new Vector2(thickness, length), color);
-                break;
-        }
-    }
-
-    private static void EnsureLine(RectTransform parent, string name, Vector2 anchor, Vector2 pivot, Vector2 anchoredPosition, Vector2 size, Color color)
-    {
-        Transform existing = parent.Find(name);
-        GameObject lineObject;
+        const float inset = 1f;
+        Transform existing = parent.Find("NotchCurve");
+        GameObject curveObject;
         if (existing == null)
         {
-            lineObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            lineObject.transform.SetParent(parent, false);
+            curveObject = new GameObject("NotchCurve", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            curveObject.transform.SetParent(parent, false);
         }
         else
         {
-            lineObject = existing.gameObject;
-            if (lineObject.GetComponent<CanvasRenderer>() == null)
-                lineObject.AddComponent<CanvasRenderer>();
-            if (lineObject.GetComponent<Image>() == null)
-                lineObject.AddComponent<Image>();
+            curveObject = existing.gameObject;
+            if (curveObject.GetComponent<CanvasRenderer>() == null)
+                curveObject.AddComponent<CanvasRenderer>();
+            if (curveObject.GetComponent<Image>() == null)
+                curveObject.AddComponent<Image>();
         }
 
-        lineObject.layer = parent.gameObject.layer;
-        lineObject.SetActive(true);
+        curveObject.layer = parent.gameObject.layer;
+        curveObject.SetActive(true);
 
-        RectTransform rect = lineObject.GetComponent<RectTransform>();
-        rect.anchorMin = anchor;
-        rect.anchorMax = anchor;
-        rect.pivot = pivot;
-        rect.anchoredPosition = anchoredPosition;
-        rect.sizeDelta = size;
+        RectTransform rect = curveObject.GetComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = Vector2.zero;
+        rect.offsetMin = new Vector2(inset, inset);
+        rect.offsetMax = new Vector2(-inset, -inset);
         rect.localRotation = Quaternion.identity;
         rect.localScale = Vector3.one;
 
-        Image image = lineObject.GetComponent<Image>();
-        ApplyRoundedImage(image, color);
+        Image image = curveObject.GetComponent<Image>();
+        image.sprite = GetCurvedNotchSprite(corner);
+        image.type = Image.Type.Simple;
+        image.preserveAspect = true;
+        image.color = color;
         image.raycastTarget = false;
     }
 
@@ -176,40 +157,82 @@ public static class UICornerDragHandle
             legacy.gameObject.SetActive(false);
     }
 
-    private static void ApplyRoundedImage(Image image, Color color)
+    private static Sprite GetCurvedNotchSprite(Corner corner)
     {
-        if (image == null)
-            return;
-
-        if (roundedSprite == null)
-            roundedSprite = CreateRoundedSprite();
-        image.sprite = roundedSprite;
-        image.type = Image.Type.Sliced;
-        image.color = color;
+        int index = (int)corner;
+        if (curvedNotchSprites[index] == null)
+            curvedNotchSprites[index] = CreateCurvedNotchSprite(corner);
+        return curvedNotchSprites[index];
     }
 
-    private static Sprite CreateRoundedSprite()
+    private static Sprite CreateCurvedNotchSprite(Corner corner)
     {
-        const int size = 32;
-        const int radius = 8;
+        const int size = 96;
+        const float radius = 25f;
+        const float stroke = 12f;
+        const float margin = 10f;
         Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
         {
-            name = "UICornerDragHandle_RoundedSprite"
+            name = $"UICornerDragHandle_CurvedNotch_{corner}"
         };
         texture.wrapMode = TextureWrapMode.Clamp;
+
         Color clear = new Color(1f, 1f, 1f, 0f);
         for (int y = 0; y < size; y++)
         {
             for (int x = 0; x < size; x++)
             {
-                float dx = Mathf.Max(radius - x, x - (size - radius - 1), 0);
-                float dy = Mathf.Max(radius - y, y - (size - radius - 1), 0);
-                float distance = Mathf.Sqrt(dx * dx + dy * dy);
-                float alpha = 1f - Mathf.Clamp01(distance - radius + 1f);
+                Vector2 point = ToBottomLeftCornerSpace(corner, x + 0.5f, y + 0.5f, size);
+                float alpha = CurvedNotchAlpha(point, radius, stroke, margin, size);
                 texture.SetPixel(x, y, alpha <= 0f ? clear : new Color(1f, 1f, 1f, alpha));
             }
         }
+
         texture.Apply();
-        return Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(radius, radius, radius, radius));
+        return Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    private static Vector2 ToBottomLeftCornerSpace(Corner corner, float x, float y, float size)
+    {
+        switch (corner)
+        {
+            case Corner.BottomRight:
+                return new Vector2(size - x, y);
+            case Corner.TopLeft:
+                return new Vector2(x, size - y);
+            case Corner.TopRight:
+                return new Vector2(size - x, size - y);
+            default:
+                return new Vector2(x, y);
+        }
+    }
+
+    private static float CurvedNotchAlpha(Vector2 point, float radius, float stroke, float margin, float size)
+    {
+        float halfStroke = stroke * 0.5f;
+        Vector2 arcCenter = new Vector2(margin + radius, margin + radius);
+        float maxLine = size - margin;
+
+        float horizontalDistance = DistanceToSegment(point, new Vector2(arcCenter.x, margin), new Vector2(maxLine, margin));
+        float verticalDistance = DistanceToSegment(point, new Vector2(margin, arcCenter.y), new Vector2(margin, maxLine));
+        float arcDistance = Mathf.Abs(Vector2.Distance(point, arcCenter) - radius);
+        bool inArcQuadrant = point.x <= arcCenter.x && point.y <= arcCenter.y;
+
+        float distance = Mathf.Min(horizontalDistance, verticalDistance);
+        if (inArcQuadrant)
+            distance = Mathf.Min(distance, arcDistance);
+
+        return 1f - Mathf.Clamp01(distance - halfStroke + 1f);
+    }
+
+    private static float DistanceToSegment(Vector2 point, Vector2 a, Vector2 b)
+    {
+        Vector2 ab = b - a;
+        float denominator = Vector2.Dot(ab, ab);
+        if (denominator <= 0.0001f)
+            return Vector2.Distance(point, a);
+
+        float t = Mathf.Clamp01(Vector2.Dot(point - a, ab) / denominator);
+        return Vector2.Distance(point, a + ab * t);
     }
 }

@@ -5,6 +5,13 @@ export DISPLAY="${DISPLAY:-:1}"
 export VNC_PORT="${VNC_PORT:-5900}"
 export NOVNC_PORT="${NOVNC_PORT:-6080}"
 export HOME="/home/noah"
+export ENABLE_DESKTOP="${ENABLE_DESKTOP:-0}"
+export ENABLE_NOVNC="${ENABLE_NOVNC:-0}"
+
+if [[ "${ENABLE_DESKTOP}" != "1" ]]; then
+  echo "[start_desktop] Desktop/noVNC disabled (ENABLE_DESKTOP=0). Container is staying alive for headless ROS/Gazebo."
+  tail -f /dev/null
+fi
 
 # Start a virtual X display and XFCE desktop.
 Xvfb "${DISPLAY}" -screen 0 1920x1080x24 >/tmp/xvfb.log 2>&1 &
@@ -35,11 +42,13 @@ xfconf-query -c xfce4-screensaver -p /saver/idle-activation/enabled -n -t bool -
 pkill -f xfce4-screensaver >/dev/null 2>&1 || true
 pkill -f light-locker >/dev/null 2>&1 || true
 
-# Expose the desktop over VNC, then bridge it to noVNC on port 6080.
-x11vnc -display "${DISPLAY}" -rfbport "${VNC_PORT}" -forever -shared -nopw -xkb >/tmp/x11vnc.log 2>&1 &
-websockify --web=/usr/share/novnc/ "${NOVNC_PORT}" "localhost:${VNC_PORT}" >/tmp/novnc.log 2>&1 &
-
-echo "[start_desktop] noVNC ready at http://localhost:${NOVNC_PORT}/vnc.html"
-
-# Keep container alive and stream logs.
-tail -F /tmp/xvfb.log /tmp/xfce.log /tmp/x11vnc.log /tmp/novnc.log
+if [[ "${ENABLE_NOVNC}" == "1" ]]; then
+  # Expose the desktop over VNC, then bridge it to noVNC on port 6080.
+  x11vnc -display "${DISPLAY}" -rfbport "${VNC_PORT}" -forever -shared -nopw -xkb >/tmp/x11vnc.log 2>&1 &
+  websockify --web=/usr/share/novnc/ "${NOVNC_PORT}" "localhost:${VNC_PORT}" >/tmp/novnc.log 2>&1 &
+  echo "[start_desktop] noVNC ready at http://localhost:${NOVNC_PORT}/vnc.html"
+  tail -F /tmp/xvfb.log /tmp/xfce.log /tmp/x11vnc.log /tmp/novnc.log
+else
+  echo "[start_desktop] XFCE desktop enabled, noVNC disabled (ENABLE_NOVNC=0)."
+  tail -F /tmp/xvfb.log /tmp/xfce.log
+fi

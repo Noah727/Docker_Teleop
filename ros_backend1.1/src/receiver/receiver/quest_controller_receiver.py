@@ -334,6 +334,11 @@ class QuestControllerReceiver(Node):
         reset_flag = self._as_optional_bool(
             controls.get("reset_enable", controls.get("reset_held"))
         )
+        arm_reset_robot_key = "left_reset_robot_enable" if arm == "left" else "right_reset_robot_enable"
+        arm_reset_robot_held_key = "left_reset_robot_held" if arm == "left" else "right_reset_robot_held"
+        arm_reset_robot_flag = self._as_optional_bool(
+            controls.get(arm_reset_robot_key, controls.get(arm_reset_robot_held_key))
+        )
         reset_robot_flag = self._as_optional_bool(
             controls.get("reset_robot_enable", controls.get("reset_robot_held"))
         )
@@ -352,7 +357,11 @@ class QuestControllerReceiver(Node):
         open_enable = open_from_analog if open_flag is None else open_flag
 
         reset_enable = reset_flag if reset_flag is not None else False
-        reset_robot_enable = reset_robot_flag if reset_robot_flag is not None else reset_enable
+        reset_robot_enable = (
+            arm_reset_robot_flag
+            if arm_reset_robot_flag is not None
+            else (reset_robot_flag if reset_robot_flag is not None else reset_enable)
+        )
         reset_scene_enable = reset_scene_flag if reset_scene_flag is not None else reset_enable
         recenter_enable = recenter_flag if recenter_flag is not None else False
         teleop_enable = teleop_flag if teleop_flag is not None else False
@@ -435,6 +444,7 @@ class QuestControllerReceiver(Node):
                     f"stale={stale}, right_tracked={right_state['tracked']}, left_tracked={left_state['tracked']}, "
                     f"right teleop/rot/close/open/attach=({right_state['teleop_enable']},{right_state['rotate_enable']},{right_state['close_enable']},{right_state['open_enable']},{right_state['attachment_mode']}), "
                     f"left teleop/rot/close/open/attach=({left_state['teleop_enable']},{left_state['rotate_enable']},{left_state['close_enable']},{left_state['open_enable']},{left_state['attachment_mode']}), "
+                    f"arm_reset(L/R)=({left_state['reset_robot_enable']},{right_state['reset_robot_enable']}), "
                     f"reset={state['reset_enable']}, reset_robot={state['reset_robot_enable']}, reset_scene={state['reset_scene_enable']}, recenter={state['recenter_enable']}, mode_switch={state['mode_switch_enable']}, "
                     f"control_mode={state['control_mode'] or 'unspecified'}, "
                     f"grip={state['grip_value']:.2f}, trigger={state['trigger_value']:.2f}, "

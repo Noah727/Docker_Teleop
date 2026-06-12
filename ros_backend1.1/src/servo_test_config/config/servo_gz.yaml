@@ -2,11 +2,14 @@ use_gazebo: true
 
 command_in_type: "speed_units"
 scale:
-  linear: 0.2
-  rotational: 0.3
-  joint: 0.01
+  linear: 1.0
+  rotational: 1.2
+  joint: 1.0
 
-publish_period: 0.034
+# Fixed-rate output keeps the Gazebo velocity command topics measurable and
+# predictable for evaluation. 0.0166667 s is 60 Hz.
+publish_period: 0.0166667
+low_latency_mode: false
 command_out_type: "std_msgs/Float64MultiArray"
 command_out_topic: /joint_group_velocity_controller/commands
 
@@ -27,7 +30,15 @@ status_topic: /servo_node/status
 incoming_command_timeout: 0.25
 num_outgoing_halt_msgs_to_publish: 4
 
-check_collisions: false
+# MoveIt Servo collision checking is enabled. Keep the proximity thresholds
+# below the normal UR base/upper-arm clearance (~17 mm in the current home
+# pose), otherwise Servo will decelerate even during normal teleop. These
+# thresholds are read when Servo starts; live `ros2 param set` updates the
+# parameter value but does not retune the already-created collision checker.
+check_collisions: true
+collision_check_rate: 5.0
+self_collision_proximity_threshold: 0.01
+scene_collision_proximity_threshold: 0.01
 
 # Relax singularity gating for teleop debugging so twist commands are not fully halted.
 lower_singularity_threshold: 100000.0

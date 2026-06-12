@@ -1,6 +1,6 @@
 right_controller_manager:
   ros__parameters:
-    update_rate: 30
+    update_rate: 60
     right_joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
     right_joint_group_velocity_controller:

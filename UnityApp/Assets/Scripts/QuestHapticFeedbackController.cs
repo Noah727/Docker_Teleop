@@ -15,20 +15,31 @@ public class QuestHapticFeedbackController : MonoBehaviour
 
     [Header("EE Error Haptics")]
     public bool enableEeGapHaptics = false;
+    public string leftTargetEePoseTopic = "/left_arm/teleop/target_ee_pose";
+    public string leftActualEePoseTopic = "/left_arm/teleop/actual_ee_pose";
+    public string rightTargetEePoseTopic = "/right_arm/teleop/target_ee_pose";
+    public string rightActualEePoseTopic = "/right_arm/teleop/actual_ee_pose";
     public string targetEePoseTopic = "/teleop/target_ee_pose";
     public string actualEePoseTopic = "/teleop/actual_ee_pose";
     public float poseFreshTimeoutSec = 0.5f;
     public float gapDeadbandMeters = 0.025f;
+    public float gapActivationThresholdMeters = 0.08f;
+    public float gapReleaseThresholdMeters = 0.045f;
+    public float gapActivationHoldSec = 0.35f;
     public float gapMaxMeters = 0.16f;
     [Range(0.0f, 1.0f)] public float maxGapAmplitude = 0.65f;
     [Range(0.0f, 1.0f)] public float gapFrequency = 0.55f;
+    [Tooltip("When enabled, EE-gap vibration is only allowed while ROS/Gazebo contact haptics are also reporting contact. Keep enabled so normal servo lag does not vibrate.")]
+    public bool requireRosContactForGapHaptics = true;
 
     [Header("Pinch Confirmation Haptics")]
     public bool enablePinchContactPulse = false;
     public bool requireObjectNearForPinchPulse = true;
     public string[] syncedObjectNames =
     {
-        "Sync_RedCube", "Sync_GreenCube", "Sync_RedCylinder", "Sync_GreenCylinder", "Sync_Rubik2x2"
+        "Sync_RedCube", "Sync_GreenCube", "Sync_RedCylinder", "Sync_GreenCylinder",
+        "Sync_CableReceiverBox", "Sync_CableReceiverBox_Fixed", "Sync_CableRod", "Sync_CableRod_B",
+        "Sync_Rubik2x2"
     };
     public float objectNearRadiusMeters = 0.08f;
     public float gripperContactMinGapMeters = 0.003f;
@@ -49,7 +60,8 @@ public class QuestHapticFeedbackController : MonoBehaviour
 
     [Header("Output")]
     public bool hapticOutputEnabled = true;
-    [Range(0.0f, 2.0f)] public float outputGain = 1.0f;
+    [Range(0.0f, 2.0f)] public float defaultOutputGain = 0.35f;
+    [Range(0.0f, 2.0f)] public float outputGain = 0.35f;
     public OVRInput.Controller hapticController = OVRInput.Controller.RTouch;
     public bool vibrateBothControllersForGap = false;
 
@@ -65,8 +77,22 @@ public class QuestHapticFeedbackController : MonoBehaviour
     private float nextSubscribeWarnTime;
     private Vector3 targetEePosition;
     private Vector3 actualEePosition;
+    private Vector3 leftTargetEePosition;
+    private Vector3 leftActualEePosition;
+    private Vector3 rightTargetEePosition;
+    private Vector3 rightActualEePosition;
     private float lastTargetPoseTime = -999f;
     private float lastActualPoseTime = -999f;
+    private float lastLeftTargetPoseTime = -999f;
+    private float lastLeftActualPoseTime = -999f;
+    private float lastRightTargetPoseTime = -999f;
+    private float lastRightActualPoseTime = -999f;
+    private float leftGapAboveThresholdSince = -1f;
+    private float rightGapAboveThresholdSince = -1f;
+    private bool leftGapHapticActive;
+    private bool rightGapHapticActive;
+    private float leftGapMeters;
+    private float rightGapMeters;
     private readonly List<Transform> syncedObjectTransforms = new List<Transform>();
     private float nextObjectRefreshTime;
     private float lastGripperValue;
@@ -116,14 +142,17 @@ public class QuestHapticFeedbackController : MonoBehaviour
 
         UpdatePinchPulseDetection();
         float legacyPulseAmplitude = UpdatePulseState();
-        float gapAmplitude = ComputeGapAmplitude();
-        float legacyAmplitude = legacyPulseAmplitude > 0f ? legacyPulseAmplitude : gapAmplitude;
-        float legacyFrequency = legacyPulseAmplitude > 0f ? pinchPulseFrequency : gapFrequency;
+        float leftGapAmplitude = ComputeGapAmplitude(left: true);
+        float rightGapAmplitude = ComputeGapAmplitude(left: false);
+        float legacyAmplitude = legacyPulseAmplitude;
+        float legacyFrequency = pinchPulseFrequency;
 
         float leftContactAmplitude = ComputeFreshRosContactAmplitude(true);
         float rightContactAmplitude = ComputeFreshRosContactAmplitude(false);
-        float leftOutput = leftContactAmplitude;
-        float rightOutput = rightContactAmplitude;
+        float leftOutput = Mathf.Max(leftContactAmplitude, leftGapAmplitude);
+        float rightOutput = Mathf.Max(rightContactAmplitude, rightGapAmplitude);
+        float leftFrequency = leftGapAmplitude > leftContactAmplitude ? gapFrequency : contactFrequency;
+        float rightFrequency = rightGapAmplitude > rightContactAmplitude ? gapFrequency : contactFrequency;
 
         if (legacyAmplitude > 0f)
         {
@@ -145,8 +174,8 @@ public class QuestHapticFeedbackController : MonoBehaviour
             rightOutput = Mathf.Clamp01(rightOutput * Mathf.Max(0f, outputGain));
         }
 
-        SendControllerHaptics(OVRInput.Controller.LTouch, contactFrequency, leftOutput, ref lastSentLeftAmplitude);
-        SendControllerHaptics(OVRInput.Controller.RTouch, contactFrequency, rightOutput, ref lastSentRightAmplitude);
+        SendControllerHaptics(OVRInput.Controller.LTouch, leftFrequency, leftOutput, ref lastSentLeftAmplitude);
+        SendControllerHaptics(OVRInput.Controller.RTouch, rightFrequency, rightOutput, ref lastSentRightAmplitude);
         if (legacyAmplitude > 0f && leftOutput <= 0f && rightOutput <= 0f)
             SendHaptics(legacyFrequency, legacyAmplitude);
         else
@@ -156,7 +185,8 @@ public class QuestHapticFeedbackController : MonoBehaviour
         LastStatus =
             $"enabled={hapticOutputEnabled} gain={outputGain:F2} ros={enableRosContactHaptics} " +
             $"rosContact L={leftContactAmplitude:F2} R={rightContactAmplitude:F2} " +
-            $"gap={CurrentGapMeters:F3}m amp={CurrentAmplitude:F2} poses={HasEePosePair} pulse={PulseActive}";
+            $"gap L={leftGapMeters:F3} R={rightGapMeters:F3} active L={leftGapHapticActive} R={rightGapHapticActive} " +
+            $"amp={CurrentAmplitude:F2} poses={HasEePosePair} pulse={PulseActive}";
     }
 
     public void ToggleHapticOutput()
@@ -182,7 +212,7 @@ public class QuestHapticFeedbackController : MonoBehaviour
 
     public void ResetOutputGain()
     {
-        outputGain = 1.0f;
+        outputGain = Mathf.Clamp(defaultOutputGain, 0f, 2f);
     }
 
     private void ResolveReferences()
@@ -197,7 +227,7 @@ public class QuestHapticFeedbackController : MonoBehaviour
     {
         if (!enableEeGapHaptics)
             return;
-        if (subscribed || string.IsNullOrWhiteSpace(targetEePoseTopic) || string.IsNullOrWhiteSpace(actualEePoseTopic))
+        if (subscribed)
             return;
 
         float now = Time.unscaledTime;
@@ -208,10 +238,17 @@ public class QuestHapticFeedbackController : MonoBehaviour
         try
         {
             ros = ROSConnection.GetOrCreateInstance();
-            ros.Subscribe<PoseStampedMsg>(targetEePoseTopic, OnTargetEePose);
-            ros.Subscribe<PoseStampedMsg>(actualEePoseTopic, OnActualEePose);
+            SubscribePoseTopic(leftTargetEePoseTopic, OnLeftTargetEePose);
+            SubscribePoseTopic(leftActualEePoseTopic, OnLeftActualEePose);
+            SubscribePoseTopic(rightTargetEePoseTopic, OnRightTargetEePose);
+            SubscribePoseTopic(rightActualEePoseTopic, OnRightActualEePose);
+            if (!string.IsNullOrWhiteSpace(targetEePoseTopic) && !string.IsNullOrWhiteSpace(actualEePoseTopic))
+            {
+                SubscribePoseTopic(targetEePoseTopic, OnTargetEePose);
+                SubscribePoseTopic(actualEePoseTopic, OnActualEePose);
+            }
             subscribed = true;
-            Debug.Log($"[QuestHapticFeedbackController] Subscribed to {targetEePoseTopic} and {actualEePoseTopic}");
+            Debug.Log("[QuestHapticFeedbackController] Subscribed to EE target/actual pose topics for haptic gap feedback.");
         }
         catch (System.Exception e)
         {
@@ -221,6 +258,13 @@ public class QuestHapticFeedbackController : MonoBehaviour
                 Debug.LogWarning($"[QuestHapticFeedbackController] ROS pose subscription not ready: {e.Message}");
             }
         }
+    }
+
+    private void SubscribePoseTopic(string topicName, System.Action<PoseStampedMsg> callback)
+    {
+        if (string.IsNullOrWhiteSpace(topicName) || callback == null)
+            return;
+        ros.Subscribe<PoseStampedMsg>(topicName, callback);
     }
 
     private void SubscribeToRosContactTopics()
@@ -293,32 +337,129 @@ public class QuestHapticFeedbackController : MonoBehaviour
         lastActualPoseTime = Time.unscaledTime;
     }
 
-    private float ComputeGapAmplitude()
+    private void OnLeftTargetEePose(PoseStampedMsg msg)
+    {
+        if (msg == null || msg.pose == null)
+            return;
+        leftTargetEePosition = ToVector3(msg.pose.position);
+        lastLeftTargetPoseTime = Time.unscaledTime;
+    }
+
+    private void OnLeftActualEePose(PoseStampedMsg msg)
+    {
+        if (msg == null || msg.pose == null)
+            return;
+        leftActualEePosition = ToVector3(msg.pose.position);
+        lastLeftActualPoseTime = Time.unscaledTime;
+    }
+
+    private void OnRightTargetEePose(PoseStampedMsg msg)
+    {
+        if (msg == null || msg.pose == null)
+            return;
+        rightTargetEePosition = ToVector3(msg.pose.position);
+        lastRightTargetPoseTime = Time.unscaledTime;
+    }
+
+    private void OnRightActualEePose(PoseStampedMsg msg)
+    {
+        if (msg == null || msg.pose == null)
+            return;
+        rightActualEePosition = ToVector3(msg.pose.position);
+        lastRightActualPoseTime = Time.unscaledTime;
+    }
+
+    private float ComputeGapAmplitude(bool left)
     {
         if (!enableEeGapHaptics)
         {
             HasEePosePair = false;
             CurrentGapMeters = 0f;
+            leftGapMeters = 0f;
+            rightGapMeters = 0f;
+            leftGapHapticActive = false;
+            rightGapHapticActive = false;
             return 0f;
         }
 
         float now = Time.unscaledTime;
-        bool fresh = now - lastTargetPoseTime <= poseFreshTimeoutSec && now - lastActualPoseTime <= poseFreshTimeoutSec;
-        bool teleopHeld = handPoseSender != null && handPoseSender.IsTeleopHeld;
-        HasEePosePair = fresh;
+        bool fresh;
+        bool teleopHeld;
+        Vector3 target;
+        Vector3 actual;
+        if (left)
+        {
+            fresh = now - lastLeftTargetPoseTime <= poseFreshTimeoutSec && now - lastLeftActualPoseTime <= poseFreshTimeoutSec;
+            teleopHeld = handPoseSender != null && handPoseSender.IsLeftTeleopHeld;
+            target = leftTargetEePosition;
+            actual = leftActualEePosition;
+        }
+        else
+        {
+            fresh = now - lastRightTargetPoseTime <= poseFreshTimeoutSec && now - lastRightActualPoseTime <= poseFreshTimeoutSec;
+            teleopHeld = handPoseSender != null && handPoseSender.IsRightTeleopHeld;
+            target = rightTargetEePosition;
+            actual = rightActualEePosition;
+        }
+
+        bool legacyFresh = now - lastTargetPoseTime <= poseFreshTimeoutSec && now - lastActualPoseTime <= poseFreshTimeoutSec;
+        HasEePosePair = fresh || legacyFresh;
 
         if (!fresh || !teleopHeld)
         {
-            CurrentGapMeters = 0f;
+            SetGapState(left, 0f, false, -1f);
             return 0f;
         }
 
-        CurrentGapMeters = Vector3.Distance(targetEePosition, actualEePosition);
-        if (CurrentGapMeters <= gapDeadbandMeters)
+        if (requireRosContactForGapHaptics && ComputeFreshRosContactAmplitude(left) <= 0f)
+        {
+            SetGapState(left, 0f, false, -1f);
+            return 0f;
+        }
+
+        float gap = Vector3.Distance(target, actual);
+        float activationThreshold = Mathf.Max(gapDeadbandMeters, gapActivationThresholdMeters);
+        float releaseThreshold = Mathf.Clamp(gapReleaseThresholdMeters, gapDeadbandMeters, activationThreshold);
+        bool active = left ? leftGapHapticActive : rightGapHapticActive;
+        float aboveSince = left ? leftGapAboveThresholdSince : rightGapAboveThresholdSince;
+
+        if (gap >= activationThreshold)
+        {
+            if (aboveSince < 0f)
+                aboveSince = now;
+            if (!active && now - aboveSince >= Mathf.Max(0f, gapActivationHoldSec))
+                active = true;
+        }
+        else if (gap <= releaseThreshold)
+        {
+            active = false;
+            aboveSince = -1f;
+        }
+
+        SetGapState(left, gap, active, aboveSince);
+        CurrentGapMeters = Mathf.Max(leftGapMeters, rightGapMeters);
+
+        if (!active)
             return 0f;
 
-        float t = Mathf.InverseLerp(gapDeadbandMeters, Mathf.Max(gapDeadbandMeters + 0.001f, gapMaxMeters), CurrentGapMeters);
+        float t = Mathf.InverseLerp(activationThreshold, Mathf.Max(activationThreshold + 0.001f, gapMaxMeters), gap);
         return Mathf.Clamp01(t) * maxGapAmplitude;
+    }
+
+    private void SetGapState(bool left, float gap, bool active, float aboveSince)
+    {
+        if (left)
+        {
+            leftGapMeters = gap;
+            leftGapHapticActive = active;
+            leftGapAboveThresholdSince = aboveSince;
+        }
+        else
+        {
+            rightGapMeters = gap;
+            rightGapHapticActive = active;
+            rightGapAboveThresholdSince = aboveSince;
+        }
     }
 
     private void UpdatePinchPulseDetection()

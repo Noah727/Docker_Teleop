@@ -149,8 +149,64 @@ simulation/launch/run_dual_arm_tabletop_sim.sh
 | `start_dual_part4` | Starts ROS-TCP endpoint and Gazebo-to-Unity object pose synchronization for the dual-arm world. |
 | `start_part23` | Starts the legacy single-arm teleop mapping pipeline. |
 | `start_part4` | Starts legacy single-arm Unity sync and ROS-TCP endpoint. |
-| `keyboard` | Starts the interactive keyboard controller. This temporarily disables headset-to-Servo output. After quitting, run `start_dual_part23` to restore the dual-arm headset pipeline. |
+| `keyboard` | Legacy single-arm keyboard controller. Prefer `right_keyboard` for the current dual-arm app. |
+| `right_gamepad_on` | Right-arm-only thumbstick/gamepad mode. Left arm headset control stays active. |
+| `right_gamepad_off` | Restores right-arm hand-pose mode. |
+| `right_keyboard` | Right-arm-only terminal keyboard override. Stops only the right target-to-Servo bridge while active. |
+| `right_keyboard_off` | Stops right keyboard override and restarts the right headset hand-pose bridge. |
 | `status` | Prints Docker status, live backend processes, TCP listeners, and recent log tails. |
+
+### Optional Right-Arm Controllers
+
+Optional control methods are terminal-driven and default to the right robot arm.
+The Quest app can keep sending right-controller packets, but the selected
+backend override blocks or replaces the right hand-pose stream before it reaches
+right-arm Servo. The left controller and left arm continue normally.
+
+Right-arm thumbstick/gamepad mode:
+
+```bash
+cd ros_backend1.1
+./scripts/backend11_lifecycle.sh right_gamepad_on
+./scripts/backend11_lifecycle.sh right_gamepad_off
+```
+
+Right-arm keyboard override:
+
+```bash
+cd ros_backend1.1
+./scripts/backend11_lifecycle.sh right_keyboard
+./scripts/backend11_lifecycle.sh right_keyboard_off
+```
+
+SpaceMouse support is a placeholder for now and has no lifecycle command yet.
+
+### Maintenance
+
+| Command | What It Does |
+| --- | --- |
+| `cleanup_runtime` | Removes local Unity temp/log folders, prunes container ROS log directories, and keeps only the newest gripper-camera recording sessions. Unity APK/build output folders are preserved by default. |
+
+Runtime cleanup keeps the latest 5 ROS log directories and latest 5 backend gripper-camera recording sessions by default:
+
+```bash
+cd ros_backend1.1
+./scripts/backend11_lifecycle.sh cleanup_runtime
+```
+
+Override retention if needed:
+
+```bash
+KEEP_RUNTIME_LOGS=3 KEEP_RECORDING_SESSIONS=3 ./scripts/backend11_lifecycle.sh cleanup_runtime
+```
+
+Delete Unity build outputs only when you explicitly want to clear generated APK folders:
+
+```bash
+CLEAN_UNITY_BUILD_OUTPUTS=1 ./scripts/backend11_lifecycle.sh cleanup_runtime
+```
+
+The lifecycle `/tmp/*.log` files are fixed paths and are overwritten on restart, so they do not accumulate as timestamped files. Quest screenshots/videos are intentionally not removed by this command because they are often used for demos or debugging evidence.
 
 ## Part Meaning
 
@@ -248,6 +304,36 @@ docker exec motion_planner_11 bash -lc 'tail -n 80 /tmp/qcr.log'
 docker exec motion_planner_11 bash -lc 'tail -n 80 /tmp/dual_left_mapper.log'
 docker exec motion_planner_11 bash -lc 'tail -n 80 /tmp/dual_right_mapper.log'
 docker exec motion_planner_11 bash -lc 'tail -n 80 /tmp/servo_dual_gz.log'
+```
+
+If Servo collision checking blocks normal motion after an SRDF or gripper-model change, use this temporary fallback while debugging the collision matrix:
+
+```bash
+cd ros_backend1.1
+SERVO_CHECK_COLLISIONS=false ./scripts/backend11_lifecycle.sh start_dual_servo
+```
+
+The intended default is `check_collisions: true` with the Hand-E internal collision pairs disabled in:
+
+```text
+src/ur_moveit_config/srdf/ur_macro.srdf.xacro
+```
+
+## Haptics
+
+Default haptics are ROS/Gazebo-contact driven only:
+
+- Gripper/object contact or fully closed empty gripper: one two-short-pulse vibration on the matching controller.
+- Other Servo collision state: vibration only if MoveIt Servo reports collision status and the EE target-vs-actual gap stays above the threshold.
+- Normal EE target-vs-actual lag without Servo collision status: no vibration.
+- Unity-side EE-gap haptics are disabled by default and, if manually re-enabled for debugging, are gated by fresh ROS/Gazebo contact haptics.
+
+Relevant files:
+
+```text
+src/teleop_bridge/teleop_bridge/haptic_feedback/contact_haptic_publisher.py
+UnityApp/Assets/Scripts/QuestHapticFeedbackController.cs
+UnityApp/Assets/Scripts/QuestMRFeatureBootstrap.cs
 ```
 
 ## Unity Pairing

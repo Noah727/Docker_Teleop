@@ -6,12 +6,23 @@ using UnityEditor.Build.Reporting;
 
 public static class CommandLineQuestBuild
 {
+    [MenuItem("Tools/Quest/Build Live Debug APK")]
+    public static void BuildLiveDebugApk()
+    {
+        BuildQuestApkToPath("App_Build/R&U_live_debug.apk");
+    }
+
     public static void BuildQuestApk()
     {
         string outputPath = GetArgument("-apkPath");
         if (string.IsNullOrWhiteSpace(outputPath))
-            outputPath = "BuildTest/HandTracking_latest.apk";
+            outputPath = "App_Build/Ros_Unity_latest.apk";
 
+        BuildQuestApkToPath(outputPath);
+    }
+
+    private static void BuildQuestApkToPath(string outputPath)
+    {
         string[] scenes = EditorBuildSettings.scenes
             .Where(scene => scene.enabled)
             .Select(scene => scene.path)

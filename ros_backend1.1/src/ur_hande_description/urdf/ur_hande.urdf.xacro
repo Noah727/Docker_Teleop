@@ -38,6 +38,7 @@
   <xacro:arg name="fake_sensor_commands" default="false"/>
   <xacro:arg name="sim_gazebo" default="false"/>
   <xacro:arg name="sim_ignition" default="false"/>
+  <xacro:arg name="include_ground_plane" default="false"/>
   <xacro:arg name="simulation_controllers" default=""/>
   <xacro:arg name="initial_positions_file" default="$(find ur_description)/config/initial_positions.yaml"/>
 
@@ -45,6 +46,7 @@
   <xacro:property name="initial_positions" value="${xacro.load_yaml(initial_positions_file)}"/>
   <xacro:property name="is_sim_gazebo" value="$(arg sim_gazebo)"/>
   <xacro:property name="is_sim_ignition" value="$(arg sim_ignition)"/>
+  <xacro:property name="include_ground_plane" value="$(arg include_ground_plane)"/>
   <xacro:property name="is_fake_hardware_requested" value="$(arg use_fake_hardware)"/>
   <xacro:property name="hande_grip_min" value="${-0.025 if (is_sim_gazebo or is_sim_ignition) else 0.0}"/>
   <xacro:property name="hande_grip_max" value="${0.0 if (is_sim_gazebo or is_sim_ignition) else 0.025}"/>
@@ -58,7 +60,7 @@
 
   <link name="world"/>
 
-  <xacro:if value="${is_sim_gazebo or is_sim_ignition}">
+  <xacro:if value="${(is_sim_gazebo or is_sim_ignition) and include_ground_plane}">
     <link name="ground_plane">
       <visual>
         <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -141,6 +143,41 @@
     sim_gazebo="${is_sim_gazebo}"
     sim_ignition="${is_sim_ignition}"
     generate_ros2_control_tag="${not (is_sim_gazebo or is_sim_ignition)}"/>
+
+  <!--
+    Gazebo gripper camera is intentionally disabled for the current MR workflow.
+
+    The active camera preview/recording path is Unity-side:
+      UnityApp/Assets/Scripts/GripperCameraRecorder.cs
+      Unity scene object: GripperDataCamera
+
+    Keep this placeholder here instead of deleting the idea entirely. If we
+    later want Gazebo-authoritative camera images, re-enable a sensor mounted
+    on $(arg tf_prefix)robotiq_hande_end or $(arg tf_prefix)tool0, then add the
+    required Gazebo/ROS bridge and documentation for /gripper_camera/* topics.
+
+    Example shape, currently commented out:
+
+    <gazebo reference="$(arg tf_prefix)robotiq_hande_end">
+      <sensor name="$(arg tf_prefix)gripper_camera" type="camera">
+        <pose>0 0 0 0 0 0</pose>
+        <topic>/$(arg tf_prefix)gripper_camera/image_raw</topic>
+        <update_rate>15</update_rate>
+        <camera>
+          <horizontal_fov>1.5708</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.02</near>
+            <far>5.0</far>
+          </clip>
+        </camera>
+      </sensor>
+    </gazebo>
+  -->
 
   <xacro:if value="${is_sim_gazebo or is_sim_ignition}">
     <!--

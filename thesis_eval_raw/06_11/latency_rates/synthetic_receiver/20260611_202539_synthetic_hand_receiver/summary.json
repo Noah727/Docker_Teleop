@@ -1,0 +1,6 @@
+{
+  "arm": "both",
+  "duration_sec": 15.0,
+  "pattern": "line_x",
+  "topic_audit_returncode": 0
+}

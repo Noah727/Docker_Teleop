@@ -45,7 +45,24 @@ def _launch_setup(context, *args, **kwargs):
     robot_kin = kin.get("/**", {}).get("ros__parameters", {}).get("robot_description_kinematics", {})
     robot_description_kinematics = {"robot_description_kinematics": robot_kin}
 
+    robot_description_planning = {
+        "robot_description_planning": load_yaml("ur_moveit_config", "config/joint_limits.yaml")
+    }
+
     servo_yaml = load_yaml("servo_test_config", "config/servo_gz.yaml")
+    check_collisions_override = os.environ.get("SERVO_CHECK_COLLISIONS", "").strip().lower()
+    if check_collisions_override in {"0", "false", "off", "no"}:
+        servo_yaml["check_collisions"] = False
+    elif check_collisions_override in {"1", "true", "on", "yes"}:
+        servo_yaml["check_collisions"] = True
+    for env_name, param_name in (
+        ("SERVO_SELF_COLLISION_THRESHOLD", "self_collision_proximity_threshold"),
+        ("SERVO_SCENE_COLLISION_THRESHOLD", "scene_collision_proximity_threshold"),
+        ("SERVO_COLLISION_CHECK_RATE", "collision_check_rate"),
+    ):
+        override = os.environ.get(env_name, "").strip()
+        if override:
+            servo_yaml[param_name] = float(override)
     servo_params = {"moveit_servo": servo_yaml}
 
     joint_states_filter_node = Node(
@@ -72,6 +89,7 @@ def _launch_setup(context, *args, **kwargs):
             robot_description,
             robot_description_semantic,
             robot_description_kinematics,
+            robot_description_planning,
             {"use_sim_time": True},
         ],
     )

@@ -1,5 +1,10 @@
 using UnityEngine;
 
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
+[ExecuteAlways]
 [DefaultExecutionOrder(515)]
 public class FloatingSceneCameraController : MonoBehaviour
 {
@@ -18,6 +23,12 @@ public class FloatingSceneCameraController : MonoBehaviour
     public int previewWidth = 640;
     public int previewHeight = 360;
 
+    [Header("Recording")]
+    public bool enableRecording = true;
+    public string recordingOutputFolderName = "FloatingCameraRecordings";
+    [Tooltip("Keep false so only the central control panel controls floating-camera recording.")]
+    public bool allowFloatingRecorderLeftXShortcut = false;
+
     [Header("Marker")]
     public Color markerColor = new Color(0.24f, 0.78f, 1.0f, 0.22f);
     public Vector3 bodySize = new Vector3(0.055f, 0.035f, 0.045f);
@@ -29,9 +40,11 @@ public class FloatingSceneCameraController : MonoBehaviour
     public int rotationRingSegments = 72;
     public float rotationRingLineWidth = 0.004f;
     public float rotationRingSensitivity = 1.0f;
-    public Color xRotationRingColor = new Color(1.0f, 0.24f, 0.20f, 0.42f);
-    public Color yRotationRingColor = new Color(0.22f, 0.95f, 0.32f, 0.42f);
-    public Color zRotationRingColor = new Color(0.30f, 0.58f, 1.0f, 0.42f);
+    [Tooltip("Seconds the rotation rings remain visible after camera/ring interaction stops.")]
+    public float rotationRingVisibleLingerSeconds = 5.0f;
+    public Color xRotationRingColor = new Color(1.0f, 0.24f, 0.20f, 0.58f);
+    public Color yRotationRingColor = new Color(0.22f, 0.95f, 0.32f, 0.58f);
+    public Color zRotationRingColor = new Color(0.30f, 0.58f, 1.0f, 0.58f);
 
     [Header("Drag")]
     public bool allowControllerRayDrag = true;
@@ -52,12 +65,22 @@ public class FloatingSceneCameraController : MonoBehaviour
 
     public Camera SourceCamera { get; private set; }
     public Texture PreviewTexture => SourceCamera != null ? SourceCamera.targetTexture : null;
+    public GripperCameraRecorder Recorder
+    {
+        get
+        {
+            EnsureCameraObject();
+            EnsureRecorder();
+            return recorder;
+        }
+    }
     public string LastStatus { get; private set; } = "not initialized";
 
     private GameObject cameraObject;
     private GameObject markerRoot;
     private Material markerMaterial;
     private RenderTexture renderTexture;
+    private GripperCameraRecorder recorder;
     private Transform leftController;
     private Transform rightController;
     private Transform dragController;
@@ -71,8 +94,59 @@ public class FloatingSceneCameraController : MonoBehaviour
     private Vector3 rotationBasisUWorld;
     private Vector3 rotationBasisVWorld;
     private float rotationStartAngle;
+    private bool rotationRingsArmed;
+    private float rotationRingsVisibleUntil = -1f;
     private Transform contactMarker;
     private Material contactMarkerMaterial;
+#if UNITY_EDITOR
+    private bool editorRefreshQueued;
+#endif
+
+    private void OnEnable()
+    {
+        EnsureCameraObject();
+    }
+
+    private void OnValidate()
+    {
+        fieldOfView = Mathf.Clamp(fieldOfView, 20f, 140f);
+        previewWidth = Mathf.Max(16, previewWidth);
+        previewHeight = Mathf.Max(16, previewHeight);
+        frustumLength = Mathf.Max(0.02f, frustumLength);
+        frustumHalfSize = Mathf.Max(0.01f, frustumHalfSize);
+        lineWidth = Mathf.Max(0.001f, lineWidth);
+        rotationRingRadius = Mathf.Max(0.025f, rotationRingRadius);
+        rotationRingHitTolerance = Mathf.Max(0.002f, rotationRingHitTolerance);
+        rotationRingSegments = Mathf.Clamp(rotationRingSegments, 24, 160);
+        rotationRingLineWidth = Mathf.Max(0.001f, rotationRingLineWidth);
+        rotationRingSensitivity = Mathf.Clamp(rotationRingSensitivity, 0.1f, 5f);
+        rotationRingVisibleLingerSeconds = Mathf.Clamp(rotationRingVisibleLingerSeconds, 0.1f, 30f);
+        triggerThreshold = Mathf.Clamp(triggerThreshold, 0.05f, 0.95f);
+        gripBlockThreshold = Mathf.Clamp(gripBlockThreshold, 0.05f, 0.95f);
+        rayMaxDistance = Mathf.Max(0.05f, rayMaxDistance);
+        hoverTriggerThreshold = Mathf.Clamp(hoverTriggerThreshold, 0.0f, 0.95f);
+        contactMarkerScale = Mathf.Max(0.002f, contactMarkerScale);
+        contactMarkerSurfaceOffset = Mathf.Max(0.0f, contactMarkerSurfaceOffset);
+
+        if (!Application.isPlaying)
+            QueueEditorRefresh();
+    }
+
+    private void QueueEditorRefresh()
+    {
+#if UNITY_EDITOR
+        if (editorRefreshQueued)
+            return;
+
+        editorRefreshQueued = true;
+        EditorApplication.delayCall += () =>
+        {
+            editorRefreshQueued = false;
+            if (this != null && !Application.isPlaying)
+                EnsureCameraObject();
+        };
+#endif
+    }
 
     private void Start()
     {
@@ -82,8 +156,11 @@ public class FloatingSceneCameraController : MonoBehaviour
     private void Update()
     {
         EnsureCameraObject();
-        if (allowControllerRayDrag)
+
+        if (Application.isPlaying && allowControllerRayDrag)
             UpdateControllerDrag();
+        RefreshRotationRingVisibility();
+
         LastStatus = SourceCamera != null
             ? $"floating camera pos={SourceCamera.transform.localPosition} euler={SourceCamera.transform.localEulerAngles} fov={SourceCamera.fieldOfView:F1}"
             : "floating camera missing";
@@ -104,6 +181,35 @@ public class FloatingSceneCameraController : MonoBehaviour
 
     public Vector3 LocalPosition => cameraObject != null ? cameraObject.transform.localPosition : defaultLocalPosition;
     public Vector3 LocalEuler => cameraObject != null ? NormalizeEuler(cameraObject.transform.localEulerAngles) : defaultLocalEuler;
+
+    public bool TryFindRayVisualHit(Ray ray, float maxRayDistance, out string hitName, out float hitDistance, out Vector3 hitPoint)
+    {
+        hitName = "none";
+        hitDistance = 0f;
+        hitPoint = Vector3.zero;
+
+        if (!AreRotationRingsVisible() || cameraObject == null)
+            return false;
+
+        bool found = false;
+        float bestDistance = float.PositiveInfinity;
+        RotationRingHit bestHit = default;
+        float cappedDistance = Mathf.Min(
+            Mathf.Max(0.05f, maxRayDistance),
+            Mathf.Max(0.05f, rayMaxDistance));
+
+        TryCandidateRingHit(ray, Vector3.right, cappedDistance, ref found, ref bestDistance, ref bestHit);
+        TryCandidateRingHit(ray, Vector3.up, cappedDistance, ref found, ref bestDistance, ref bestHit);
+        TryCandidateRingHit(ray, Vector3.forward, cappedDistance, ref found, ref bestDistance, ref bestHit);
+
+        if (!found)
+            return false;
+
+        hitName = RingNameForAxis(bestHit.axisLocal);
+        hitDistance = bestHit.distance;
+        hitPoint = bestHit.pointWorld;
+        return true;
+    }
 
     private void EnsureCameraObject()
     {
@@ -137,6 +243,7 @@ public class FloatingSceneCameraController : MonoBehaviour
         SourceCamera.depth = -80f;
         SourceCamera.fieldOfView = Mathf.Clamp(fieldOfView, 20f, 140f);
         EnsureRenderTexture();
+        EnsureRecorder();
         EnsureMarker();
     }
 
@@ -152,7 +259,7 @@ public class FloatingSceneCameraController : MonoBehaviour
         }
 
         if (renderTexture != null)
-            Destroy(renderTexture);
+            DestroyObjectSafe(renderTexture);
 
         renderTexture = new RenderTexture(Mathf.Max(16, previewWidth), Mathf.Max(16, previewHeight), 16, RenderTextureFormat.ARGB32)
         {
@@ -160,6 +267,33 @@ public class FloatingSceneCameraController : MonoBehaviour
         };
         renderTexture.Create();
         SourceCamera.targetTexture = renderTexture;
+    }
+
+    private void EnsureRecorder()
+    {
+        if (!Application.isPlaying || !enableRecording || SourceCamera == null || cameraObject == null)
+        {
+            recorder = null;
+            return;
+        }
+
+        if (recorder == null)
+            recorder = cameraObject.GetComponent<GripperCameraRecorder>();
+        if (recorder == null)
+            recorder = cameraObject.AddComponent<GripperCameraRecorder>();
+
+        recorder.sourceCamera = SourceCamera;
+        recorder.assignRuntimeRenderTexture = false;
+        recorder.createFloatingPanel = false;
+        recorder.showSceneMarker = false;
+        recorder.createRuntimeSceneMarker = false;
+        recorder.enableKeyboardShortcuts = false;
+        recorder.toggleRecordingWithLeftX = allowFloatingRecorderLeftXShortcut;
+        recorder.outputFolderName = string.IsNullOrWhiteSpace(recordingOutputFolderName)
+            ? "FloatingCameraRecordings"
+            : recordingOutputFolderName;
+        recorder.width = SourceCamera.targetTexture != null ? SourceCamera.targetTexture.width : previewWidth;
+        recorder.height = SourceCamera.targetTexture != null ? SourceCamera.targetTexture.height : previewHeight;
     }
 
     private void EnsureMarker()
@@ -227,9 +361,11 @@ public class FloatingSceneCameraController : MonoBehaviour
 
     private void EnsureRotationRings()
     {
+        RemoveRotationButtonArtifacts();
         CreateRing("FloatingCameraRotateRing_X", Vector3.right, xRotationRingColor);
         CreateRing("FloatingCameraRotateRing_Y", Vector3.up, yRotationRingColor);
         CreateRing("FloatingCameraRotateRing_Z", Vector3.forward, zRotationRingColor);
+        RefreshRotationRingVisibility(force: true);
     }
 
     private void CreateRing(string name, Vector3 axisLocal, Color color)
@@ -247,6 +383,16 @@ public class FloatingSceneCameraController : MonoBehaviour
         CreateLine(name, points, color, Mathf.Max(0.001f, rotationRingLineWidth), loop: false);
     }
 
+    private void RemoveRotationButtonArtifacts()
+    {
+        RemoveMarkerChild("FloatingCameraRotateButton_X_Pos");
+        RemoveMarkerChild("FloatingCameraRotateButton_X_Neg");
+        RemoveMarkerChild("FloatingCameraRotateButton_Y_Pos");
+        RemoveMarkerChild("FloatingCameraRotateButton_Y_Neg");
+        RemoveMarkerChild("FloatingCameraRotateButton_Z_Pos");
+        RemoveMarkerChild("FloatingCameraRotateButton_Z_Neg");
+    }
+
     private void CreateLine(string name, Vector3[] points)
     {
         CreateLine(name, points, markerColor, lineWidth, loop: false);
@@ -254,9 +400,18 @@ public class FloatingSceneCameraController : MonoBehaviour
 
     private void CreateLine(string name, Vector3[] points, Color color, float width, bool loop)
     {
-        Transform existing = markerRoot.transform.Find(name);
+        CreateLine(markerRoot.transform, name, points, color, width, loop);
+    }
+
+    private void CreateLine(Transform parent, string name, Vector3[] points, Color color, float width, bool loop)
+    {
+        Transform existing = parent.Find(name);
         GameObject go = existing != null ? existing.gameObject : new GameObject(name);
-        go.transform.SetParent(markerRoot.transform, false);
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = Vector3.zero;
+        go.transform.localRotation = Quaternion.identity;
+        go.transform.localScale = Vector3.one;
+        go.layer = parent.gameObject.layer;
         LineRenderer line = go.GetComponent<LineRenderer>();
         if (line == null)
             line = go.AddComponent<LineRenderer>();
@@ -336,7 +491,9 @@ public class FloatingSceneCameraController : MonoBehaviour
         ResolveControllers();
         float leftTrigger = GetTriggerValue(true);
         float rightTrigger = GetTriggerValue(false);
-        bool triggerHeld = leftTrigger >= triggerThreshold || rightTrigger >= triggerThreshold;
+        bool leftTriggerHeld = leftTrigger >= triggerThreshold;
+        bool rightTriggerHeld = rightTrigger >= triggerThreshold;
+        bool triggerHeld = leftTriggerHeld || rightTriggerHeld;
         bool hoverIntent = leftTrigger >= hoverTriggerThreshold
             || rightTrigger >= hoverTriggerThreshold
             || (showContactMarkerWhileRayVisualVisible && IsControllerRayVisualVisible());
@@ -362,9 +519,15 @@ public class FloatingSceneCameraController : MonoBehaviour
             return;
 
         if (manipulationMode == CameraManipulationMode.Translate)
+        {
             cameraObject.transform.position = dragController.position + dragController.forward * dragDistance;
+            KeepRotationRingsAwake();
+        }
         else if (manipulationMode == CameraManipulationMode.Rotate)
+        {
             ApplyRotationDrag();
+            KeepRotationRingsAwake();
+        }
     }
 
     private void BeginManipulationIfHit()
@@ -379,7 +542,7 @@ public class FloatingSceneCameraController : MonoBehaviour
         if (controller == null)
             return false;
 
-        if (TryRayHitRotationRing(controller, out RotationRingHit ringHit))
+        if (AreRotationRingsVisible() && TryRayHitRotationRing(controller, out RotationRingHit ringHit))
         {
             dragController = controller;
             manipulationMode = CameraManipulationMode.Rotate;
@@ -391,6 +554,7 @@ public class FloatingSceneCameraController : MonoBehaviour
             rotationBasisVWorld = ringHit.basisVWorld;
             rotationStartAngle = ringHit.angleDegrees;
             dragging = true;
+            KeepRotationRingsAwake();
             return true;
         }
 
@@ -400,6 +564,7 @@ public class FloatingSceneCameraController : MonoBehaviour
             dragDistance = distance;
             manipulationMode = CameraManipulationMode.Translate;
             dragging = true;
+            KeepRotationRingsAwake();
             return true;
         }
 
@@ -408,6 +573,9 @@ public class FloatingSceneCameraController : MonoBehaviour
 
     private void ApplyRotationDrag()
     {
+        if (dragController == null || cameraObject == null)
+            return;
+
         Ray ray = new Ray(dragController.position, dragController.forward);
         Plane plane = new Plane(rotationPlaneNormalWorld, rotationPlaneCenterWorld);
         if (!plane.Raycast(ray, out float distance) || distance < 0f || distance > Mathf.Max(0.05f, rayMaxDistance))
@@ -438,7 +606,7 @@ public class FloatingSceneCameraController : MonoBehaviour
         {
             if (hit.collider == null)
                 continue;
-            if (hit.collider.transform == markerRoot.transform || hit.collider.transform.IsChildOf(markerRoot.transform))
+            if (hit.collider.transform.name.IndexOf("FloatingCameraBody", System.StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 distance = hit.distance;
                 return true;
@@ -478,7 +646,7 @@ public class FloatingSceneCameraController : MonoBehaviour
             return false;
 
         bool found = false;
-        if (TryRayHitRotationRing(controller, out RotationRingHit ringHit) && ringHit.distance < bestDistance)
+        if (AreRotationRingsVisible() && TryRayHitRotationRing(controller, out RotationRingHit ringHit) && ringHit.distance < bestDistance)
         {
             bestDistance = ringHit.distance;
             hitPoint = ringHit.pointWorld;
@@ -593,24 +761,25 @@ public class FloatingSceneCameraController : MonoBehaviour
     private bool TryRayHitRotationRing(Transform controller, out RotationRingHit bestHit)
     {
         bestHit = default;
-        if (controller == null || cameraObject == null)
+        if (!AreRotationRingsVisible() || controller == null || cameraObject == null)
             return false;
 
         Ray ray = new Ray(controller.position, controller.forward);
         bool found = false;
         float bestDistance = float.PositiveInfinity;
-        TryCandidateRingHit(ray, Vector3.right, ref found, ref bestDistance, ref bestHit);
-        TryCandidateRingHit(ray, Vector3.up, ref found, ref bestDistance, ref bestHit);
-        TryCandidateRingHit(ray, Vector3.forward, ref found, ref bestDistance, ref bestHit);
+        float cappedDistance = Mathf.Max(0.05f, rayMaxDistance);
+        TryCandidateRingHit(ray, Vector3.right, cappedDistance, ref found, ref bestDistance, ref bestHit);
+        TryCandidateRingHit(ray, Vector3.up, cappedDistance, ref found, ref bestDistance, ref bestHit);
+        TryCandidateRingHit(ray, Vector3.forward, cappedDistance, ref found, ref bestDistance, ref bestHit);
         return found;
     }
 
-    private void TryCandidateRingHit(Ray ray, Vector3 axisLocal, ref bool found, ref float bestDistance, ref RotationRingHit bestHit)
+    private void TryCandidateRingHit(Ray ray, Vector3 axisLocal, float maxRayDistance, ref bool found, ref float bestDistance, ref RotationRingHit bestHit)
     {
         Vector3 centerWorld = cameraObject.transform.position;
         Vector3 axisWorld = cameraObject.transform.TransformDirection(axisLocal).normalized;
         Plane plane = new Plane(axisWorld, centerWorld);
-        if (!plane.Raycast(ray, out float distance) || distance < 0f || distance > Mathf.Max(0.05f, rayMaxDistance))
+        if (!plane.Raycast(ray, out float distance) || distance < 0f || distance > Mathf.Max(0.05f, maxRayDistance))
             return;
 
         Vector3 pointWorld = ray.GetPoint(distance);
@@ -625,7 +794,11 @@ public class FloatingSceneCameraController : MonoBehaviour
         GetRingBasis(axisLocal, out Vector3 uLocal, out Vector3 vLocal);
         Vector3 basisUWorld = cameraObject.transform.TransformDirection(uLocal).normalized;
         Vector3 basisVWorld = cameraObject.transform.TransformDirection(vLocal).normalized;
-        Vector3 radial = (pointWorld - centerWorld).normalized;
+        Vector3 radial = pointWorld - centerWorld;
+        if (radial.sqrMagnitude < 0.000001f)
+            return;
+        radial.Normalize();
+
         bestHit = new RotationRingHit
         {
             axisLocal = axisLocal,
@@ -639,6 +812,15 @@ public class FloatingSceneCameraController : MonoBehaviour
         };
         bestDistance = distance;
         found = true;
+    }
+
+    private static string RingNameForAxis(Vector3 axisLocal)
+    {
+        if (axisLocal == Vector3.right)
+            return "FloatingCameraRotateRing_X";
+        if (axisLocal == Vector3.up)
+            return "FloatingCameraRotateRing_Y";
+        return "FloatingCameraRotateRing_Z";
     }
 
     private float AngleOnRotationPlane(Vector3 pointWorld)
@@ -676,6 +858,60 @@ public class FloatingSceneCameraController : MonoBehaviour
             uLocal = Vector3.right;
             vLocal = Vector3.up;
         }
+    }
+
+    private void KeepRotationRingsAwake()
+    {
+        rotationRingsArmed = true;
+        rotationRingsVisibleUntil = CurrentClock() + Mathf.Max(0.1f, rotationRingVisibleLingerSeconds);
+        SetRotationRingsActive(true);
+    }
+
+    private bool AreRotationRingsVisible()
+    {
+        return rotationRingsArmed && CurrentClock() <= rotationRingsVisibleUntil;
+    }
+
+    private void RefreshRotationRingVisibility(bool force = false)
+    {
+        bool visible = AreRotationRingsVisible();
+        if (!visible && !dragging)
+            rotationRingsArmed = false;
+        SetRotationRingsActive(visible || (dragging && manipulationMode == CameraManipulationMode.Rotate), force);
+    }
+
+    private void SetRotationRingsActive(bool active, bool force = false)
+    {
+        if (markerRoot == null)
+            return;
+
+        SetMarkerChildActive("FloatingCameraRotateRing_X", active, force);
+        SetMarkerChildActive("FloatingCameraRotateRing_Y", active, force);
+        SetMarkerChildActive("FloatingCameraRotateRing_Z", active, force);
+    }
+
+    private void SetMarkerChildActive(string childName, bool active, bool force)
+    {
+        Transform child = markerRoot.transform.Find(childName);
+        if (child == null)
+            return;
+        if (force || child.gameObject.activeSelf != active)
+            child.gameObject.SetActive(active);
+    }
+
+    private static float CurrentClock()
+    {
+        return Application.isPlaying ? Time.time : Time.realtimeSinceStartup;
+    }
+
+    private void RemoveMarkerChild(string childName)
+    {
+        if (markerRoot == null || string.IsNullOrWhiteSpace(childName))
+            return;
+
+        Transform child = markerRoot.transform.Find(childName);
+        if (child != null)
+            DestroyObjectSafe(child.gameObject);
     }
 
     private Transform ResolveWorkspace()
@@ -760,6 +996,17 @@ public class FloatingSceneCameraController : MonoBehaviour
             material.SetColor("_Color", color);
     }
 
+    private static void DestroyObjectSafe(Object obj)
+    {
+        if (obj == null)
+            return;
+
+        if (Application.isPlaying)
+            Destroy(obj);
+        else
+            DestroyImmediate(obj);
+    }
+
     private bool IsControllerRayVisualVisible()
     {
         GameObject leftRay = GameObject.Find("LeftControllerAimRay");
@@ -777,8 +1024,8 @@ public class FloatingSceneCameraController : MonoBehaviour
         public Vector3 centerWorld;
         public Vector3 basisUWorld;
         public Vector3 basisVWorld;
+        public float angleDegrees;
         public Vector3 pointWorld;
         public float distance;
-        public float angleDegrees;
     }
 }

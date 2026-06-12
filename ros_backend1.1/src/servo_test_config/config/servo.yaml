@@ -6,7 +6,7 @@ scale:
   rotational: 0.3
   joint: 0.01
 
-publish_period: 0.034
+publish_period: 0.0166667
 command_out_type: "trajectory_msgs/JointTrajectory"
 command_out_topic: /joint_trajectory_controller/joint_trajectory
 

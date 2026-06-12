@@ -29,20 +29,22 @@ public class TeleopInstructionBoard : MonoBehaviour
     [TextArea(8, 18)]
     public string instructions =
         "RIGHT CONTROLLER\n" +
-        "Grip hold: engage robot teleop\n" +
-        "While gripping: trigger tap toggles gripper open / close\n" +
-        "Grip released: trigger hold drags robot workspace\n" +
-        "A hold: rotation mode\n" +
-        "B tap: reset robot + table objects\n" +
+        "Grip hold: engage right-arm teleop\n" +
+        "Trigger tap while gripping: right gripper open / close\n" +
+        "A hold: right-arm rotation mode\n" +
+        "B tap: right-arm attachment mode\n" +
         "Thumbstick press: clutch; release to recenter hand reference\n\n" +
         "LEFT CONTROLLER\n" +
-        "X tap: start / stop wrist-camera recording\n" +
-        "Y tap: switch hand-pose / thumbstick mode\n\n" +
-        "THUMBSTICK MODE\n" +
-        "Left stick: forward/back + left/right\n" +
-        "Left trigger / grip: up / down\n" +
-        "Right stick: rotate wrist\n\n" +
+        "Grip hold: engage left-arm teleop\n" +
+        "Trigger tap while gripping: left gripper open / close\n" +
+        "X hold: left-arm rotation mode\n" +
+        "Y tap: toggle left-arm attachment mode\n\n" +
         "CONTROL PANEL\n" +
+        "Use panel for recording, reset, cameras,\n" +
+        "haptics, and task controls.\n\n" +
+        "OPTIONAL CONTROLS\n" +
+        "Thumbstick/gamepad and keyboard modes are\n" +
+        "right-arm backend commands from terminal.\n\n" +
         "Release right grip, point left controller at panel,\n" +
         "hold left trigger to drag it.";
 

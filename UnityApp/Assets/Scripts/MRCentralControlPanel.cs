@@ -1,7 +1,10 @@
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
 using System.Globalization;
+using RosMessageTypes.Std;
+using Unity.Robotics.ROSTCPConnector;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -20,12 +23,14 @@ public class MRCentralControlPanel : MonoBehaviour
         Camera,
         Attachment,
         Haptics,
+        TaskSwitch,
         Debug
     }
 
     private enum CameraPreviewMode
     {
-        Wrist,
+        LeftWrist,
+        RightWrist,
         Floating
     }
 
@@ -53,11 +58,15 @@ public class MRCentralControlPanel : MonoBehaviour
     public float triggerThreshold = 0.55f;
     public float rightGripBlockThreshold = 0.55f;
     public float rayMaxDistance = 3.0f;
-    public float contentScrollSensitivity = 1.0f;
     public Color contentViewportColor = new Color(0.0f, 0.0f, 0.0f, 0.26f);
 
     [Header("Camera Preview")]
     public Vector2 previewSize = new Vector2(560f, 220f);
+
+    [Header("Task Manager")]
+    public string taskManagerSelectTopic = "/task_manager/select_task";
+    public string taskManagerStatusTopic = "/task_manager/status";
+    public string[] taskSwitchTaskNames = { "pick_place_basic", "rubik_2x2", "cable_insertion" };
 
     [Header("Workspace Reset")]
     public string workspaceRootName = "GazeboWorkspace";
@@ -74,20 +83,27 @@ public class MRCentralControlPanel : MonoBehaviour
 
     private GameObject panel;
     private RectTransform panelRect;
+    private RectTransform headerLayer;
+    private RectTransform actionLayer;
+    private RectTransform contentLayer;
+    private RectTransform statusLayer;
+    private RectTransform tabsLayer;
+    private RectTransform handlesLayer;
     private RectTransform controlsTab;
     private RectTransform cameraTab;
     private RectTransform attachmentTab;
     private RectTransform hapticsTab;
+    private RectTransform taskSwitchTab;
     private RectTransform debugTab;
-    private RectTransform modeButton;
+    private RectTransform swapHandsButton;
     private RectTransform resetObjectsButton;
-    private RectTransform resetRobotsButton;
-    private RectTransform resetAllButton;
-    private RectTransform resetWorkspaceButton;
+    private RectTransform resetLeftRobotButton;
+    private RectTransform resetRightRobotButton;
     private RectTransform overheadViewButton;
     private RectTransform recordButton;
     private RectTransform captureButton;
-    private RectTransform wristCameraButton;
+    private RectTransform leftWristCameraButton;
+    private RectTransform rightWristCameraButton;
     private RectTransform floatingCameraButton;
     private RectTransform attachmentAdjustButton;
     private RectTransform resetLeftAttachmentButton;
@@ -100,27 +116,25 @@ public class MRCentralControlPanel : MonoBehaviour
     private RectTransform hapticGainDownButton;
     private RectTransform hapticGainUpButton;
     private RectTransform hapticGainResetButton;
+    private RectTransform taskPickPlaceButton;
+    private RectTransform taskRubikButton;
+    private RectTransform taskCableButton;
     private RectTransform applyFloatingCameraButton;
     private RectTransform dragHandle;
     private RectTransform resizeHandle;
     private readonly RectTransform[] resizeHandles = new RectTransform[4];
     private UICornerDragHandle.Corner activeResizeCorner;
     private RectTransform contentScrollArea;
-    private RectTransform contentViewport;
-    private RectTransform scrollContent;
     private RectTransform contentScrollbarRect;
-    private RectTransform scrollbarHandle;
-    private RectTransform contentScrollDragRect;
-    private ScrollRect contentScrollRect;
     private Scrollbar contentScrollbar;
     private Text titleText;
     private Text contentText;
     private Text statusText;
-    private Text modeButtonText;
+    private Text swapHandsButtonText;
     private Text recordButtonText;
     private RawImage previewImage;
     private PanelPage page = PanelPage.Controls;
-    private CameraPreviewMode cameraPreviewMode = CameraPreviewMode.Wrist;
+    private CameraPreviewMode cameraPreviewMode = CameraPreviewMode.RightWrist;
     private Transform leftController;
     private Transform rightController;
     private bool leftTriggerWasHeld;
@@ -130,15 +144,12 @@ public class MRCentralControlPanel : MonoBehaviour
     private HandPoseSender sender;
     private WorkspaceDragController workspaceDrag;
     private GripperCameraRecorder recorder;
+    private GripperCameraRecorder leftRecorder;
+    private GripperCameraRecorder rightRecorder;
     private FloatingSceneCameraController floatingCamera;
     private QuestPassthroughController passthrough;
     private QuestHapticFeedbackController haptics;
     private VRDraggableWindow panelDragger;
-    private bool contentScrollDragging;
-    private bool contentScrollDraggingScrollbar;
-    private Transform contentScrollController;
-    private float contentScrollStartLocalY;
-    private float contentScrollStartNormalized;
     private bool resizeDragging;
     private Transform resizeController;
     private Vector2 resizeStartLocalPoint;
@@ -150,6 +161,9 @@ public class MRCentralControlPanel : MonoBehaviour
     private InputField floatingCameraPosInput;
     private InputField floatingCameraRotInput;
     private InputField floatingCameraFovInput;
+    private ROSConnection ros;
+    private bool taskManagerRosReady;
+    private string taskManagerStatus = "Task manager: waiting for ROS-TCP.";
     private static Sprite roundedSprite;
 
     private void OnEnable()
@@ -247,42 +261,48 @@ public class MRCentralControlPanel : MonoBehaviour
 
         Image background = panel.GetComponent<Image>();
         ApplyRoundedImage(background, panelColor);
+        EnsurePanelLayers();
+        EnsurePanelSectionBackings();
 
         Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         if (font == null)
             font = Font.CreateDynamicFontFromOSFont("Arial", 16);
 
-        titleText = EnsureText("Title", panelRect, font, "MR Control Panel", 24, FontStyle.Bold, TextAnchor.MiddleLeft);
+        titleText = EnsurePanelText("Title", headerLayer, font, "MR Control Panel", 24, FontStyle.Bold, TextAnchor.MiddleLeft);
         SetRect(titleText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(24f, -18f), new Vector2(-48f, 36f), new Vector2(0f, 1f));
 
-        float tabWidth = 118f;
-        float tabGap = 10f;
+        float tabWidth = 106f;
+        float tabGap = 8f;
         float tabY = -panelSize.y + 32f;
-        float firstTabX = (panelSize.x - ((tabWidth * 5f) + (tabGap * 4f))) * 0.5f + (tabWidth * 0.5f);
+        float firstTabX = (panelSize.x - ((tabWidth * 6f) + (tabGap * 5f))) * 0.5f + (tabWidth * 0.5f);
         controlsTab = EnsureTab("Tab_Controls", "Controls", font, new Vector2(firstTabX, tabY));
         cameraTab = EnsureTab("Tab_Camera", "Camera", font, new Vector2(firstTabX + tabWidth + tabGap, tabY));
         attachmentTab = EnsureTab("Tab_Attachment", "Attach", font, new Vector2(firstTabX + (tabWidth + tabGap) * 2f, tabY));
         hapticsTab = EnsureTab("Tab_Haptics", "Haptics", font, new Vector2(firstTabX + (tabWidth + tabGap) * 3f, tabY));
-        debugTab = EnsureTab("Tab_Debug", "Debug", font, new Vector2(firstTabX + (tabWidth + tabGap) * 4f, tabY));
+        taskSwitchTab = EnsureTab("Tab_TaskSwitch", "Tasks", font, new Vector2(firstTabX + (tabWidth + tabGap) * 4f, tabY));
+        debugTab = EnsureTab("Tab_Debug", "Debug", font, new Vector2(firstTabX + (tabWidth + tabGap) * 5f, tabY));
 
-        EnsureContentScrollView(font);
+        EnsureFixedContentView(font);
         contentText.horizontalOverflow = HorizontalWrapMode.Wrap;
-        contentText.verticalOverflow = VerticalWrapMode.Overflow;
+        contentText.verticalOverflow = VerticalWrapMode.Truncate;
 
-        statusText = EnsureText("Status", panelRect, font, "", 14, FontStyle.Normal, TextAnchor.LowerLeft);
+        statusText = EnsurePanelText("Status", statusLayer, font, "", 14, FontStyle.Normal, TextAnchor.LowerLeft);
         SetRect(statusText.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(24f, 66f), new Vector2(-48f, 30f), new Vector2(0f, 0f));
 
-        previewImage = EnsureRawImage("CameraPreview", panelRect);
+        previewImage = EnsurePanelRawImage("CameraPreview", contentLayer);
         SetRect(previewImage.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -292f), CameraPreviewSize(), new Vector2(0.5f, 0.5f));
 
-        modeButton = EnsureButtonRect("ModeButton", "Mode", font, new Vector2(94f, -88f), new Vector2(136f, 38f));
-        resetObjectsButton = EnsureButtonRect("ResetObjectsButton", "Objects", font, new Vector2(246f, -88f), new Vector2(136f, 38f));
-        resetRobotsButton = EnsureButtonRect("ResetRobotsButton", "Robots", font, new Vector2(398f, -88f), new Vector2(136f, 38f));
-        resetAllButton = EnsureButtonRect("ResetAllButton", "All Reset", font, new Vector2(550f, -88f), new Vector2(136f, 38f));
-        resetWorkspaceButton = EnsureButtonRect("ResetWorkspaceButton", "Workspace Reset", font, new Vector2(260f, -138f), new Vector2(220f, 38f));
-        overheadViewButton = EnsureButtonRect("OverheadViewButton", "Overhead View", font, new Vector2(518f, -138f), new Vector2(220f, 38f));
+        RemovePanelChildIfExists("ModeButton");
+        swapHandsButton = EnsureButtonRect("SwapHandsButton", "Swap Hands", font, new Vector2(88f, -88f), new Vector2(140f, 38f));
+        resetLeftRobotButton = EnsureButtonRect("ResetLeftRobotButton", "Left Arm", font, new Vector2(236f, -88f), new Vector2(126f, 38f));
+        resetRightRobotButton = EnsureButtonRect("ResetRightRobotButton", "Right Arm", font, new Vector2(370f, -88f), new Vector2(126f, 38f));
+        resetObjectsButton = EnsureButtonRect("ResetObjectsButton", "Objects", font, new Vector2(504f, -88f), new Vector2(126f, 38f));
+        overheadViewButton = EnsureButtonRect("OverheadViewButton", "Overhead", font, new Vector2(644f, -88f), new Vector2(132f, 38f));
         RemovePanelChildIfExists("ResetButton");
         RemovePanelChildIfExists("OverheadCameraButton");
+        RemovePanelChildIfExists("ResetRobotsButton");
+        RemovePanelChildIfExists("ResetAllButton");
+        RemovePanelChildIfExists("ResetWorkspaceButton");
         RemovePanelChildIfExists("RubikTwistXButton");
         RemovePanelChildIfExists("RubikTwistYButton");
         RemovePanelChildIfExists("RubikTwistZButton");
@@ -290,8 +310,10 @@ public class MRCentralControlPanel : MonoBehaviour
         RemovePanelChildIfExists("RubikResetButton");
         recordButton = EnsureButtonRect("RecordButton", "Record", font, new Vector2(560f, -88f), new Vector2(132f, 38f));
         captureButton = EnsureButtonRect("CaptureButton", "Capture", font, new Vector2(696f, -88f), new Vector2(112f, 38f));
-        wristCameraButton = EnsureButtonRect("WristCameraButton", "Wrist", font, new Vector2(104f, -88f), new Vector2(136f, 36f));
-        floatingCameraButton = EnsureButtonRect("FloatingCameraButton", "Floating", font, new Vector2(254f, -88f), new Vector2(144f, 36f));
+        RemovePanelChildIfExists("WristCameraButton");
+        leftWristCameraButton = EnsureButtonRect("LeftWristCameraButton", "Left Wrist", font, new Vector2(88f, -88f), new Vector2(120f, 36f));
+        rightWristCameraButton = EnsureButtonRect("RightWristCameraButton", "Right Wrist", font, new Vector2(220f, -88f), new Vector2(128f, 36f));
+        floatingCameraButton = EnsureButtonRect("FloatingCameraButton", "Floating", font, new Vector2(364f, -88f), new Vector2(126f, 36f));
         attachmentAdjustButton = EnsureButtonRect("AttachmentAdjustButton", "Hold X/A", font, new Vector2(132f, -88f), new Vector2(210f, 38f));
         resetLeftAttachmentButton = EnsureButtonRect("ResetLeftAttachmentButton", "Reset L", font, new Vector2(326f, -88f), new Vector2(110f, 38f));
         resetRightAttachmentButton = EnsureButtonRect("ResetRightAttachmentButton", "Reset R", font, new Vector2(444f, -88f), new Vector2(110f, 38f));
@@ -303,6 +325,9 @@ public class MRCentralControlPanel : MonoBehaviour
         hapticGainDownButton = EnsureButtonRect("HapticGainDownButton", "Gain -", font, new Vector2(458f, -88f), new Vector2(110f, 38f));
         hapticGainUpButton = EnsureButtonRect("HapticGainUpButton", "Gain +", font, new Vector2(580f, -88f), new Vector2(110f, 38f));
         hapticGainResetButton = EnsureButtonRect("HapticGainResetButton", "Gain 1x", font, new Vector2(704f, -88f), new Vector2(120f, 38f));
+        taskPickPlaceButton = EnsureButtonRect("TaskPickPlaceButton", "Pick/Place", font, new Vector2(126f, -88f), new Vector2(180f, 38f));
+        taskRubikButton = EnsureButtonRect("TaskRubikButton", "Rubik 2x2", font, new Vector2(326f, -88f), new Vector2(180f, 38f));
+        taskCableButton = EnsureButtonRect("TaskCableButton", "Cable Insert", font, new Vector2(526f, -88f), new Vector2(190f, 38f));
         applyFloatingCameraButton = EnsureButtonRect("ApplyFloatingCameraButton", "Apply Camera", font, new Vector2(610f, -488f), new Vector2(170f, 34f));
         leftAttachmentPosInput = EnsureInputField("LeftAttachmentPosInput", "L pos x,y,z", font, new Vector2(178f, -158f), new Vector2(280f, 32f));
         leftAttachmentRotInput = EnsureInputField("LeftAttachmentRotInput", "L rot deg x,y,z", font, new Vector2(474f, -158f), new Vector2(280f, 32f));
@@ -311,7 +336,7 @@ public class MRCentralControlPanel : MonoBehaviour
         floatingCameraPosInput = EnsureInputField("FloatingCameraPosInput", "cam pos x,y,z", font, new Vector2(180f, -444f), new Vector2(292f, 32f));
         floatingCameraRotInput = EnsureInputField("FloatingCameraRotInput", "cam rot x,y,z", font, new Vector2(486f, -444f), new Vector2(292f, 32f));
         floatingCameraFovInput = EnsureInputField("FloatingCameraFovInput", "fov", font, new Vector2(430f, -488f), new Vector2(86f, 32f));
-        modeButtonText = modeButton.GetComponentInChildren<Text>();
+        swapHandsButtonText = swapHandsButton.GetComponentInChildren<Text>();
         recordButtonText = recordButton.GetComponentInChildren<Text>();
 
         dragHandle = EnsureDragDashHandle();
@@ -319,7 +344,7 @@ public class MRCentralControlPanel : MonoBehaviour
         Vector2 resizeSize = new Vector2(44f, 44f);
         float resizeOffset = 4f;
         resizeHandles[(int)UICornerDragHandle.Corner.BottomLeft] = UICornerDragHandle.Ensure(
-            panel.transform,
+            handlesLayer,
             "ResizeHandle_BottomLeft",
             resizeColor,
             new Vector2(0f, 0f),
@@ -328,7 +353,7 @@ public class MRCentralControlPanel : MonoBehaviour
             resizeSize,
             UICornerDragHandle.Corner.BottomLeft);
         resizeHandles[(int)UICornerDragHandle.Corner.BottomRight] = UICornerDragHandle.Ensure(
-            panel.transform,
+            handlesLayer,
             "ResizeHandle_BottomRight",
             resizeColor,
             new Vector2(1f, 0f),
@@ -337,7 +362,7 @@ public class MRCentralControlPanel : MonoBehaviour
             resizeSize,
             UICornerDragHandle.Corner.BottomRight);
         resizeHandles[(int)UICornerDragHandle.Corner.TopLeft] = UICornerDragHandle.Ensure(
-            panel.transform,
+            handlesLayer,
             "ResizeHandle_TopLeft",
             resizeColor,
             new Vector2(0f, 1f),
@@ -346,7 +371,7 @@ public class MRCentralControlPanel : MonoBehaviour
             resizeSize,
             UICornerDragHandle.Corner.TopLeft);
         resizeHandles[(int)UICornerDragHandle.Corner.TopRight] = UICornerDragHandle.Ensure(
-            panel.transform,
+            handlesLayer,
             "ResizeHandle_TopRight",
             resizeColor,
             new Vector2(1f, 1f),
@@ -355,6 +380,7 @@ public class MRCentralControlPanel : MonoBehaviour
             resizeSize,
             UICornerDragHandle.Corner.TopRight);
         resizeHandle = resizeHandles[(int)UICornerDragHandle.Corner.BottomLeft];
+        SetLayerRecursively(panel, 5);
 
         panelDragger = panel.GetComponent<VRDraggableWindow>();
         if (panelDragger == null)
@@ -372,6 +398,8 @@ public class MRCentralControlPanel : MonoBehaviour
         // Keep the panel roll-level, but allow pitch so it tilts toward the user's eyes instead of staying vertical.
         panelDragger.yawOnlyHeadsetFacing = false;
 
+        BindPanelButtonActions();
+
         if (Application.isPlaying && !panelInitialHeadsetFacingApplied && !panelDragger.IsDragging)
             panelInitialHeadsetFacingApplied = panelDragger.FaceHeadsetNow();
     }
@@ -387,26 +415,113 @@ public class MRCentralControlPanel : MonoBehaviour
         UpdatePanel(force: true);
     }
 
+    private void EnsurePanelLayers()
+    {
+        headerLayer = EnsurePanelLayer("Layer_01_Header");
+        actionLayer = EnsurePanelLayer("Layer_02_Actions");
+        contentLayer = EnsurePanelLayer("Layer_03_Content");
+        statusLayer = EnsurePanelLayer("Layer_04_Status");
+        tabsLayer = EnsurePanelLayer("Layer_05_Tabs");
+        handlesLayer = EnsurePanelLayer("Layer_06_Handles");
+
+        headerLayer.SetSiblingIndex(0);
+        contentLayer.SetSiblingIndex(1);
+        actionLayer.SetSiblingIndex(2);
+        statusLayer.SetSiblingIndex(3);
+        tabsLayer.SetSiblingIndex(4);
+        handlesLayer.SetSiblingIndex(5);
+    }
+
+    private RectTransform EnsurePanelLayer(string layerName)
+    {
+        Transform existing = panel.transform.Find(layerName);
+        GameObject go;
+        if (existing == null)
+        {
+            go = new GameObject(layerName, typeof(RectTransform));
+            go.transform.SetParent(panel.transform, false);
+        }
+        else
+        {
+            go = existing.gameObject;
+        }
+
+        RectTransform rect = go.GetComponent<RectTransform>();
+        SetRect(rect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, new Vector2(0.5f, 0.5f));
+        go.layer = panel.layer;
+        return rect;
+    }
+
+    private void EnsurePanelSectionBackings()
+    {
+        Color strip = new Color(0f, 0f, 0f, 0.18f);
+        Color strongerStrip = new Color(0f, 0f, 0f, 0.24f);
+
+        RectTransform headerBacking = EnsureRectObject("Header_Background", headerLayer, typeof(Image));
+        SetRect(headerBacking, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(16f, -10f), new Vector2(-32f, 52f), new Vector2(0f, 1f));
+        ApplySectionImage(headerBacking, strip);
+        headerBacking.SetAsFirstSibling();
+
+        RectTransform actionBacking = EnsureRectObject("Actions_Background", actionLayer, typeof(Image));
+        SetRect(actionBacking, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(16f, -64f), new Vector2(-32f, 100f), new Vector2(0f, 1f));
+        ApplySectionImage(actionBacking, strip);
+        actionBacking.SetAsFirstSibling();
+
+        RectTransform statusBacking = EnsureRectObject("Status_Background", statusLayer, typeof(Image));
+        SetRect(statusBacking, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(16f, 58f), new Vector2(-32f, 44f), new Vector2(0f, 0f));
+        ApplySectionImage(statusBacking, strip);
+        statusBacking.SetAsFirstSibling();
+
+        RectTransform tabsBacking = EnsureRectObject("Tabs_Background", tabsLayer, typeof(Image));
+        SetRect(tabsBacking, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(16f, 8f), new Vector2(-32f, 50f), new Vector2(0f, 0f));
+        ApplySectionImage(tabsBacking, strongerStrip);
+        tabsBacking.SetAsFirstSibling();
+    }
+
+    private void ApplySectionImage(RectTransform rect, Color color)
+    {
+        if (rect == null)
+            return;
+        Image image = rect.GetComponent<Image>();
+        ApplyRoundedImage(image, color);
+        if (image != null)
+            image.raycastTarget = false;
+    }
+
     private RectTransform EnsureTab(string name, string label, Font font, Vector2 anchoredPosition)
     {
-        RectTransform rect = EnsureButtonRect(name, label, font, anchoredPosition, new Vector2(118f, 36f));
+        RectTransform rect = EnsureButtonRect(name, label, font, anchoredPosition, new Vector2(106f, 36f), tabsLayer);
         return rect;
     }
 
     private RectTransform EnsureButtonRect(string name, string label, Font font, Vector2 anchoredPosition, Vector2 size)
     {
-        Transform existing = panel.transform.Find(name);
+        return EnsureButtonRect(name, label, font, anchoredPosition, size, actionLayer);
+    }
+
+    private RectTransform EnsureButtonRect(string name, string label, Font font, Vector2 anchoredPosition, Vector2 size, Transform parent)
+    {
+        Transform targetParent = parent != null ? parent : panel.transform;
+        Transform existing = FindPanelChild(name);
         GameObject go;
         if (existing == null)
         {
-            go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            go.transform.SetParent(panel.transform, false);
+            go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+            go.transform.SetParent(targetParent, false);
             Text text = EnsureText("Text", go.GetComponent<RectTransform>(), font, label, 15, FontStyle.Bold, TextAnchor.MiddleCenter);
             SetRect(text.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, new Vector2(0.5f, 0.5f));
         }
         else
         {
             go = existing.gameObject;
+            if (go.transform.parent != targetParent)
+                go.transform.SetParent(targetParent, false);
+            if (go.GetComponent<CanvasRenderer>() == null)
+                go.AddComponent<CanvasRenderer>();
+            if (go.GetComponent<Image>() == null)
+                go.AddComponent<Image>();
+            if (go.GetComponent<Button>() == null)
+                go.AddComponent<Button>();
         }
 
         RectTransform rect = go.GetComponent<RectTransform>();
@@ -421,12 +536,15 @@ public class MRCentralControlPanel : MonoBehaviour
             childText.text = label;
 
         StyleButton(rect, actionButtonColor, buttonTextColor);
+        Button button = go.GetComponent<Button>();
+        if (button != null)
+            button.targetGraphic = go.GetComponent<Image>();
         return rect;
     }
 
     private RectTransform EnsureDragDashHandle()
     {
-        RectTransform handleRect = EnsureRectObject(HandleName, panel.transform, typeof(Image));
+        RectTransform handleRect = EnsurePanelRectObject(HandleName, handlesLayer, typeof(Image));
         SetRect(
             handleRect,
             new Vector2(0.5f, 0f),
@@ -445,14 +563,74 @@ public class MRCentralControlPanel : MonoBehaviour
         return handleRect;
     }
 
+    private void BindPanelButtonActions()
+    {
+        BindButton(controlsTab, () => SetPage(PanelPage.Controls));
+        BindButton(cameraTab, () => SetPage(PanelPage.Camera));
+        BindButton(attachmentTab, () => SetPage(PanelPage.Attachment));
+        BindButton(hapticsTab, () => SetPage(PanelPage.Haptics));
+        BindButton(taskSwitchTab, () => SetPage(PanelPage.TaskSwitch));
+        BindButton(debugTab, () => SetPage(PanelPage.Debug));
+
+        BindButton(swapHandsButton, () => { if (sender != null) sender.ToggleControllerArmSwap(); });
+        BindButton(resetObjectsButton, () => { if (sender != null) sender.RequestResetObjects(); });
+        BindButton(resetLeftRobotButton, () => { if (sender != null) sender.RequestResetLeftRobot(); });
+        BindButton(resetRightRobotButton, () => { if (sender != null) sender.RequestResetRightRobot(); });
+        BindButton(overheadViewButton, ResetOverheadView);
+
+        BindButton(recordButton, ToggleSelectedRecording);
+        BindButton(captureButton, CaptureSelectedCameraFrame);
+        BindButton(leftWristCameraButton, () => SelectCameraPreview(CameraPreviewMode.LeftWrist));
+        BindButton(rightWristCameraButton, () => SelectCameraPreview(CameraPreviewMode.RightWrist));
+        BindButton(floatingCameraButton, () => SelectCameraPreview(CameraPreviewMode.Floating));
+        BindButton(applyFloatingCameraButton, ApplyFloatingCameraInputs);
+
+        BindButton(attachmentAdjustButton, () => { if (sender != null) sender.SetAttachmentAdjustmentMode(false); });
+        BindButton(resetLeftAttachmentButton, () => { if (sender != null) sender.ResetLeftAttachmentOffset(); });
+        BindButton(resetRightAttachmentButton, () => { if (sender != null) sender.ResetRightAttachmentOffset(); });
+        BindButton(resetAllAttachmentButton, () => { if (sender != null) sender.ResetAttachmentOffsets(); });
+        BindButton(applyLeftAttachmentButton, () => ApplyAttachmentInputs(left: true));
+        BindButton(applyRightAttachmentButton, () => ApplyAttachmentInputs(left: false));
+
+        BindButton(hapticOutputButton, () => { if (haptics != null) haptics.ToggleHapticOutput(); });
+        BindButton(hapticRosButton, () => { if (haptics != null) haptics.ToggleRosContactHaptics(); });
+        BindButton(hapticGainDownButton, () => { if (haptics != null) haptics.AdjustOutputGain(-0.1f); });
+        BindButton(hapticGainUpButton, () => { if (haptics != null) haptics.AdjustOutputGain(0.1f); });
+        BindButton(hapticGainResetButton, () => { if (haptics != null) haptics.ResetOutputGain(); });
+
+        BindButton(taskPickPlaceButton, () => PublishTaskSelection("pick_place_basic"));
+        BindButton(taskRubikButton, () => PublishTaskSelection("rubik_2x2"));
+        BindButton(taskCableButton, () => PublishTaskSelection("cable_insertion"));
+    }
+
+    private void BindButton(RectTransform rect, UnityAction action)
+    {
+        if (rect == null || action == null)
+            return;
+
+        Button button = rect.GetComponent<Button>();
+        if (button == null)
+            button = rect.gameObject.AddComponent<Button>();
+        Image image = rect.GetComponent<Image>();
+        if (image != null)
+        {
+            image.raycastTarget = true;
+            button.targetGraphic = image;
+        }
+
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(action);
+    }
+
     private InputField EnsureInputField(string name, string placeholder, Font font, Vector2 anchoredPosition, Vector2 size)
     {
-        Transform existing = panel.transform.Find(name);
+        Transform targetParent = actionLayer != null ? actionLayer : panel.transform;
+        Transform existing = FindPanelChild(name);
         GameObject go;
         if (existing == null)
         {
             go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(InputField));
-            go.transform.SetParent(panel.transform, false);
+            go.transform.SetParent(targetParent, false);
 
             Text text = EnsureText("Text", go.GetComponent<RectTransform>(), font, "", 14, FontStyle.Normal, TextAnchor.MiddleLeft);
             SetRect(text.rectTransform, Vector2.zero, Vector2.one, new Vector2(10f, 0f), new Vector2(-20f, 0f), new Vector2(0.5f, 0.5f));
@@ -470,6 +648,10 @@ public class MRCentralControlPanel : MonoBehaviour
         else
         {
             go = existing.gameObject;
+            if (go.transform.parent != targetParent)
+                go.transform.SetParent(targetParent, false);
+            if (go.GetComponent<CanvasRenderer>() == null)
+                go.AddComponent<CanvasRenderer>();
             if (go.GetComponent<Image>() == null)
                 go.AddComponent<Image>();
             if (go.GetComponent<InputField>() == null)
@@ -516,6 +698,37 @@ public class MRCentralControlPanel : MonoBehaviour
         return uiText;
     }
 
+    private Text EnsurePanelText(string name, Transform parent, Font font, string text, int fontSize, FontStyle fontStyle, TextAnchor alignment)
+    {
+        Transform targetParent = parent != null ? parent : panel.transform;
+        Transform existing = FindPanelChild(name);
+        GameObject go;
+        if (existing == null)
+        {
+            go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+            go.transform.SetParent(targetParent, false);
+        }
+        else
+        {
+            go = existing.gameObject;
+            if (go.transform.parent != targetParent)
+                go.transform.SetParent(targetParent, false);
+            if (go.GetComponent<CanvasRenderer>() == null)
+                go.AddComponent<CanvasRenderer>();
+            if (go.GetComponent<Text>() == null)
+                go.AddComponent<Text>();
+        }
+
+        Text uiText = go.GetComponent<Text>();
+        uiText.font = font;
+        uiText.text = text;
+        uiText.fontSize = fontSize;
+        uiText.fontStyle = fontStyle;
+        uiText.alignment = alignment;
+        uiText.color = new Color(0.96f, 0.92f, 0.84f, 1.0f);
+        return uiText;
+    }
+
     private RawImage EnsureRawImage(string name, Transform parent)
     {
         Transform existing = parent.Find(name);
@@ -535,57 +748,80 @@ public class MRCentralControlPanel : MonoBehaviour
         return image;
     }
 
-    private void EnsureContentScrollView(Font font)
+    private RawImage EnsurePanelRawImage(string name, Transform parent)
     {
-        contentScrollArea = EnsureRectObject("ContentScrollArea", panel.transform, typeof(ScrollRect), typeof(Image));
+        Transform targetParent = parent != null ? parent : panel.transform;
+        Transform existing = FindPanelChild(name);
+        GameObject go;
+        if (existing == null)
+        {
+            go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
+            go.transform.SetParent(targetParent, false);
+        }
+        else
+        {
+            go = existing.gameObject;
+            if (go.transform.parent != targetParent)
+                go.transform.SetParent(targetParent, false);
+            if (go.GetComponent<CanvasRenderer>() == null)
+                go.AddComponent<CanvasRenderer>();
+            if (go.GetComponent<RawImage>() == null)
+                go.AddComponent<RawImage>();
+        }
+
+        RawImage image = go.GetComponent<RawImage>();
+        image.color = Color.white;
+        return image;
+    }
+
+    private void EnsureFixedContentView(Font font)
+    {
+        contentScrollArea = EnsurePanelRectObject("ContentScrollArea", contentLayer, typeof(Image));
         Image areaImage = contentScrollArea.GetComponent<Image>();
         ApplyRoundedImage(areaImage, contentViewportColor);
 
-        contentViewport = EnsureRectObject("Viewport", contentScrollArea, typeof(Image), typeof(Mask));
-        Image viewportImage = contentViewport.GetComponent<Image>();
-        viewportImage.color = new Color(0f, 0f, 0f, 0.01f);
-        Mask mask = contentViewport.GetComponent<Mask>();
-        mask.showMaskGraphic = false;
-        SetRect(contentViewport, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, new Vector2(0.5f, 0.5f));
+        ScrollRect staleScrollRect = contentScrollArea.GetComponent<ScrollRect>();
+        if (staleScrollRect != null)
+            staleScrollRect.enabled = false;
 
-        scrollContent = EnsureRectObject("ScrollContent", contentViewport);
-        SetRect(scrollContent, new Vector2(0f, 1f), new Vector2(1f, 1f), Vector2.zero, new Vector2(0f, 100f), new Vector2(0.5f, 1f));
+        Transform staleViewport = contentScrollArea.Find("Viewport");
+        if (staleViewport != null)
+            staleViewport.gameObject.SetActive(false);
 
-        contentText = EnsureText("Content", scrollContent, font, "", 17, FontStyle.Normal, TextAnchor.UpperLeft);
-        SetRect(contentText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(12f, -8f), new Vector2(-24f, 100f), new Vector2(0f, 1f));
+        Transform staleScrollbar = contentScrollArea.Find("ContentScrollbar");
+        if (staleScrollbar != null)
+            staleScrollbar.gameObject.SetActive(false);
+        contentScrollbarRect = staleScrollbar as RectTransform;
+        contentScrollbar = null;
 
-        contentScrollRect = contentScrollArea.GetComponent<ScrollRect>();
-        contentScrollRect.viewport = contentViewport;
-        contentScrollRect.content = scrollContent;
-        contentScrollRect.horizontal = false;
-        contentScrollRect.vertical = true;
-        contentScrollRect.movementType = ScrollRect.MovementType.Clamped;
-        contentScrollRect.inertia = false;
-        contentScrollRect.scrollSensitivity = 18f;
-        contentScrollbar = EnsureVerticalScrollbar();
-        contentScrollRect.verticalScrollbar = contentScrollbar;
-        contentScrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+        contentText = EnsureText("FixedContent", contentScrollArea, font, "", 15, FontStyle.Normal, TextAnchor.UpperLeft);
+        SetRect(contentText.rectTransform, Vector2.zero, Vector2.one, new Vector2(16f, 12f), new Vector2(-16f, -12f), new Vector2(0.5f, 0.5f));
 
-        Transform legacyContent = panel.transform.Find("Content");
+        Transform legacyContent = FindPanelChild("Content");
         if (legacyContent != null && legacyContent != contentText.transform)
-            legacyContent.gameObject.SetActive(false);
+        {
+            if (Application.isPlaying)
+                Destroy(legacyContent.gameObject);
+            else
+                DestroyImmediate(legacyContent.gameObject);
+        }
     }
 
     private Scrollbar EnsureVerticalScrollbar()
     {
         contentScrollbarRect = EnsureRectObject("ContentScrollbar", contentScrollArea, typeof(Image), typeof(Scrollbar));
-        SetRect(contentScrollbarRect, new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(-12f, 0f), new Vector2(16f, -16f), new Vector2(1f, 0.5f));
+        SetRect(contentScrollbarRect, new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(-10f, 0f), new Vector2(18f, -18f), new Vector2(1f, 0.5f));
         Image background = contentScrollbarRect.GetComponent<Image>();
         ApplyRoundedImage(background, new Color(1f, 0.94f, 0.78f, 0.13f));
 
         RectTransform slidingArea = EnsureRectObject("SlidingArea", contentScrollbarRect);
-        SetRect(slidingArea, Vector2.zero, Vector2.one, new Vector2(0f, 0f), new Vector2(-4f, -4f), new Vector2(0.5f, 0.5f));
+        SetRect(slidingArea, Vector2.zero, Vector2.one, new Vector2(0f, 0f), new Vector2(-6f, -6f), new Vector2(0.5f, 0.5f));
 
         Transform legacyHandle = contentScrollbarRect.Find("Handle");
         if (legacyHandle != null && legacyHandle.parent == contentScrollbarRect)
             legacyHandle.SetParent(slidingArea, false);
 
-        scrollbarHandle = EnsureRectObject("Handle", slidingArea, typeof(Image));
+        RectTransform scrollbarHandle = EnsureRectObject("Handle", slidingArea, typeof(Image));
         SetRect(scrollbarHandle, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, new Vector2(0.5f, 0.5f));
         Image handleImage = scrollbarHandle.GetComponent<Image>();
         ApplyRoundedImage(handleImage, new Color(1f, 0.72f, 0.36f, 0.92f));
@@ -620,6 +856,52 @@ public class MRCentralControlPanel : MonoBehaviour
         return go.GetComponent<RectTransform>();
     }
 
+    private RectTransform EnsurePanelRectObject(string name, Transform parent, params System.Type[] components)
+    {
+        Transform targetParent = parent != null ? parent : panel.transform;
+        Transform existing = FindPanelChild(name);
+        GameObject go;
+        if (existing == null)
+        {
+            go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer));
+            go.transform.SetParent(targetParent, false);
+        }
+        else
+        {
+            go = existing.gameObject;
+            if (go.transform.parent != targetParent)
+                go.transform.SetParent(targetParent, false);
+            if (go.GetComponent<CanvasRenderer>() == null)
+                go.AddComponent<CanvasRenderer>();
+        }
+
+        foreach (System.Type componentType in components)
+        {
+            if (go.GetComponent(componentType) == null)
+                go.AddComponent(componentType);
+        }
+
+        return go.GetComponent<RectTransform>();
+    }
+
+    private Transform FindPanelChild(string childName)
+    {
+        if (panel == null || string.IsNullOrWhiteSpace(childName))
+            return null;
+
+        Transform direct = panel.transform.Find(childName);
+        if (direct != null)
+            return direct;
+
+        RectTransform[] children = panel.GetComponentsInChildren<RectTransform>(includeInactive: true);
+        foreach (RectTransform child in children)
+        {
+            if (child != null && child.name == childName)
+                return child;
+        }
+        return null;
+    }
+
     private void UpdatePanel(bool force)
     {
         if (panel == null)
@@ -629,12 +911,14 @@ public class MRCentralControlPanel : MonoBehaviour
         SetTabColor(cameraTab, page == PanelPage.Camera);
         SetTabColor(attachmentTab, page == PanelPage.Attachment);
         SetTabColor(hapticsTab, page == PanelPage.Haptics);
+        SetTabColor(taskSwitchTab, page == PanelPage.TaskSwitch);
         SetTabColor(debugTab, page == PanelPage.Debug);
 
         bool showCamera = page == PanelPage.Camera;
         bool showControls = page == PanelPage.Controls;
         bool showAttachment = page == PanelPage.Attachment;
         bool showHaptics = page == PanelPage.Haptics;
+        bool showTaskSwitch = page == PanelPage.TaskSwitch;
         ApplyPageLayout(showCamera);
         if (contentScrollArea != null)
             contentScrollArea.gameObject.SetActive(true);
@@ -644,18 +928,17 @@ public class MRCentralControlPanel : MonoBehaviour
             if (showCamera)
                 previewImage.texture = ResolvePreviewTexture();
         }
-        if (modeButton != null)
-            modeButton.gameObject.SetActive(showControls);
+        SetButtonActive(swapHandsButton, showControls);
         SetButtonActive(resetObjectsButton, showControls);
-        SetButtonActive(resetRobotsButton, showControls);
-        SetButtonActive(resetAllButton, showControls);
-        SetButtonActive(resetWorkspaceButton, showControls);
+        SetButtonActive(resetLeftRobotButton, showControls);
+        SetButtonActive(resetRightRobotButton, showControls);
         SetButtonActive(overheadViewButton, showControls);
         if (recordButton != null)
             recordButton.gameObject.SetActive(showCamera);
         if (captureButton != null)
             captureButton.gameObject.SetActive(showCamera);
-        SetButtonActive(wristCameraButton, showCamera);
+        SetButtonActive(leftWristCameraButton, showCamera);
+        SetButtonActive(rightWristCameraButton, showCamera);
         SetButtonActive(floatingCameraButton, showCamera);
         SetButtonActive(attachmentAdjustButton, showAttachment);
         SetButtonActive(resetLeftAttachmentButton, showAttachment);
@@ -668,7 +951,10 @@ public class MRCentralControlPanel : MonoBehaviour
         SetButtonActive(hapticGainDownButton, showHaptics);
         SetButtonActive(hapticGainUpButton, showHaptics);
         SetButtonActive(hapticGainResetButton, showHaptics);
-        SetButtonActive(applyFloatingCameraButton, showCamera);
+        SetButtonActive(taskPickPlaceButton, showTaskSwitch);
+        SetButtonActive(taskRubikButton, showTaskSwitch);
+        SetButtonActive(taskCableButton, showTaskSwitch);
+        SetButtonActive(applyFloatingCameraButton, showCamera && cameraPreviewMode == CameraPreviewMode.Floating);
         SetInputActive(leftAttachmentPosInput, showAttachment);
         SetInputActive(leftAttachmentRotInput, showAttachment);
         SetInputActive(rightAttachmentPosInput, showAttachment);
@@ -677,10 +963,10 @@ public class MRCentralControlPanel : MonoBehaviour
         SetInputActive(floatingCameraRotInput, showCamera && cameraPreviewMode == CameraPreviewMode.Floating);
         SetInputActive(floatingCameraFovInput, showCamera && cameraPreviewMode == CameraPreviewMode.Floating);
 
-        if (modeButtonText != null)
-            modeButtonText.text = sender != null && sender.IsGamepadModeActive ? "Hand Pose" : "Thumbstick";
+        if (swapHandsButtonText != null)
+            swapHandsButtonText.text = sender != null && sender.swapControllerArmControl ? "Hands Swapped" : "Swap Hands";
         if (recordButtonText != null)
-            recordButtonText.text = recorder != null && recorder.IsRecording ? "Stop Rec" : "Start Rec";
+            recordButtonText.text = SelectedRecorder() != null && SelectedRecorder().IsRecording ? "Stop Rec" : "Start Rec";
         Text attachmentAdjustText = attachmentAdjustButton != null ? attachmentAdjustButton.GetComponentInChildren<Text>() : null;
         if (attachmentAdjustText != null)
             attachmentAdjustText.text = "Hold X/A";
@@ -691,15 +977,15 @@ public class MRCentralControlPanel : MonoBehaviour
         if (hapticRosText != null)
             hapticRosText.text = haptics != null && haptics.enableRosContactHaptics ? "ROS Contact ON" : "ROS Contact OFF";
 
-        StyleButton(modeButton, actionButtonColor, buttonTextColor);
+        StyleButton(swapHandsButton, sender != null && sender.swapControllerArmControl ? activeTabColor : actionButtonColor, buttonTextColor);
         StyleButton(resetObjectsButton, resetButtonColor, buttonTextColor);
-        StyleButton(resetRobotsButton, resetButtonColor, buttonTextColor);
-        StyleButton(resetAllButton, resetButtonColor, buttonTextColor);
-        StyleButton(resetWorkspaceButton, resetButtonColor, buttonTextColor);
+        StyleButton(resetLeftRobotButton, resetButtonColor, buttonTextColor);
+        StyleButton(resetRightRobotButton, resetButtonColor, buttonTextColor);
         StyleButton(overheadViewButton, actionButtonColor, buttonTextColor);
-        StyleButton(recordButton, recorder != null && recorder.IsRecording ? recordActiveButtonColor : cameraButtonColor, buttonTextColor);
+        StyleButton(recordButton, SelectedRecorder() != null && SelectedRecorder().IsRecording ? recordActiveButtonColor : cameraButtonColor, buttonTextColor);
         StyleButton(captureButton, cameraButtonColor, buttonTextColor);
-        StyleButton(wristCameraButton, cameraPreviewMode == CameraPreviewMode.Wrist ? activeTabColor : cameraButtonColor, buttonTextColor);
+        StyleButton(leftWristCameraButton, cameraPreviewMode == CameraPreviewMode.LeftWrist ? activeTabColor : cameraButtonColor, buttonTextColor);
+        StyleButton(rightWristCameraButton, cameraPreviewMode == CameraPreviewMode.RightWrist ? activeTabColor : cameraButtonColor, buttonTextColor);
         StyleButton(floatingCameraButton, cameraPreviewMode == CameraPreviewMode.Floating ? activeTabColor : cameraButtonColor, buttonTextColor);
         StyleButton(attachmentAdjustButton, actionButtonColor, buttonTextColor);
         StyleButton(resetLeftAttachmentButton, resetButtonColor, buttonTextColor);
@@ -712,70 +998,112 @@ public class MRCentralControlPanel : MonoBehaviour
         StyleButton(hapticGainDownButton, actionButtonColor, buttonTextColor);
         StyleButton(hapticGainUpButton, actionButtonColor, buttonTextColor);
         StyleButton(hapticGainResetButton, actionButtonColor, buttonTextColor);
+        StyleButton(taskPickPlaceButton, actionButtonColor, buttonTextColor);
+        StyleButton(taskRubikButton, actionButtonColor, buttonTextColor);
+        StyleButton(taskCableButton, actionButtonColor, buttonTextColor);
         StyleButton(applyFloatingCameraButton, actionButtonColor, buttonTextColor);
         RefreshInputValuesIfIdle();
 
         if (contentText != null)
             contentText.text = BuildContentText();
-        RefreshScrollableContent();
+        RefreshFixedContent();
 
         if (statusText != null)
             statusText.text = BuildStatusText();
 
         UpdateCornerHandleVisibility();
-        LastStatus = $"page={page}, recorder={(recorder != null ? "ok" : "missing")}, sender={(sender != null ? "ok" : "missing")}";
+        LastStatus = $"page={page}, camera={cameraPreviewMode}, recorder={(SelectedRecorder() != null ? "ok" : "missing")}, sender={(sender != null ? "ok" : "missing")}";
     }
 
     private string BuildContentText()
     {
         if (page == PanelPage.Camera)
         {
-            string session = recorder != null && !string.IsNullOrWhiteSpace(recorder.CurrentSessionFolder)
-                ? recorder.CurrentSessionFolder
+            GripperCameraRecorder activeRecorder = SelectedRecorder();
+            string session = activeRecorder != null && !string.IsNullOrWhiteSpace(activeRecorder.CurrentSessionFolder)
+                ? activeRecorder.CurrentSessionFolder
                 : "No recording session yet.";
-            string floating = floatingCamera != null ? floatingCamera.LastStatus : "floating camera: missing";
-            return "CAMERAS\n\nView buttons switch the preview source: Wrist or Floating.\n\nFloating camera: release teleop grip, then trigger-drag the yellow camera body to move it. Trigger-drag one of the three colored rings to rotate it around X/Y/Z. Fine tune with pos / rot / FOV fields, then press Apply Camera.\n\n" + floating + "\n\nLast recording session:\n" + session;
+            string leftStatus = leftRecorder != null ? "left wrist: ready" : "left wrist: missing";
+            string rightStatus = rightRecorder != null ? "right wrist: ready" : "right wrist: missing";
+            GripperCameraRecorder floatingRecorder = Application.isPlaying && floatingCamera != null ? floatingCamera.Recorder : null;
+            string floatingRecorderStatus = Application.isPlaying
+                ? (floatingRecorder != null ? "ready" : "missing")
+                : (floatingCamera != null && floatingCamera.enableRecording ? "runtime-created" : "disabled");
+            string floating = floatingCamera != null
+                ? $"floating: ready, recorder={floatingRecorderStatus}"
+                : "floating camera: missing";
+            return "CAMERAS\n\n" +
+                "Select Left Wrist, Right Wrist, or Floating.\n" +
+                "Record/Capture uses the selected camera.\n\n" +
+                leftStatus + "\n" +
+                rightStatus + "\n" +
+                floating + "\n\n" +
+                "Floating: trigger-drag camera body. Use color rings to rotate. Type pos/rot/FOV, then Apply.\n\n" +
+                "Last session:\n" + session;
         }
 
         if (page == PanelPage.Attachment)
         {
             string attach = sender != null ? sender.AttachmentOffsetStatus : "HandPoseSender: missing";
-            return "ATTACHMENT MODE\n\nThe backend default offset is attachment_tool_rotation_offset_xyzw in the dual-arm tuning YAML files. This page sends a saved Unity-side offset on top of that default.\n\nCalibration: enable attachment mode for an arm, hold that arm's grip, then hold left X / right A. The arm freezes. Move the controller to the pose you want relative to the visible gripper, then release X/A to save the new offset.\n\nSaved offsets are stored locally on the headset and auto-applied next launch. Reset L, Reset R, or Reset Both clears the saved offset back to backend default behavior.\n\nManual fields use:\nposition offset: x,y,z meters in Unity workspace axes\nrotation offset: x,y,z degrees\n\n" + attach;
+            return "ATTACHMENT\n\n" +
+                "Y/B toggles attachment per arm.\n" +
+                "Grip still engages teleop.\n" +
+                "Hold X/A while attached to freeze, move controller to desired gripper offset, release to save.\n\n" +
+                "Manual fields: pos x,y,z meters; rot x,y,z degrees.\n" +
+                "Reset buttons clear saved headset offsets.\n\n" +
+                attach;
         }
 
         if (page == PanelPage.Haptics)
         {
             string hp = haptics != null ? haptics.LastStatus : "QuestHapticFeedbackController: missing";
-            return "HAPTICS\n\nBackend contact detection is Gazebo-authoritative. It checks gripper probe points against the generated SDF object geometry, then sends per-arm amplitudes to the headset.\n\nVibration types:\nshort two-tap pulse: first secure gripper/object contact while closing\ncontinuous buzz: low steady contact feedback while contact persists\nproximity ramp: light feedback while closing near an object\n\nUse the buttons above to toggle headset output, toggle ROS contact haptics, and tune headset gain.\n\n" + hp;
+            return "HAPTICS\n\n" +
+                "Default: Gazebo contact pulse only.\n" +
+                "Two short taps when both gripper sides contact/pinch.\n" +
+                "No continuous buzz during hold.\n" +
+                "EE-error vibration should stay off for normal use.\n\n" +
+                "Use buttons to toggle output, ROS contact haptics, and gain.\n\n" +
+                hp;
         }
 
         if (page == PanelPage.Debug)
         {
-            string modeText = sender != null ? $"Control mode: {sender.ControlModeLabel}" : "Control mode: unknown";
             string senderText = sender != null ? sender.LastStatus : "HandPoseSender: missing";
             string workspaceText = workspaceDrag != null ? workspaceDrag.LastStatus : "WorkspaceDragController: missing";
             string passText = passthrough != null ? passthrough.LastStatus : "Passthrough: missing";
             string hapticText = haptics != null ? haptics.LastStatus : "Haptics: missing";
-            string recorderText = recorder != null ? $"Recorder: {(recorder.IsRecording ? "REC" : "idle")}" : "Recorder: missing";
+            string recorderText = SelectedRecorder() != null ? $"Recorder {cameraPreviewMode}: {(SelectedRecorder().IsRecording ? "REC" : "idle")}" : $"Recorder {cameraPreviewMode}: missing";
             string panelDragText = panelDragger != null ? $"Panel drag: {panelDragger.LastStatus}" : "Panel drag: missing";
-            return "DEBUG\n\nTrigger-drag this text area to scroll.\n\n" + modeText + "\n\n" + senderText + "\n\n" + workspaceText + "\n\n" + panelDragText + "\n\n" + hapticText + "\n\n" + passText + "\n\n" + recorderText;
+            return "DEBUG\n\n" +
+                "Control mode: terminal-controlled backend setting\n" +
+                senderText + "\n" +
+                workspaceText + "\n" +
+                panelDragText + "\n" +
+                hapticText + "\n" +
+                passText + "\n" +
+                recorderText;
+        }
+
+        if (page == PanelPage.TaskSwitch)
+        {
+            return "TASKS\n\n" +
+                "Buttons publish to /task_manager/select_task.\n" +
+                "Runtime manager hot-swaps Gazebo task models and tells Unity to rebuild TaskGroup_Main.\n\n" +
+                "For stable demos, current Pick/Place already includes cable insertion objects.\n\n" +
+                taskManagerStatus;
         }
 
         return
             "CONTROLS\n\n" +
-            "Trigger-drag this text area to scroll.\n\n" +
-            "Left grip hold: engage left-arm teleop.\n" +
-            "Right grip hold: engage right-arm teleop.\n" +
-            "Left/right trigger tap while gripping: toggle that gripper open / close.\n" +
-            "Left X hold: left-arm rotation mode.\n" +
-            "Right A hold: right-arm rotation mode.\n" +
-            "Left Y tap: toggle left attachment mode.\n" +
-            "Right B tap: toggle right attachment mode.\n" +
-            "Trigger hold while not gripping: drag/rotate workspace handles.\n" +
-            "Panel Mode button: switch hand-pose / thumbstick mode.\n" +
-            "Reset buttons: Objects, Robots, All Reset, Workspace, or Overhead View.\n\n" +
-            "Teleop still requires that arm's grip hold before the arm moves.\n" +
-            "Panel: point either controller at tabs/buttons. Drag from the floating notch; resize from corner L-notches.";
+            "Grip hold: engage that arm.\n" +
+            "Trigger tap while gripping: open/close that gripper.\n" +
+            "X/A hold: rotation mode for left/right arm.\n" +
+            "Y/B tap: attachment mode for left/right arm.\n" +
+            "Trigger while not gripping: use workspace/panel handles.\n\n" +
+            "Optional keyboard/thumbstick modes are terminal commands.\n" +
+            "Swap Hands: exchange controller-to-arm assignment.\n" +
+            "Reset buttons: left arm, right arm, objects, or overhead workspace view.\n\n" +
+            "Drag panel from bottom notch; resize from curved corner notches.";
     }
 
     private string BuildStatusText()
@@ -786,9 +1114,10 @@ public class MRCentralControlPanel : MonoBehaviour
         string attach = sender != null
             ? $"attach L {(sender.IsLeftAttachmentModeActive ? "on" : "off")} / R {(sender.IsRightAttachmentModeActive ? "on" : "off")}"
             : "attach ?";
-        string mode = sender != null ? sender.ControlModeLabel : "mode ?";
-        string rec = recorder != null && recorder.IsRecording ? "REC" : "idle";
-        return $"{mode} | {teleop} | {attach} | camera {rec} | page {page}";
+        string assignment = sender != null ? sender.ControllerArmAssignmentLabel : "hands ?";
+        GripperCameraRecorder activeRecorder = SelectedRecorder();
+        string rec = activeRecorder != null && activeRecorder.IsRecording ? "REC" : "idle";
+        return $"{assignment} | {teleop} | {attach} | {cameraPreviewMode} {rec} | page {page}";
     }
 
     private void HandleControllerClicks()
@@ -813,18 +1142,6 @@ public class MRCentralControlPanel : MonoBehaviour
             return;
         }
 
-        if (contentScrollDragging)
-        {
-            bool activeTriggerHeld =
-                (contentScrollController == leftController && leftTriggerHeld) ||
-                (contentScrollController == rightController && rightTriggerHeld);
-            if (activeTriggerHeld)
-                UpdateContentScrollDrag(contentScrollController);
-            else
-                EndContentScroll();
-            return;
-        }
-
         if (resizeDragging)
         {
             bool activeTriggerHeld =
@@ -841,15 +1158,12 @@ public class MRCentralControlPanel : MonoBehaviour
             return;
         if (leftTriggerDown && TryBeginResizeDrag(leftController))
             return;
-        if (leftTriggerDown && TryBeginContentScroll(leftController))
-            return;
         if (rightTriggerDown)
         {
             if (TryHandlePanelClick(rightController))
                 return;
             if (TryBeginResizeDrag(rightController))
                 return;
-            TryBeginContentScroll(rightController);
         }
     }
 
@@ -861,32 +1175,37 @@ public class MRCentralControlPanel : MonoBehaviour
         Ray ray = new Ray(controller.position, controller.forward);
         if (RectRayHit(controlsTab, ray))
         {
-            page = PanelPage.Controls;
+            SetPage(PanelPage.Controls);
             return true;
         }
         else if (RectRayHit(cameraTab, ray))
         {
-            page = PanelPage.Camera;
+            SetPage(PanelPage.Camera);
             return true;
         }
         else if (RectRayHit(attachmentTab, ray))
         {
-            page = PanelPage.Attachment;
+            SetPage(PanelPage.Attachment);
             return true;
         }
         else if (RectRayHit(hapticsTab, ray))
         {
-            page = PanelPage.Haptics;
+            SetPage(PanelPage.Haptics);
+            return true;
+        }
+        else if (RectRayHit(taskSwitchTab, ray))
+        {
+            SetPage(PanelPage.TaskSwitch);
             return true;
         }
         else if (RectRayHit(debugTab, ray))
         {
-            page = PanelPage.Debug;
+            SetPage(PanelPage.Debug);
             return true;
         }
-        else if (page == PanelPage.Controls && RectRayHit(modeButton, ray) && sender != null)
+        else if (page == PanelPage.Controls && RectRayHit(swapHandsButton, ray) && sender != null)
         {
-            sender.ToggleControlMode();
+            sender.ToggleControllerArmSwap();
             return true;
         }
         else if (page == PanelPage.Controls && RectRayHit(resetObjectsButton, ray) && sender != null)
@@ -894,44 +1213,44 @@ public class MRCentralControlPanel : MonoBehaviour
             sender.RequestResetObjects();
             return true;
         }
-        else if (page == PanelPage.Controls && RectRayHit(resetRobotsButton, ray) && sender != null)
+        else if (page == PanelPage.Controls && RectRayHit(resetLeftRobotButton, ray) && sender != null)
         {
-            sender.RequestResetRobots();
+            sender.RequestResetLeftRobot();
             return true;
         }
-        else if (page == PanelPage.Controls && RectRayHit(resetAllButton, ray) && sender != null)
+        else if (page == PanelPage.Controls && RectRayHit(resetRightRobotButton, ray) && sender != null)
         {
-            sender.RequestResetAll();
-            return true;
-        }
-        else if (page == PanelPage.Controls && RectRayHit(resetWorkspaceButton, ray))
-        {
-            ResetWorkspaceUnderHeadset();
+            sender.RequestResetRightRobot();
             return true;
         }
         else if (page == PanelPage.Controls && RectRayHit(overheadViewButton, ray))
         {
-            ResetWorkspaceUnderHeadset();
+            ResetOverheadView();
             return true;
         }
-        else if (page == PanelPage.Camera && RectRayHit(recordButton, ray) && recorder != null)
+        else if (page == PanelPage.Camera && RectRayHit(recordButton, ray))
         {
-            recorder.ToggleRecording();
+            ToggleSelectedRecording();
             return true;
         }
-        else if (page == PanelPage.Camera && RectRayHit(captureButton, ray) && recorder != null)
+        else if (page == PanelPage.Camera && RectRayHit(captureButton, ray))
         {
-            recorder.CaptureOneFrame();
+            CaptureSelectedCameraFrame();
             return true;
         }
-        else if (page == PanelPage.Camera && RectRayHit(wristCameraButton, ray))
+        else if (page == PanelPage.Camera && RectRayHit(leftWristCameraButton, ray))
         {
-            cameraPreviewMode = CameraPreviewMode.Wrist;
+            SelectCameraPreview(CameraPreviewMode.LeftWrist);
+            return true;
+        }
+        else if (page == PanelPage.Camera && RectRayHit(rightWristCameraButton, ray))
+        {
+            SelectCameraPreview(CameraPreviewMode.RightWrist);
             return true;
         }
         else if (page == PanelPage.Camera && RectRayHit(floatingCameraButton, ray))
         {
-            cameraPreviewMode = CameraPreviewMode.Floating;
+            SelectCameraPreview(CameraPreviewMode.Floating);
             return true;
         }
         else if (page == PanelPage.Camera && RectRayHit(applyFloatingCameraButton, ray))
@@ -1022,8 +1341,69 @@ public class MRCentralControlPanel : MonoBehaviour
             haptics.ResetOutputGain();
             return true;
         }
+        else if (page == PanelPage.TaskSwitch && RectRayHit(taskPickPlaceButton, ray))
+        {
+            PublishTaskSelection("pick_place_basic");
+            return true;
+        }
+        else if (page == PanelPage.TaskSwitch && RectRayHit(taskRubikButton, ray))
+        {
+            PublishTaskSelection("rubik_2x2");
+            return true;
+        }
+        else if (page == PanelPage.TaskSwitch && RectRayHit(taskCableButton, ray))
+        {
+            PublishTaskSelection("cable_insertion");
+            return true;
+        }
 
         return false;
+    }
+
+    private void SetPage(PanelPage nextPage)
+    {
+        if (page == nextPage)
+            return;
+        page = nextPage;
+    }
+
+    private void SelectCameraPreview(CameraPreviewMode nextMode)
+    {
+        cameraPreviewMode = nextMode;
+        ResetContentScrollToTop();
+        LastStatus = $"camera preview selected: {cameraPreviewMode}";
+    }
+
+    private void ToggleSelectedRecording()
+    {
+        GripperCameraRecorder activeRecorder = SelectedRecorder();
+        if (activeRecorder == null)
+        {
+            LastStatus = $"record ignored: no recorder found for {cameraPreviewMode}.";
+            return;
+        }
+
+        activeRecorder.ToggleRecording();
+        LastStatus = activeRecorder.IsRecording
+            ? $"recording started: {cameraPreviewMode}"
+            : $"recording stopped: {cameraPreviewMode}";
+    }
+
+    private void CaptureSelectedCameraFrame()
+    {
+        GripperCameraRecorder activeRecorder = SelectedRecorder();
+        if (activeRecorder == null)
+        {
+            LastStatus = $"capture ignored: no recorder found for {cameraPreviewMode}.";
+            return;
+        }
+
+        activeRecorder.CaptureOneFrame();
+        LastStatus = $"captured frame: {cameraPreviewMode}";
+    }
+
+    private void ResetContentScrollToTop()
+    {
     }
 
     private void SetButtonActive(RectTransform button, bool active)
@@ -1040,49 +1420,130 @@ public class MRCentralControlPanel : MonoBehaviour
 
     private void ApplyPageLayout(bool showCamera)
     {
-        ApplyCameraControlLayout(showCamera);
+        ApplyActionLayout(showCamera);
 
         if (contentScrollArea != null)
         {
-            Vector2 contentPosition;
-            Vector2 contentSize;
+            float contentTop;
+            const float contentBottomReserve = 112f;
             if (showCamera)
             {
                 bool floating = cameraPreviewMode == CameraPreviewMode.Floating;
-                contentPosition = floating ? new Vector2(24f, -520f) : new Vector2(24f, -428f);
-                contentSize = floating ? new Vector2(-48f, 74f) : new Vector2(-48f, 152f);
+                contentTop = floating ? 472f : 374f;
             }
             else if (page == PanelPage.Attachment)
             {
-                contentPosition = new Vector2(24f, -260f);
-                contentSize = new Vector2(-48f, 238f);
+                contentTop = 262f;
+            }
+            else if (page == PanelPage.Controls)
+            {
+                contentTop = 172f;
+            }
+            else if (page == PanelPage.Debug)
+            {
+                contentTop = 86f;
             }
             else
             {
-                contentPosition = new Vector2(24f, -188f);
-                contentSize = new Vector2(-48f, 310f);
+                contentTop = 138f;
             }
-            SetRect(contentScrollArea, new Vector2(0f, 1f), new Vector2(1f, 1f), contentPosition, contentSize, new Vector2(0f, 1f));
+            LayoutContentArea(contentTop, contentBottomReserve);
         }
 
         if (previewImage != null)
-            SetRect(previewImage.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -272f), CameraPreviewSize(), new Vector2(0.5f, 0.5f));
+            SetRect(previewImage.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -252f), CameraPreviewSize(), new Vector2(0.5f, 0.5f));
     }
 
-    private void ApplyCameraControlLayout(bool showCamera)
+    private void LayoutContentArea(float topPixels, float bottomReservePixels)
     {
-        if (!showCamera)
+        float height = Mathf.Max(56f, panelSize.y - topPixels - bottomReservePixels);
+        SetRect(
+            contentScrollArea,
+            new Vector2(0f, 1f),
+            new Vector2(1f, 1f),
+            new Vector2(24f, -topPixels),
+            new Vector2(-48f, height),
+            new Vector2(0f, 1f));
+    }
+
+    private void ApplyActionLayout(bool showCamera)
+    {
+        if (page == PanelPage.Controls)
+        {
+            LayoutRow(
+                new[] { swapHandsButton, resetLeftRobotButton, resetRightRobotButton, resetObjectsButton, overheadViewButton },
+                new[] { 150f, 122f, 122f, 122f, 132f },
+                -88f,
+                38f,
+                12f);
+        }
+        else if (showCamera)
+        {
+            LayoutRow(
+                new[] { leftWristCameraButton, rightWristCameraButton, floatingCameraButton, recordButton, captureButton },
+                new[] { 122f, 130f, 124f, 122f, 112f },
+                -88f,
+                38f,
+                10f);
+
+            if (cameraPreviewMode == CameraPreviewMode.Floating)
+            {
+                SetInputTransform(floatingCameraPosInput, new Vector2(180f, -374f), new Vector2(292f, 32f));
+                SetInputTransform(floatingCameraRotInput, new Vector2(486f, -374f), new Vector2(292f, 32f));
+                SetInputTransform(floatingCameraFovInput, new Vector2(430f, -418f), new Vector2(86f, 32f));
+                SetButtonTransform(applyFloatingCameraButton, new Vector2(610f, -418f), new Vector2(170f, 34f));
+            }
+        }
+        else if (page == PanelPage.Attachment)
+        {
+            LayoutRow(
+                new[] { attachmentAdjustButton, resetLeftAttachmentButton, resetRightAttachmentButton, resetAllAttachmentButton },
+                new[] { 210f, 112f, 112f, 152f },
+                -88f,
+                38f,
+                10f);
+            SetInputTransform(leftAttachmentPosInput, new Vector2(178f, -142f), new Vector2(280f, 32f));
+            SetInputTransform(leftAttachmentRotInput, new Vector2(474f, -142f), new Vector2(280f, 32f));
+            SetButtonTransform(applyLeftAttachmentButton, new Vector2(684f, -184f), new Vector2(112f, 34f));
+            SetInputTransform(rightAttachmentPosInput, new Vector2(178f, -184f), new Vector2(280f, 32f));
+            SetInputTransform(rightAttachmentRotInput, new Vector2(474f, -184f), new Vector2(280f, 32f));
+            SetButtonTransform(applyRightAttachmentButton, new Vector2(684f, -226f), new Vector2(112f, 34f));
+        }
+        else if (page == PanelPage.Haptics)
+        {
+            LayoutRow(
+                new[] { hapticOutputButton, hapticRosButton, hapticGainDownButton, hapticGainUpButton, hapticGainResetButton },
+                new[] { 150f, 170f, 110f, 110f, 120f },
+                -88f,
+                38f,
+                10f);
+        }
+        else if (page == PanelPage.TaskSwitch)
+        {
+            LayoutRow(
+                new[] { taskPickPlaceButton, taskRubikButton, taskCableButton },
+                new[] { 180f, 180f, 190f },
+                -88f,
+                38f,
+                14f);
+        }
+    }
+
+    private void LayoutRow(RectTransform[] rects, float[] widths, float y, float height, float gap)
+    {
+        if (rects == null || widths == null || rects.Length != widths.Length)
             return;
 
-        SetButtonTransform(wristCameraButton, new Vector2(104f, -88f), new Vector2(136f, 36f));
-        SetButtonTransform(floatingCameraButton, new Vector2(254f, -88f), new Vector2(144f, 36f));
-        SetButtonTransform(recordButton, new Vector2(548f, -88f), new Vector2(132f, 38f));
-        SetButtonTransform(captureButton, new Vector2(690f, -88f), new Vector2(112f, 38f));
+        float totalWidth = Mathf.Max(0f, gap * Mathf.Max(0, rects.Length - 1));
+        for (int i = 0; i < widths.Length; i++)
+            totalWidth += widths[i];
 
-        SetInputTransform(floatingCameraPosInput, new Vector2(180f, -414f), new Vector2(292f, 32f));
-        SetInputTransform(floatingCameraRotInput, new Vector2(486f, -414f), new Vector2(292f, 32f));
-        SetInputTransform(floatingCameraFovInput, new Vector2(430f, -458f), new Vector2(86f, 32f));
-        SetButtonTransform(applyFloatingCameraButton, new Vector2(610f, -458f), new Vector2(170f, 34f));
+        float x = (panelSize.x - totalWidth) * 0.5f;
+        for (int i = 0; i < rects.Length; i++)
+        {
+            SetButtonTransform(rects[i], new Vector2(x + widths[i] * 0.5f, y), new Vector2(widths[i], height));
+            x += widths[i] + gap;
+        }
     }
 
     private static void SetButtonTransform(RectTransform rect, Vector2 anchoredPosition, Vector2 size)
@@ -1104,26 +1565,20 @@ public class MRCentralControlPanel : MonoBehaviour
         rect.sizeDelta = size;
     }
 
-    private void RefreshScrollableContent()
+    private void RefreshFixedContent()
     {
-        if (contentText == null || scrollContent == null || contentViewport == null || contentScrollRect == null || contentScrollArea == null)
+        if (contentText == null || contentScrollArea == null)
             return;
         if (!contentScrollArea.gameObject.activeInHierarchy)
             return;
 
-        float previousScroll = contentScrollRect.verticalNormalizedPosition;
         Canvas.ForceUpdateCanvases();
-        float viewportHeight = Mathf.Max(1f, contentViewport.rect.height);
-        float textHeight = Mathf.Max(viewportHeight - 16f, contentText.preferredHeight + 16f);
-        float contentHeight = Mathf.Max(viewportHeight, textHeight + 16f);
+        SetRect(contentText.rectTransform, Vector2.zero, Vector2.one, new Vector2(16f, 12f), new Vector2(-16f, -12f), new Vector2(0.5f, 0.5f));
 
-        SetRect(scrollContent, new Vector2(0f, 1f), new Vector2(1f, 1f), Vector2.zero, new Vector2(0f, contentHeight), new Vector2(0.5f, 1f));
-        SetRect(contentText.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(12f, -8f), new Vector2(-24f, textHeight), new Vector2(0f, 1f));
-
-        if (!CanScrollContent())
-            contentScrollRect.verticalNormalizedPosition = 1f;
-        else
-            contentScrollRect.verticalNormalizedPosition = Mathf.Clamp01(previousScroll);
+        if (contentScrollbarRect != null)
+            contentScrollbarRect.gameObject.SetActive(false);
+        if (contentScrollbar != null)
+            contentScrollbar.interactable = false;
     }
 
     private Vector2 CameraPreviewSize()
@@ -1138,7 +1593,19 @@ public class MRCentralControlPanel : MonoBehaviour
         if (cameraPreviewMode == CameraPreviewMode.Floating)
             return floatingCamera != null ? floatingCamera.PreviewTexture : null;
 
-        return recorder != null ? recorder.PreviewTexture : null;
+        GripperCameraRecorder activeRecorder = SelectedRecorder();
+        return activeRecorder != null ? activeRecorder.PreviewTexture : null;
+    }
+
+    private GripperCameraRecorder SelectedRecorder()
+    {
+        if (cameraPreviewMode == CameraPreviewMode.LeftWrist)
+            return leftRecorder != null ? leftRecorder : recorder;
+        if (cameraPreviewMode == CameraPreviewMode.RightWrist)
+            return rightRecorder != null ? rightRecorder : recorder;
+        if (cameraPreviewMode == CameraPreviewMode.Floating)
+            return floatingCamera != null ? floatingCamera.Recorder : null;
+        return recorder;
     }
 
     private void RefreshInputValuesIfIdle()
@@ -1237,7 +1704,7 @@ public class MRCentralControlPanel : MonoBehaviour
     {
         if (panel == null)
             return;
-        Transform child = panel.transform.Find(childName);
+        Transform child = FindPanelChild(childName);
         if (child != null)
             child.gameObject.SetActive(active);
     }
@@ -1247,7 +1714,7 @@ public class MRCentralControlPanel : MonoBehaviour
         if (panel == null)
             return;
 
-        Transform child = panel.transform.Find(childName);
+        Transform child = FindPanelChild(childName);
         if (child == null)
             return;
 
@@ -1281,6 +1748,12 @@ public class MRCentralControlPanel : MonoBehaviour
         }
 
         LastStatus = $"workspace reset to {targetPosition}, yaw={targetRotation.eulerAngles.y:F1}, headset={headset.name}";
+    }
+
+    private void ResetOverheadView()
+    {
+        ResetWorkspaceUnderHeadset();
+        LastStatus = $"overhead view reset only; robots/task reset not requested. {LastStatus}";
     }
 
     private Quaternion ComputeWorkspaceResetRotation(Transform headset, Transform workspace)
@@ -1351,7 +1824,7 @@ public class MRCentralControlPanel : MonoBehaviour
     private bool TryRectRayPlaneLocalPoint(RectTransform rect, Ray ray, out Vector2 localPoint)
     {
         localPoint = Vector2.zero;
-        if (rect == null)
+        if (rect == null || !rect.gameObject.activeInHierarchy)
             return false;
 
         Plane plane = new Plane(rect.forward, rect.position);
@@ -1366,75 +1839,8 @@ public class MRCentralControlPanel : MonoBehaviour
         return true;
     }
 
-    private bool TryBeginContentScroll(Transform controller)
-    {
-        if (controller == null || contentScrollRect == null || contentViewport == null)
-            return false;
-        if (!contentViewport.gameObject.activeInHierarchy)
-            return false;
-
-        Ray ray = new Ray(controller.position, controller.forward);
-        Vector2 scrollbarLocalPoint = Vector2.zero;
-        Vector2 viewportLocalPoint = Vector2.zero;
-        bool hitScrollbar = contentScrollbarRect != null && TryRectRayLocalPoint(contentScrollbarRect, ray, out scrollbarLocalPoint);
-        bool hitViewport = TryRectRayLocalPoint(contentViewport, ray, out viewportLocalPoint);
-        if (!hitScrollbar && !hitViewport)
-            return false;
-        if (!CanScrollContent())
-            return true;
-
-        contentScrollDragging = true;
-        contentScrollDraggingScrollbar = hitScrollbar;
-        contentScrollController = controller;
-        contentScrollDragRect = hitScrollbar ? contentScrollbarRect : contentViewport;
-        contentScrollStartLocalY = hitScrollbar ? scrollbarLocalPoint.y : viewportLocalPoint.y;
-        contentScrollStartNormalized = contentScrollRect.verticalNormalizedPosition;
-        if (hitScrollbar)
-            SetScrollFromScrollbarLocalPoint(scrollbarLocalPoint);
-        return true;
-    }
-
-    private void UpdateContentScrollDrag(Transform controller)
-    {
-        if (controller == null || contentScrollRect == null || contentViewport == null)
-            return;
-
-        Ray ray = new Ray(controller.position, controller.forward);
-        RectTransform dragRect = contentScrollDragRect != null ? contentScrollDragRect : contentViewport;
-        if (!TryRectRayPlaneLocalPoint(dragRect, ray, out Vector2 localPoint))
-            return;
-
-        if (contentScrollDraggingScrollbar)
-        {
-            SetScrollFromScrollbarLocalPoint(localPoint);
-            return;
-        }
-
-        float hiddenHeight = HiddenScrollHeight();
-        if (hiddenHeight <= 1f)
-            return;
-
-        float localDelta = localPoint.y - contentScrollStartLocalY;
-        float normalizedDelta = (localDelta / hiddenHeight) * Mathf.Max(0.1f, contentScrollSensitivity);
-        contentScrollRect.verticalNormalizedPosition = Mathf.Clamp01(contentScrollStartNormalized - normalizedDelta);
-    }
-
-    private void SetScrollFromScrollbarLocalPoint(Vector2 localPoint)
-    {
-        if (contentScrollRect == null || contentScrollbarRect == null)
-            return;
-
-        Rect rect = contentScrollbarRect.rect;
-        float normalized = Mathf.InverseLerp(rect.yMin, rect.yMax, localPoint.y);
-        contentScrollRect.verticalNormalizedPosition = Mathf.Clamp01(normalized);
-    }
-
     private void EndContentScroll()
     {
-        contentScrollDragging = false;
-        contentScrollDraggingScrollbar = false;
-        contentScrollController = null;
-        contentScrollDragRect = null;
     }
 
     private bool TryBeginResizeDrag(Transform controller)
@@ -1490,7 +1896,7 @@ public class MRCentralControlPanel : MonoBehaviour
             Mathf.Clamp(resizeStartSize.x + (leftCorner ? -delta.x : delta.x), 440f, 920f),
             Mathf.Clamp(resizeStartSize.y + (bottomCorner ? -delta.y : delta.y), 330f, 720f));
         panelRect.sizeDelta = panelSize;
-        RefreshScrollableContent();
+        RefreshFixedContent();
     }
 
     private void EndResizeDrag()
@@ -1535,18 +1941,6 @@ public class MRCentralControlPanel : MonoBehaviour
         return false;
     }
 
-    private bool CanScrollContent()
-    {
-        return HiddenScrollHeight() > 1f;
-    }
-
-    private float HiddenScrollHeight()
-    {
-        if (scrollContent == null || contentViewport == null)
-            return 0f;
-        return Mathf.Max(0f, scrollContent.rect.height - contentViewport.rect.height);
-    }
-
     private static float GetTriggerValue(VRDraggableWindow.DragController controllerSide)
     {
         if (controllerSide == VRDraggableWindow.DragController.Left)
@@ -1581,14 +1975,119 @@ public class MRCentralControlPanel : MonoBehaviour
             sender = FindAny<HandPoseSender>();
         if (workspaceDrag == null)
             workspaceDrag = WorkspaceDragController.ActiveInstance ?? FindAny<WorkspaceDragController>();
-        if (recorder == null)
-            recorder = FindAny<GripperCameraRecorder>();
+        ResolveWristRecorders();
         if (floatingCamera == null)
             floatingCamera = FindAny<FloatingSceneCameraController>();
         if (passthrough == null)
             passthrough = QuestPassthroughController.ActiveInstance ?? FindAny<QuestPassthroughController>();
         if (haptics == null)
             haptics = QuestHapticFeedbackController.ActiveInstance ?? FindAny<QuestHapticFeedbackController>();
+        ResolveTaskManagerRos();
+    }
+
+    private void ResolveWristRecorders()
+    {
+        if (leftRecorder != null && rightRecorder != null && recorder != null)
+            return;
+
+        GripperCameraRecorder[] recorders = FindAll<GripperCameraRecorder>();
+        foreach (GripperCameraRecorder candidate in recorders)
+        {
+            if (candidate == null)
+                continue;
+
+            if (recorder == null)
+                recorder = candidate;
+
+            string path = BuildTransformPath(candidate.transform).ToLowerInvariant();
+            if (leftRecorder == null && path.Contains("left"))
+                leftRecorder = candidate;
+            if (rightRecorder == null && path.Contains("right"))
+                rightRecorder = candidate;
+        }
+
+        if (leftRecorder == null && recorders.Length > 0)
+            leftRecorder = recorders[0];
+        if (rightRecorder == null)
+        {
+            foreach (GripperCameraRecorder candidate in recorders)
+            {
+                if (candidate != null && candidate != leftRecorder)
+                {
+                    rightRecorder = candidate;
+                    break;
+                }
+            }
+        }
+        if (rightRecorder == null)
+            rightRecorder = leftRecorder;
+        if (recorder == null)
+            recorder = rightRecorder != null ? rightRecorder : leftRecorder;
+    }
+
+    private static string BuildTransformPath(Transform transform)
+    {
+        if (transform == null)
+            return "";
+
+        string path = transform.name;
+        Transform current = transform.parent;
+        int guard = 0;
+        while (current != null && guard++ < 16)
+        {
+            path = current.name + "/" + path;
+            current = current.parent;
+        }
+        return path;
+    }
+
+    private void ResolveTaskManagerRos()
+    {
+        if (!Application.isPlaying || taskManagerRosReady)
+            return;
+
+        try
+        {
+            ros = ROSConnection.GetOrCreateInstance();
+            ros.RegisterPublisher<StringMsg>(taskManagerSelectTopic);
+            ros.Subscribe<StringMsg>(taskManagerStatusTopic, OnTaskManagerStatus);
+            taskManagerRosReady = true;
+            taskManagerStatus = "Task manager: ROS subscriptions ready.";
+        }
+        catch (System.Exception e)
+        {
+            taskManagerStatus = $"Task manager ROS not ready: {e.Message}";
+        }
+    }
+
+    private void OnTaskManagerStatus(StringMsg msg)
+    {
+        if (msg == null || string.IsNullOrWhiteSpace(msg.data))
+            return;
+        taskManagerStatus = msg.data;
+    }
+
+    private void PublishTaskSelection(string taskName)
+    {
+        if (string.IsNullOrWhiteSpace(taskName))
+            return;
+
+        ResolveTaskManagerRos();
+        if (ros == null || !taskManagerRosReady)
+        {
+            taskManagerStatus = $"Task manager unavailable; cannot select {taskName}.";
+            return;
+        }
+
+        try
+        {
+            ros.Publish(taskManagerSelectTopic, new StringMsg(taskName));
+            taskManagerStatus = $"Requested task switch: {taskName}";
+        }
+        catch (System.Exception e)
+        {
+            taskManagerStatus = $"Task switch publish failed: {e.Message}";
+        }
     }
 
     private void ResolveControllerTransforms()

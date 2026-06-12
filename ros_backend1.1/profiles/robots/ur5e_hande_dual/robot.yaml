@@ -21,8 +21,9 @@ robots:
     gazebo_controller_manager: /left_controller_manager
     servo_command_topic: /left_arm/target_twist_states
     gripper_command_topic: /left_hande_position_controller/commands
-    home_joint_positions: [1.54, -1.62, 1.4, -1.2, -1.6, 3.03159]
-    spawn_pose_xyz_rpy: [0.0, 0.72, 0.0, 0.0, 0.0, -1.5708]
+    home_joint_positions: [0.0, -1.57, 1.57, 0.0, 1.57, 0.0]
+    #spawn_pose_xyz_rpy: [0.0, 0.60, 0.0, 0.0, 0.0, -1.5708]
+    spawn_pose_xyz_rpy: [0.0, 0.60, 0.0, 0.0, 0.0, 0.0]
   - arm_id: right_arm
     namespace: /right_arm
     tf_prefix: right_
@@ -43,7 +44,8 @@ robots:
     gazebo_controller_manager: /right_controller_manager
     servo_command_topic: /right_arm/target_twist_states
     gripper_command_topic: /right_hande_position_controller/commands
-    home_joint_positions: [-1.54, -1.62, 1.4, -1.2, -1.6, 3.03159]
-    spawn_pose_xyz_rpy: [0.0, -0.72, 0.0, 0.0, 0.0, 1.5708]
+    home_joint_positions: [0.0, -1.57, 1.57, 0.0, 1.57, 0.0]
+    #spawn_pose_xyz_rpy: [0.0, 0.60, 0.0, 0.0, 0.0, 1.5708]
+    spawn_pose_xyz_rpy: [0.0, -0.60, 0.0, 0.0, 0.0, 0.0]
 notes:
   - The dual-arm launch now has per-arm Gazebo controllers, Servo nodes, and teleop bridges.

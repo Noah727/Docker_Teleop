@@ -37,6 +37,13 @@ class JointStatesFilter(Node):
             and not any(name.endswith(suffix) for suffix in self._drop_suffixes)
         ]
 
+        # Multiple controller managers publish on /joint_states. A message for the
+        # other arm can legitimately contain no joints for this filter. Publishing
+        # an empty JointState would make Servo alternate between valid and empty
+        # robot states, which corrupts collision checking and velocity scaling.
+        if not keep_indices:
+            return
+
         if len(keep_indices) == len(msg.name):
             self._publisher.publish(msg)
             return

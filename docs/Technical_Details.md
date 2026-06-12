@@ -4,6 +4,8 @@ This file collects the deeper project notes that are useful after the basic setu
 
 The sections below consolidate the previous separate docs for architecture, Unity build details, wired/wireless networking, world-frame mapping, tuning, camera/recording, troubleshooting, and GitHub setup.
 
+Current canonical backend is `ros_backend1.1`, container `motion_planner_11`, and Unity scene `UnityApp/Assets/Scenes/GazeboReplica_DualArm_MR.unity`. Some older command blocks in this file were merged from previous backend versions and may still show legacy names such as `ros_backend1.0`, `motion_planner_10`, `received_pose_to_target_twist`, or `target_twist_to_servo_cmd`. Prefer the current names shown in the architecture section below and in `ros_backend1.1/src/teleop_bridge/README.md`.
+
 ---
 
 
@@ -21,24 +23,32 @@ Meta Quest / Unity
       v
 ROS backend container
   quest_controller_receiver
-    /received_pose_states
+    /left_arm/received_pose_states
+    /right_arm/received_pose_states
       |
       v
-  received_pose_to_target_twist
-    /target_twist_states
+  hand_pose_mapper
+    /left_arm/target_twist_states
+    /right_arm/target_twist_states
       |
-      +--> target_twist_to_servo_cmd --> MoveIt Servo --> Gazebo robot arm
+      +--> servo_command_bridge --> MoveIt Servo --> Gazebo robot arms
       |
-      +--> target_twist_to_gripper_cmd --> Hand-E position controller
+      +--> coupled_gripper_controller --> Hand-E position controllers
       |
-      +--> target_twist_reset_manager --> reset / home / scene object reset
+      +--> reset_manager --> reset / home / scene object reset
+
+Task/object sync and haptics
+  task_pose_sync_publisher
+    /unity_sync/<object>_pose
+  contact_haptic_publisher
+    /left_arm/haptics/*
+    /right_arm/haptics/*
 
 Gazebo / ROS state
-  /joint_states, /tf, object poses, camera topics
+  /joint_states, /tf, filtered per-arm joint states, object poses
       |
       v
 Unity ROS-TCP-Connector
-  Ur5eTrajectorySubscriber.cs
   SceneObjectPoseSyncManager.cs
   GazeboPoseStampedSubscriber.cs
 ```
@@ -67,10 +77,13 @@ Unity should be treated mostly as a visualizer and UI layer. Robot/object physic
 ## Main Runtime Nodes
 
 - `quest_controller_receiver`: TCP JSON receiver from Unity.
-- `received_pose_to_target_twist`: hand/gamepad mapping and mode logic.
-- `target_twist_to_servo_cmd`: converts target twist state into servo commands.
-- `target_twist_to_gripper_cmd`: converts gripper intent into Hand-E position commands.
-- `target_twist_reset_manager`: B-button reset, home motion, object reset.
+- `hand_pose_mapper`: hand/controller pose mapping, attachment mode, gripper intent, reset intent, and mode logic.
+- `servo_command_bridge`: converts target twist state into MoveIt Servo `TwistStamped` commands.
+- `coupled_gripper_controller`: converts gripper intent into coupled Robotiq Hand-E finger commands.
+- `reset_manager`: robot home motion, object reset, and Servo restart support.
+- `task_pose_sync_publisher`: publishes Gazebo task object poses to Unity.
+- `runtime_task_manager`: publishes active task manifests and handles task selection/reset services.
+- `contact_haptic_publisher`: publishes haptic events derived from Gazebo contacts/Servo collision state.
 - `ros_tcp_endpoint`: Unity ROS-TCP bridge server.
 
 ## Network Ports
@@ -112,7 +125,7 @@ Do not commit generated Unity folders or APK builds. They are ignored by `.gitig
 - Meta Quest 3 with Developer Mode enabled.
 - `adb` available on the host machine.
 - Git LFS.
-- Docker backend from `ros_backend1.0/`.
+- Docker backend from `ros_backend1.1/`.
 
 ## Clone The Project
 
@@ -149,7 +162,7 @@ Current Unity project identity:
 ```text
 Company: NoahLi
 Product: HandTrackingUnity
-Android package ID: com.noahli.handtrackingunity
+Android package ID: com.noahli.ROSUNITY
 ```
 
 Current active build scene:
@@ -237,19 +250,19 @@ cd ros_backend1.0
 The app package ID is:
 
 ```text
-com.noahli.handtrackingunity
+com.noahli.ROSUNITY
 ```
 
 Wrist-camera recordings are expected under:
 
 ```text
-/storage/emulated/0/Android/data/com.noahli.handtrackingunity/files/GripperCameraRecordings
+/storage/emulated/0/Android/data/com.noahli.ROSUNITY/files/GripperCameraRecordings
 ```
 
 Pull recordings to the host:
 
 ```bash
-adb pull "/storage/emulated/0/Android/data/com.noahli.handtrackingunity/files/GripperCameraRecordings" ./GripperCameraRecordings
+adb pull "/storage/emulated/0/Android/data/com.noahli.ROSUNITY/files/GripperCameraRecordings" ./GripperCameraRecordings
 ```
 
 ## Common Problems
@@ -260,7 +273,7 @@ adb pull "/storage/emulated/0/Android/data/com.noahli.handtrackingunity/files/Gr
 - `adb devices` shows `unauthorized`: accept the USB debugging prompt inside the headset.
 - App cannot connect in wired mode: restart `bringup_wired` and confirm the Quest is connected by USB.
 - Robot does not move: confirm backend status, Quest logs, and controller state in the in-app panel.
-- Recording path looks empty: make sure the currently installed app uses package ID `com.noahli.handtrackingunity`.
+- Recording path looks empty: make sure the currently installed app uses package ID `com.noahli.ROSUNITY`.
 
 ## Development Workflow
 
@@ -763,7 +776,7 @@ The world-delta reference is recaptured when:
 
 - tracking is lost and regained
 - teleop is engaged with right grip
-- you switch between hand-pose mode and gamepad mode with left `Y`
+- backend `control_mode` is changed by terminal command or ROS parameter update
 - reset mode is toggled with right `B`; while reset is active, the pending hand reference keeps refreshing from the current tracked hand pose
 - the right thumbstick is held and released; arm motion pauses while held, then the release pose becomes the new hand reference without homing the robot or resetting scene objects
 - mapper frame/mapping/scale/offset parameters are changed live
@@ -1180,29 +1193,22 @@ See the `RECORDING` section later in this file.
 
 ## Gazebo Gripper Camera
 
-The Gazebo camera, when enabled in the robot description, publishes ROS topics such as:
+The current `ros_backend1.1` dual-arm workflow does not use a Gazebo gripper
+camera. `/gripper_camera/image_raw` and `/gripper_camera/camera_info` are not
+expected to appear in `ros2 topic list`.
 
-```bash
-/gripper_camera/image_raw
-/gripper_camera/camera_info
+The active preview/recording path is Unity-side through `GripperDataCamera`.
+This keeps camera capture out of the Gazebo/Docker render loop, which matters on
+macOS because Gazebo rendering inside Docker is CPU-heavy.
+
+A disabled Gazebo camera template is kept as a comment near the gripper in:
+
+```text
+ros_backend1.1/src/ur_hande_description/urdf/ur_hande.urdf.xacro
 ```
 
-Inspect topics:
-
-```bash
-cd ros_backend1.0
-CONTAINER=motion_planner_10
-ROS_ENV='source /opt/ros/humble/setup.bash && source /home/noah/ws_moveit/install/setup.bash'
-docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 topic list | grep gripper_camera"
-```
-
-Check image rate:
-
-```bash
-docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 topic hz /gripper_camera/image_raw"
-```
-
-If `/gripper_camera/camera_info` is missing, inspect the Gazebo camera plugin and bridge configuration in `ros_backend1.0/simulation` and robot xacro files.
+If Gazebo-authoritative images are needed later, re-enable that sensor, add the
+required Gazebo/ROS bridge, and then document the resulting camera topics.
 
 
 ---
@@ -1232,7 +1238,7 @@ It records PNG frames from `GripperDataCamera`.
 
 The floating preview panel and UI buttons are excluded from the gripper camera recording, so they should not appear in the saved frames.
 
-The yellow camera marker is controlled by `GripperCameraRecorder`:
+The blue camera marker is controlled by `GripperCameraRecorder`:
 
 - `showSceneMarker`: draws the editor Gizmo marker.
 - `createRuntimeSceneMarker`: creates a real editor/play-mode child object named `GripperDataCamera_VisibleMarker` under `GripperDataCamera`.
@@ -1295,7 +1301,7 @@ The script saves frames under Unity's `Application.persistentDataPath`.
 For the Quest/Android build, expected path:
 
 ```text
-/storage/emulated/0/Android/data/com.noahli.handtrackingunity/files/GripperCameraRecordings
+/storage/emulated/0/Android/data/com.noahli.ROSUNITY/files/GripperCameraRecordings
 ```
 
 Inside that folder:
@@ -1345,7 +1351,7 @@ Pull the recording folder:
 
 ```bash
 cd /path/to/robot-teleop-project
-adb pull "/storage/emulated/0/Android/data/com.noahli.handtrackingunity/files/GripperCameraRecordings" ./GripperCameraRecordings
+adb pull "/storage/emulated/0/Android/data/com.noahli.ROSUNITY/files/GripperCameraRecordings" ./GripperCameraRecordings
 ```
 
 Open the pulled folder:
@@ -1359,13 +1365,13 @@ open ./GripperCameraRecordings
 List recording folders on the Quest:
 
 ```bash
-adb shell ls -lah "/storage/emulated/0/Android/data/com.noahli.handtrackingunity/files/GripperCameraRecordings"
+adb shell ls -lah "/storage/emulated/0/Android/data/com.noahli.ROSUNITY/files/GripperCameraRecordings"
 ```
 
 List files inside one session:
 
 ```bash
-adb shell ls -lah "/storage/emulated/0/Android/data/com.noahli.handtrackingunity/files/GripperCameraRecordings/20260416_143015"
+adb shell ls -lah "/storage/emulated/0/Android/data/com.noahli.ROSUNITY/files/GripperCameraRecordings/20260416_143015"
 ```
 
 Replace `20260416_143015` with the actual session folder name.
@@ -1597,13 +1603,13 @@ Common causes:
 ./scripts/backend10_lifecycle.sh start_part23
 ```
 
-## Y Button Seems To Break Motion
+## Optional Gamepad Mode Seems To Break Motion
 
-`Y` toggles hand-pose mode vs thumbstick/gamepad mode.
+The in-headset `Y` mode switch is disabled by default. Gamepad/thumbstick mode is now a backend terminal command, normally for the right arm only.
 
-- In `hand_pose` mode, right hand/controller motion moves the robot while right grip is held.
-- In `gamepad` mode, the robot ignores hand-position motion and uses sticks/triggers instead.
-- Press `Y` again to return to hand-pose mode.
+- `right_gamepad_on`: right mapper ignores hand-position motion and uses stick/trigger fields.
+- `right_gamepad_off`: right mapper returns to hand-pose mode.
+- Left arm headset control stays active.
 
 Live check:
 

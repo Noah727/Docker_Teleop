@@ -1,4 +1,4 @@
-/right_arm/received_pose_to_target_twist:
+/right_arm/hand_pose_mapper:
   ros__parameters:
     use_sim_time: true
     input_topic: /right_arm/received_pose_states
@@ -15,29 +15,30 @@
     attachment_enable_rotation: true
     attachment_use_absolute_rotation: true
     attachment_base_xyz: [0.0, -0.60, 0.0]
-    attachment_base_xyzw: [0.0, 0.0, 0.7071068, 0.7071068]
+    attachment_base_xyzw: [0.0, 0.0, 0.0, 1.0]
     attachment_tool_position_offset_xyz: [0.0, 0.0, 0.0]
     attachment_tool_rotation_offset_xyzw: [0.5, 0.5, 0.5, 0.5]
-    attachment_kp_angular: 1.4
-    attachment_max_angular_speed: 1.00
+    attachment_kp_angular: 3.0
+    attachment_max_angular_speed: 3.50
     attachment_angular_deadband: 0.03
-    kp_linear: 2.0
-    max_linear_speed: 0.45
+    kp_linear: 6.0
+    max_linear_speed: 0.85
     linear_deadband: 0.005
-    kp_angular: 4.0
-    max_angular_speed: 2.20
+    kp_angular: 8.0
+    max_angular_speed: 6.00
     angular_deadband: 0.02
     control_mode: hand_pose
     start_in_gamepad_mode: false
+    allow_unity_control_mode_switch: false
     gamepad_deadband: 0.15
-    gamepad_linear_speed_xyz: [0.30, 0.30, 0.30]
+    gamepad_linear_speed_xyz: [0.42, 0.42, 0.42]
     gamepad_linear_sign_xyz: [1.0, -1.0, 1.0]
-    gamepad_angular_speed_xyz: [0.0, 1.10, 1.10]
+    gamepad_angular_speed_xyz: [0.0, 2.40, 2.40]
     gamepad_angular_sign_xyz: [1.0, 1.0, -1.0]
-    map_axes: ["x", "z", "y"]
-    map_signs: [-1.0, -1.0, 1.0]
-    rot_map_axes: ["x", "z", "y"]
-    rot_map_signs: [1.0, 1.0, -1.0]
+    map_axes: ["z", "x", "y"]
+    map_signs: [1.0, -1.0, 1.0]
+    rot_map_axes: ["z", "x", "y"]
+    rot_map_signs: [-1.0, 1.0, -1.0]
     rot_scale_xyz: [1.0, 1.0, 1.0]
     debug_rotation_mapping: false
     debug_rotation_log_period_sec: 0.25
@@ -46,7 +47,7 @@
     min_xyz: [-1.0, -1.0, -1.0]
     max_xyz: [1.0, 1.0, 1.0]
 
-/right_arm/target_twist_to_servo_cmd:
+/right_arm/servo_command_bridge:
   ros__parameters:
     use_sim_time: true
     input_topic: /right_arm/target_twist_states
@@ -59,7 +60,7 @@
     start_servo_service: /right_arm/servo_node/start_servo
     start_on_reset_release: true
 
-/right_arm/target_twist_to_gripper_cmd:
+/right_arm/simple_gripper_command_bridge:
   ros__parameters:
     use_sim_time: true
     input_topic: /right_arm/target_twist_states
@@ -68,8 +69,8 @@
     controlled_joint_names:
       - right_robotiq_hande_left_finger_joint
       - right_robotiq_hande_right_finger_joint
-    publish_rate_hz: 30.0
-    speed_m_per_s: 0.03
+    publish_rate_hz: 60.0
+    speed_m_per_s: 0.22
     min_pos: -0.025
     max_pos: 0.0
     initial_pos: 0.0
@@ -80,7 +81,7 @@
     stale_timeout_sec: 0.25
     require_tracked: false
 
-/right_arm/coupled_hande_gripper_controller:
+/right_arm/coupled_gripper_controller:
   ros__parameters:
     use_sim_time: true
     input_topic: /right_arm/target_twist_states
@@ -90,9 +91,9 @@
       - right_robotiq_hande_left_finger_joint
       - right_robotiq_hande_right_finger_joint
     publish_rate_hz: 60.0
-    speed_m_per_s: 0.08
-    close_speed_m_per_s: 0.12
-    open_speed_m_per_s: 0.10
+    speed_m_per_s: 0.22
+    close_speed_m_per_s: 0.40
+    open_speed_m_per_s: 0.22
     min_pos: -0.025
     max_pos: 0.0
     initial_pos: 0.0
@@ -103,7 +104,7 @@
     stale_timeout_sec: 0.25
     require_tracked: false
 
-/right_arm/target_twist_reset_manager:
+/right_arm/reset_manager:
   ros__parameters:
     use_sim_time: true
     input_topic: /right_arm/target_twist_states
@@ -120,8 +121,8 @@
       - right_wrist_1_joint
       - right_wrist_2_joint
       - right_wrist_3_joint
-    home_joint_positions: [-1.54, -1.62, 1.4, -1.2, -1.6, 3.03159]
-    control_rate_hz: 40.0
+    home_joint_positions: [0.0, -1.57, 1.57, 0.0, 1.57, 0.0]
+    control_rate_hz: 60.0
     kick_velocities: [0.35, -0.18, -0.28, 0.18, -0.28, 0.0]
     kick_duration_sec: 1.5
     home_kp: 1.2

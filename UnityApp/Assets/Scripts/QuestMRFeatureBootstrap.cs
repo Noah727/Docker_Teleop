@@ -12,6 +12,8 @@ public class QuestMRFeatureBootstrap : MonoBehaviour
     public bool enableHandPoseSenderFallback = true;
     public bool enableControllerRayVisuals = true;
     public bool enableFloatingSceneCamera = true;
+    public bool enableEvaluationTracePublisher = true;
+    public bool enableRecordingPerformanceTraceLogger = true;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void CreateBootstrapAfterSceneLoad()
@@ -49,11 +51,46 @@ public class QuestMRFeatureBootstrap : MonoBehaviour
             EnsureComponent<ControllerRayVisual>();
         if (enableFloatingSceneCamera)
             EnsureComponent<FloatingSceneCameraController>();
+        if (enableEvaluationTracePublisher)
+            ConfigureEvaluationTracePublisher(EnsureComponent<MREvaluationTracePublisher>());
+        if (enableRecordingPerformanceTraceLogger)
+            ConfigureRecordingPerformanceTraceLogger(EnsureComponent<RecordingPerformanceTraceLogger>());
         if (enableRuntimeDebugPanel)
             EnsureComponent<TeleopRuntimeDebugPanel>();
         if (enableCentralControlPanel)
             EnsureComponent<MRCentralControlPanel>();
         DisableLegacyPanels();
+    }
+
+    private static void ConfigureEvaluationTracePublisher(MREvaluationTracePublisher publisher)
+    {
+        if (publisher == null)
+            return;
+
+        publisher.enabled = true;
+        publisher.publishVisualTrace = true;
+        publisher.publishRateHz = 60f;
+        publisher.workspaceRootName = "GazeboWorkspace";
+        publisher.frameId = "world";
+    }
+
+    private static void ConfigureRecordingPerformanceTraceLogger(RecordingPerformanceTraceLogger logger)
+    {
+        if (logger == null)
+            return;
+
+        logger.enabled = true;
+        logger.enableLogging = true;
+        logger.writeLocalCsv = true;
+        logger.publishRosTrace = true;
+        logger.sampleRateHz = 10f;
+        logger.postRecordingLogSeconds = 15f;
+        logger.outputFolderName = "RecordingPerformanceLogs";
+        logger.recordingStateTopic = "/unity_eval/recording_state";
+        logger.fpsSampleTopic = "/unity_eval/fps_sample";
+        logger.publishIdleHeartbeat = true;
+        logger.idleHeartbeatHz = 1f;
+        logger.autoDiscoverRecorders = true;
     }
 
     private void DisableExistingHaptics()
@@ -72,9 +109,19 @@ public class QuestMRFeatureBootstrap : MonoBehaviour
         haptics.enabled = true;
         haptics.enableRosContactHaptics = true;
         haptics.enableEeGapHaptics = false;
+        haptics.requireRosContactForGapHaptics = true;
         haptics.enablePinchContactPulse = false;
+        haptics.defaultOutputGain = 0.35f;
+        haptics.outputGain = 0.35f;
+        haptics.gapActivationThresholdMeters = 0.08f;
+        haptics.gapReleaseThresholdMeters = 0.045f;
+        haptics.gapActivationHoldSec = 0.35f;
         haptics.leftContactAmplitudeTopic = "/left_arm/haptics/contact_amplitude";
         haptics.rightContactAmplitudeTopic = "/right_arm/haptics/contact_amplitude";
+        haptics.leftTargetEePoseTopic = "/left_arm/teleop/target_ee_pose";
+        haptics.leftActualEePoseTopic = "/left_arm/teleop/actual_ee_pose";
+        haptics.rightTargetEePoseTopic = "/right_arm/teleop/target_ee_pose";
+        haptics.rightActualEePoseTopic = "/right_arm/teleop/actual_ee_pose";
     }
 
     private void EnsureHandPoseSender()

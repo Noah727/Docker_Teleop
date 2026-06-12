@@ -48,12 +48,17 @@ public class HandPoseSender : MonoBehaviour
     private float modeSwitchPulseUntilTime;
     private float resetPulseUntilTime;
     private float resetRobotPulseUntilTime;
+    private float resetLeftRobotPulseUntilTime;
+    private float resetRightRobotPulseUntilTime;
     private float resetScenePulseUntilTime;
     private ControlsData latestControls;
     private bool latestRightInputTracked;
     private int sentPacketCount;
     private float lastStatusLogTime;
     public bool preferOVRHands = true;
+    [Header("Dual Arm Assignment")]
+    [Tooltip("If enabled, the left physical controller drives the right robot arm and the right physical controller drives the left robot arm.")]
+    public bool swapControllerArmControl = false;
 
     public ControlsData LatestControls => latestControls;
     public bool IsTeleopHeld => latestControls != null && latestControls.teleop_held;
@@ -67,6 +72,7 @@ public class HandPoseSender : MonoBehaviour
     public bool IsRightInputTracked => latestRightInputTracked;
     public bool IsGamepadModeActive => gamepadModeActive;
     public string ControlModeLabel => gamepadModeActive ? "gamepad" : "hand_pose";
+    public string ControllerArmAssignmentLabel => swapControllerArmControl ? "swapped" : "normal";
     public string LastStatus { get; private set; } = "not started";
 
     [System.Serializable]
@@ -101,6 +107,8 @@ public class HandPoseSender : MonoBehaviour
         public bool open_enable;
         public bool reset_enable;
         public bool reset_robot_enable;
+        public bool left_reset_robot_enable;
+        public bool right_reset_robot_enable;
         public bool reset_scene_enable;
         public bool recenter_enable;
         public bool left_recenter_held;
@@ -151,6 +159,8 @@ public class HandPoseSender : MonoBehaviour
     public float statusLogIntervalSec = 2.0f;
     [Tooltip("How long to keep the Y-mode-switch pulse true so the ROS receiver publish loop cannot miss it.")]
     public float modeSwitchPulseSec = 0.18f;
+    [Tooltip("Disabled by default for this project. Optional control modes are activated from backend terminal commands instead of the Quest UI.")]
+    public bool enableControlModeSwitch = false;
     [Tooltip("How long to keep panel-requested reset true so the ROS receiver publish loop cannot miss it.")]
     public float resetPulseSec = 0.25f;
 
@@ -239,8 +249,10 @@ public class HandPoseSender : MonoBehaviour
         Packet packet = new Packet();
         packet.timestamp = Time.time;
 
-        packet.left_hand = GetLeftInputData();
-        packet.right_hand = GetRightInputData();
+        HandData rawLeftHand = GetLeftInputData();
+        HandData rawRightHand = GetRightInputData();
+        packet.left_hand = swapControllerArmControl ? rawRightHand : rawLeftHand;
+        packet.right_hand = swapControllerArmControl ? rawLeftHand : rawRightHand;
         latestRightInputTracked = packet.right_hand != null && packet.right_hand.isTracked;
         packet.controls = GetControlsData(packet.left_hand, packet.right_hand);
         latestControls = packet.controls;
@@ -362,13 +374,14 @@ public class HandPoseSender : MonoBehaviour
     {
         ControlsData controls = new ControlsData();
 
-        bool leftRotateHeld = IsLeftXHeld();
-        bool rightRotateHeld = OVRInput.Get(OVRInput.Button.One, OVRInput.Controller.RTouch) ||
-                               OVRInput.Get(OVRInput.RawButton.A, OVRInput.Controller.RTouch) ||
-                               OVRInput.Get(OVRInput.RawButton.A);
-        bool rightAttachmentToggleHeld = OVRInput.Get(OVRInput.Button.Two, OVRInput.Controller.RTouch) ||
-                                         OVRInput.Get(OVRInput.RawButton.B, OVRInput.Controller.RTouch) ||
-                                         OVRInput.Get(OVRInput.RawButton.B);
+        bool physicalLeftRotateHeld = IsLeftXHeld();
+        bool physicalRightRotateHeld = IsRightAHeld();
+        bool physicalLeftAttachmentToggleHeld = IsLeftYHeld();
+        bool physicalRightAttachmentToggleHeld = IsRightBHeld();
+        bool leftRotateHeld = swapControllerArmControl ? physicalRightRotateHeld : physicalLeftRotateHeld;
+        bool rightRotateHeld = swapControllerArmControl ? physicalLeftRotateHeld : physicalRightRotateHeld;
+        bool leftAttachmentToggleHeld = swapControllerArmControl ? physicalRightAttachmentToggleHeld : physicalLeftAttachmentToggleHeld;
+        bool rightAttachmentToggleHeld = swapControllerArmControl ? physicalLeftAttachmentToggleHeld : physicalRightAttachmentToggleHeld;
 
         controls.rotate_held = rightRotateHeld;
         controls.reset_held = false;
@@ -376,11 +389,11 @@ public class HandPoseSender : MonoBehaviour
             OVRInput.Get(OVRInput.Button.PrimaryThumbstick, OVRInput.Controller.RTouch) ||
             OVRInput.Get(OVRInput.Button.SecondaryThumbstick, OVRInput.Controller.Touch) ||
             OVRInput.Get(OVRInput.RawButton.RThumbstick);
-        controls.mode_switch_held = IsLeftYHeld();
-        bool leftAttachmentToggleDown = controls.mode_switch_held && !leftAttachmentToggleWasHeld;
+        controls.mode_switch_held = enableControlModeSwitch && physicalLeftAttachmentToggleHeld;
+        bool leftAttachmentToggleDown = leftAttachmentToggleHeld && !leftAttachmentToggleWasHeld;
         if (leftAttachmentToggleDown)
             leftAttachmentModeActive = !leftAttachmentModeActive;
-        leftAttachmentToggleWasHeld = controls.mode_switch_held;
+        leftAttachmentToggleWasHeld = leftAttachmentToggleHeld;
 
         bool rightAttachmentToggleDown = rightAttachmentToggleHeld && !rightAttachmentToggleWasHeld;
         if (rightAttachmentToggleDown)
@@ -388,36 +401,35 @@ public class HandPoseSender : MonoBehaviour
         rightAttachmentToggleWasHeld = rightAttachmentToggleHeld;
 
         bool modeSwitchDown = controls.mode_switch_held && !modeSwitchWasHeld;
-        if (modeSwitchDown && !leftAttachmentToggleDown)
+        if (enableControlModeSwitch && modeSwitchDown && !leftAttachmentToggleDown && !rightAttachmentToggleDown)
             ToggleControlMode();
         modeSwitchWasHeld = controls.mode_switch_held;
 
-        // Read both direct controller axes and combined Touch fallbacks. Some Quest/OpenXR
-        // profiles expose right-hand controls as Secondary* on the combined Touch mapping.
-        float rightGripValue = Mathf.Max(
-            OVRInput.Get(OVRInput.Axis1D.PrimaryHandTrigger, OVRInput.Controller.RTouch),
-            OVRInput.Get(OVRInput.Axis1D.SecondaryHandTrigger, OVRInput.Controller.Touch));
-        float rightTriggerValue = Mathf.Max(
-            OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.RTouch),
-            OVRInput.Get(OVRInput.Axis1D.SecondaryIndexTrigger, OVRInput.Controller.Touch));
-        float leftGripValue = Mathf.Max(
-            OVRInput.Get(OVRInput.Axis1D.PrimaryHandTrigger, OVRInput.Controller.LTouch),
-            OVRInput.Get(OVRInput.Axis1D.PrimaryHandTrigger, OVRInput.Controller.Touch));
-        float leftTriggerValue = Mathf.Max(
-            OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.LTouch),
-            OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.Touch));
-        Vector2 leftStick = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, OVRInput.Controller.LTouch);
-        Vector2 rightStick = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, OVRInput.Controller.RTouch);
+        // Read both direct controller axes and combined Touch fallbacks. Quest/OpenXR profiles
+        // can expose a direct controller's grip as either Primary* or Secondary*, while the
+        // combined Touch profile uses Primary for left and Secondary for right.
+        float physicalRightGripValue = GetRightGripValue();
+        float physicalRightTriggerValue = GetRightTriggerValue();
+        float physicalLeftGripValue = GetLeftGripValue();
+        float physicalLeftTriggerValue = GetLeftTriggerValue();
+        float rightGripValue = swapControllerArmControl ? physicalLeftGripValue : physicalRightGripValue;
+        float rightTriggerValue = swapControllerArmControl ? physicalLeftTriggerValue : physicalRightTriggerValue;
+        float leftGripValue = swapControllerArmControl ? physicalRightGripValue : physicalLeftGripValue;
+        float leftTriggerValue = swapControllerArmControl ? physicalRightTriggerValue : physicalLeftTriggerValue;
+        Vector2 physicalLeftStick = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, OVRInput.Controller.LTouch);
+        Vector2 physicalRightStick = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, OVRInput.Controller.RTouch);
 
         // Fallback for profiles that expose both controllers through the combined Touch mapping.
-        if (leftStick.sqrMagnitude < 0.0001f)
+        if (physicalLeftStick.sqrMagnitude < 0.0001f)
         {
-            leftStick = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, OVRInput.Controller.Touch);
+            physicalLeftStick = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, OVRInput.Controller.Touch);
         }
-        if (rightStick.sqrMagnitude < 0.0001f)
+        if (physicalRightStick.sqrMagnitude < 0.0001f)
         {
-            rightStick = OVRInput.Get(OVRInput.Axis2D.SecondaryThumbstick, OVRInput.Controller.Touch);
+            physicalRightStick = OVRInput.Get(OVRInput.Axis2D.SecondaryThumbstick, OVRInput.Controller.Touch);
         }
+        Vector2 leftStick = swapControllerArmControl ? physicalRightStick : physicalLeftStick;
+        Vector2 rightStick = swapControllerArmControl ? physicalLeftStick : physicalRightStick;
         bool rightTriggerHeld = rightTriggerValue >= analogPressThreshold;
         bool teleopHeld = rightGripValue >= analogPressThreshold;
         bool leftTriggerHeld = leftTriggerValue >= analogPressThreshold;
@@ -445,14 +457,18 @@ public class HandPoseSender : MonoBehaviour
         controls.close_enable = controls.close_held;
         controls.open_enable = controls.open_held;
         bool resetRobotEnable = resetRobotPulseUntilTime > 0f && Time.time <= resetRobotPulseUntilTime;
+        bool resetLeftRobotEnable = resetRobotEnable || (resetLeftRobotPulseUntilTime > 0f && Time.time <= resetLeftRobotPulseUntilTime);
+        bool resetRightRobotEnable = resetRobotEnable || (resetRightRobotPulseUntilTime > 0f && Time.time <= resetRightRobotPulseUntilTime);
         bool resetSceneEnable = resetScenePulseUntilTime > 0f && Time.time <= resetScenePulseUntilTime;
         controls.reset_robot_enable = resetRobotEnable;
+        controls.left_reset_robot_enable = resetLeftRobotEnable;
+        controls.right_reset_robot_enable = resetRightRobotEnable;
         controls.reset_scene_enable = resetSceneEnable;
         controls.reset_enable = controls.reset_held || (resetPulseUntilTime > 0f && Time.time <= resetPulseUntilTime) || (resetRobotEnable && resetSceneEnable);
         controls.recenter_enable = controls.recenter_held || rightAttachmentPaused;
         controls.left_recenter_held = leftAttachmentPaused;
         controls.left_recenter_enable = leftAttachmentPaused;
-        controls.mode_switch_enable = Time.time <= modeSwitchPulseUntilTime;
+        controls.mode_switch_enable = enableControlModeSwitch && Time.time <= modeSwitchPulseUntilTime;
         controls.teleop_enable = controls.teleop_held;
         controls.gamepad_mode = gamepadModeActive;
         controls.left_rotate_enable = leftAttachmentPaused ? false : leftRotateHeld;
@@ -476,7 +492,7 @@ public class HandPoseSender : MonoBehaviour
         controls.left_thumbstick_y = leftStick.y;
         controls.right_thumbstick_x = rightStick.x;
         controls.right_thumbstick_y = rightStick.y;
-        controls.source = "quest_dual_controller";
+        controls.source = swapControllerArmControl ? "quest_dual_controller_swapped" : "quest_dual_controller";
         controls.control_mode = ControlModeLabel;
         controls.mapping_mode = mappingMode;
 
@@ -582,7 +598,7 @@ public class HandPoseSender : MonoBehaviour
     {
         if (hand == null || !hand.isTracked)
             return false;
-        if (!TryGetInputWorldPose(leftArm, out Vector3 handWorldPos, out Quaternion handWorldRot))
+        if (!TryGetPacketPoseAsUnityWorld(hand, out Vector3 handWorldPos, out Quaternion handWorldRot))
             return false;
 
         Transform tool = ResolveAttachmentToolTransform(leftArm);
@@ -612,6 +628,40 @@ public class HandPoseSender : MonoBehaviour
         }
 
         SyncAttachmentEulerFromQuaternions();
+        return true;
+    }
+
+    private bool TryGetPacketPoseAsUnityWorld(HandData hand, out Vector3 worldPos, out Quaternion worldRot)
+    {
+        worldPos = Vector3.zero;
+        worldRot = Quaternion.identity;
+        if (hand == null || !hand.isTracked)
+            return false;
+
+        worldPos = hand.pos;
+        worldRot = hand.rot;
+
+        if (sendRelativeToControlFrame)
+        {
+            if (controlFrameTransform == null)
+                ResolveControlFrame(forceLog: false);
+            if (controlFrameTransform == null)
+                return false;
+
+            worldPos = controlFrameTransform.TransformPoint(worldPos);
+            worldRot = NormalizeQuaternion(controlFrameTransform.rotation * worldRot);
+            return true;
+        }
+
+        if (sendRelativeToHeadset)
+        {
+            if (!TryGetHeadsetPose(out Vector3 headPos, out Quaternion headRot))
+                return false;
+
+            worldPos = headPos + (headRot * worldPos);
+            worldRot = NormalizeQuaternion(headRot * worldRot);
+        }
+
         return true;
     }
 
@@ -889,7 +939,7 @@ public class HandPoseSender : MonoBehaviour
     private void UpdateLastStatus(bool connected, bool rightTracked)
     {
         string controlsText = latestControls != null
-            ? $"mode={ControlModeLabel}, R teleop={latestControls.right_teleop_enable}, R grip={latestControls.grip_value:F2}, R trigger={latestControls.trigger_value:F2}, R close/open=({latestControls.right_close_enable},{latestControls.right_open_enable}), L teleop={latestControls.left_teleop_enable}, L grip={latestControls.left_grip_value:F2}, L trigger={latestControls.left_trigger_value:F2}, L close/open=({latestControls.left_close_enable},{latestControls.left_open_enable}), yHeld={latestControls.mode_switch_held}, yPulse={latestControls.mode_switch_enable}"
+            ? $"mode={ControlModeLabel}, assignment={ControllerArmAssignmentLabel}, R teleop={latestControls.right_teleop_enable}, R grip={latestControls.grip_value:F2}, R trigger={latestControls.trigger_value:F2}, R close/open=({latestControls.right_close_enable},{latestControls.right_open_enable}), L teleop={latestControls.left_teleop_enable}, L grip={latestControls.left_grip_value:F2}, L trigger={latestControls.left_trigger_value:F2}, L close/open=({latestControls.left_close_enable},{latestControls.left_open_enable}), yHeld={latestControls.mode_switch_held}, yPulse={latestControls.mode_switch_enable}"
             : "controls=NULL";
 
         LastStatus = $"tcp={(connected ? "ON" : "OFF")} {targetIP}:{targetPort}, rightTracked={rightTracked}, sent={sentPacketCount}, {controlsText}";
@@ -903,8 +953,27 @@ public class HandPoseSender : MonoBehaviour
 
     public void ToggleControlMode()
     {
+        if (!enableControlModeSwitch)
+            return;
+
         gamepadModeActive = !gamepadModeActive;
         modeSwitchPulseUntilTime = Time.time + Mathf.Max(0.05f, modeSwitchPulseSec);
+    }
+
+    public void ToggleControllerArmSwap()
+    {
+        swapControllerArmControl = !swapControllerArmControl;
+        leftTriggerWasHeld = false;
+        rightTriggerWasHeld = false;
+        modeSwitchWasHeld = false;
+        leftAttachmentToggleWasHeld = false;
+        rightAttachmentToggleWasHeld = false;
+        leftAttachmentAdjustWasHeld = false;
+        rightAttachmentAdjustWasHeld = false;
+        leftAttachmentCalibrationActive = false;
+        rightAttachmentCalibrationActive = false;
+        leftAttachmentCalibrationHoldUntilTime = 0f;
+        rightAttachmentCalibrationHoldUntilTime = 0f;
     }
 
     public void RequestReset()
@@ -922,10 +991,22 @@ public class HandPoseSender : MonoBehaviour
         resetRobotPulseUntilTime = Time.time + Mathf.Max(0.05f, resetPulseSec);
     }
 
+    public void RequestResetLeftRobot()
+    {
+        resetLeftRobotPulseUntilTime = Time.time + Mathf.Max(0.05f, resetPulseSec);
+    }
+
+    public void RequestResetRightRobot()
+    {
+        resetRightRobotPulseUntilTime = Time.time + Mathf.Max(0.05f, resetPulseSec);
+    }
+
     public void RequestResetAll()
     {
         resetPulseUntilTime = Time.time + Mathf.Max(0.05f, resetPulseSec);
         resetRobotPulseUntilTime = resetPulseUntilTime;
+        resetLeftRobotPulseUntilTime = resetPulseUntilTime;
+        resetRightRobotPulseUntilTime = resetPulseUntilTime;
         resetScenePulseUntilTime = resetPulseUntilTime;
     }
 
@@ -951,6 +1032,69 @@ public class HandPoseSender : MonoBehaviour
             OVRInput.Get(OVRInput.RawButton.X, OVRInput.Controller.LTouch) ||
             OVRInput.Get(OVRInput.RawButton.X, OVRInput.Controller.Touch) ||
             OVRInput.Get(OVRInput.RawButton.X);
+    }
+
+    private bool IsRightAHeld()
+    {
+        return
+            OVRInput.Get(OVRInput.Button.One, OVRInput.Controller.RTouch) ||
+            OVRInput.Get(OVRInput.Button.One, OVRInput.Controller.Touch) ||
+            OVRInput.Get(OVRInput.RawButton.A, OVRInput.Controller.RTouch) ||
+            OVRInput.Get(OVRInput.RawButton.A, OVRInput.Controller.Touch) ||
+            OVRInput.Get(OVRInput.RawButton.A);
+    }
+
+    private bool IsRightBHeld()
+    {
+        return
+            OVRInput.Get(OVRInput.Button.Two, OVRInput.Controller.RTouch) ||
+            OVRInput.Get(OVRInput.Button.Two, OVRInput.Controller.Touch) ||
+            OVRInput.Get(OVRInput.RawButton.B, OVRInput.Controller.RTouch) ||
+            OVRInput.Get(OVRInput.RawButton.B, OVRInput.Controller.Touch) ||
+            OVRInput.Get(OVRInput.RawButton.B);
+    }
+
+    private float GetLeftGripValue()
+    {
+        return MaxAxis(
+            OVRInput.Get(OVRInput.Axis1D.PrimaryHandTrigger, OVRInput.Controller.LTouch),
+            OVRInput.Get(OVRInput.Axis1D.SecondaryHandTrigger, OVRInput.Controller.LTouch),
+            OVRInput.Get(OVRInput.Axis1D.PrimaryHandTrigger, OVRInput.Controller.Touch));
+    }
+
+    private float GetRightGripValue()
+    {
+        return MaxAxis(
+            OVRInput.Get(OVRInput.Axis1D.PrimaryHandTrigger, OVRInput.Controller.RTouch),
+            OVRInput.Get(OVRInput.Axis1D.SecondaryHandTrigger, OVRInput.Controller.RTouch),
+            OVRInput.Get(OVRInput.Axis1D.SecondaryHandTrigger, OVRInput.Controller.Touch));
+    }
+
+    private float GetLeftTriggerValue()
+    {
+        return MaxAxis(
+            OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.LTouch),
+            OVRInput.Get(OVRInput.Axis1D.SecondaryIndexTrigger, OVRInput.Controller.LTouch),
+            OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.Touch));
+    }
+
+    private float GetRightTriggerValue()
+    {
+        return MaxAxis(
+            OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.RTouch),
+            OVRInput.Get(OVRInput.Axis1D.SecondaryIndexTrigger, OVRInput.Controller.RTouch),
+            OVRInput.Get(OVRInput.Axis1D.SecondaryIndexTrigger, OVRInput.Controller.Touch));
+    }
+
+    private static float MaxAxis(params float[] values)
+    {
+        float max = 0f;
+        if (values == null)
+            return max;
+
+        for (int i = 0; i < values.Length; i++)
+            max = Mathf.Max(max, values[i]);
+        return max;
     }
 
     void ResolveHandTransforms(bool forceLog = false)
