@@ -1,8 +1,13 @@
-# Thesis Evaluation TODO
+# Project TODO: Thesis Evaluation vs GitHub Demo
 
-Use this as the active raw-material checklist for the thesis. Raw evidence goes in `thesis_eval_raw/06_11/` unless an OS-specific folder is stated. Thesis-ready, passed material goes in `complete_material/`.
+Use this as the active checklist for two separate jobs:
 
-Last updated: 2026-06-12 after promoting the new MR sync trace, recording FPS/sync trace, and Ubuntu/Linux data.
+- Thesis writing/evaluation: collect defensible raw data, plots, and trial CSVs. Raw evidence goes in `thesis_eval_raw/06_11/` unless an OS-specific folder is stated. Thesis-ready, passed material goes in `complete_material/`.
+- GitHub repo demo construction: prepare short public-facing clips/screenshots/captions for the README demo section. Working media lives in ignored `demo_media/`; curated source copies live in ignored `complete_material/demo_video_06_11/`; final published links go into the root `README.md`.
+
+Important split: the long Quest demo video collected on 2026-06-11 belongs primarily to GitHub demo construction. It can provide screenshots or illustrative figures for the thesis, but it is not a substitute for the time-boxed thesis trial rows.
+
+Last updated: 2026-06-12 after promoting the new MR sync trace, recording FPS/sync trace, Ubuntu/Linux data, and Windows/WSL backend portability data.
 
 ## Status Legend
 
@@ -34,7 +39,7 @@ Accepted into `complete_material/`:
 | `[DONE - PROMOTED]` | Task profile/SDF/Unity JSON consistency | `complete_material/scripted_backend_checks/06_11_offline_validation/` | Confirms generated task objects agree across task YAML, Gazebo SDF, and Unity `active_task.json`. |
 | `[DONE - PROMOTED]` | Unity saved-scene smoke check | `complete_material/scripted_backend_checks/06_11_offline_validation/` | Confirms the saved dual-arm Unity scene contains expected generated task/sync names. |
 | `[DONE - PROMOTED]` | Mac platform bringup snapshot | `complete_material/portability/mac_bringup_snapshot/` | Gives a macOS host/tooling report for portability. |
-| `[DONE - PROMOTED]` | Demo source video, topic clips, screenshots, captions draft | `complete_material/demo_video_06_11/` | Provides thesis figures, README media source, and demo evidence. Needs final short teaser selection and human caption review before publication. |
+| `[DONE - PROMOTED]` | Demo source video, topic clips, screenshots, captions draft | `complete_material/demo_video_06_11/` | GitHub README demo source material. Thesis may reuse screenshots as illustrative figures, but this is not trial-performance evidence. Needs final short teaser selection and human caption review before publication. |
 | `[DONE - CAVEAT]` | Headset backend latency trace | `complete_material/latency_rates/headset_backend_latency_06_11/` | Numeric live Quest input to ROS backend command latency. Caveat: ROS/container arrival-time latency after receiver publication, not optical end-to-end display latency. |
 | `[DONE - CAVEAT]` | RedCube MR object-sync visual alignment | `complete_material/sync_precision/redcube_mr_sync_06_11/` | Usable object sync evidence. RedCube mean motion error is about 2-3 mm; static alignment is near zero. Old EE absolute alignment rows are not usable. |
 | `[DONE - CAVEAT]` | RedCube MR object-sync rerun | `complete_material/sync_precision/redcube_mr_sync_06_12/` | Static RedCube Gazebo-to-Unity visual alignment is effectively numerical precision. This run had no moving RedCube samples, so use it as static sync evidence. |
@@ -42,20 +47,31 @@ Accepted into `complete_material/`:
 | `[DONE - CAVEAT]` | Recording-on FPS and sync-latency trace | `complete_material/latency_rates/recording_fps_sync_06_12/` and `complete_material/plots/06_12_evaluation/` | Provides Quest FPS during recording, RedCube moving/still visual sync error, and object Gazebo-to-Unity visual onset latency. EE event rows remain debug-only unless filtered. |
 | `[DONE - CAVEAT]` | Mac no-headset backend scripted batch | `complete_material/latency_rates/no_headset_backend_06_11/` and raw review in `thesis_eval_raw/06_11/scripted_backend_checks/no_headset_backend_results_review.md` | Topic rates, haptic idle baseline, Servo response, mapping sanity, and synthetic backend support evidence. Synthetic receiver is debug-only, not the primary controller eval. |
 | `[DONE - CAVEAT]` | Ubuntu/Linux setup, dynamic performance, topic rates, and RTF isolation | `complete_material/portability/linux_ubuntu_06_12/` and `complete_material/plots/06_12_evaluation/` | Usable as a portability/performance case study. Do not present as a strict OS benchmark because hardware and Docker stacks differ. |
+| `[DONE - CAVEAT]` | Windows/WSL backend portability and scripted checks | `complete_material/portability/windows_wsl_06_12/` and `complete_material/plots/06_12_evaluation/` | Usable as no-headset Windows/WSL backend portability evidence. ADB was not on PATH, so Quest wired transport and headset traffic were not validated. |
 | `[DONE - PROMOTED]` | 06-12 derived thesis tables/plots | `complete_material/plots/06_12_evaluation/` and `complete_material/evaluation_update_06_12.md` | Thesis-ready CSV/SVG summaries for recording FPS, RedCube sync, macOS-vs-Ubuntu RTF/CPU, and Ubuntu isolation. |
 
-## Remaining Material Gaps
+## Remaining Thesis Material Gaps
 
 Priority order:
 
-1. `[TODO]` Human-reviewed final captions and README teaser clips from the promoted demo media.
-2. `[TODO]` Cable insertion precision trial rows.
-3. `[TODO]` Pick/place trial rows and optional dual-arm handoff rows.
-4. `[OPTIONAL]` Windows/WSL portability evidence.
-5. `[OPTIONAL]` New EE visual alignment trace if the thesis needs quantitative EE visual alignment rather than object alignment.
-6. `[OPTIONAL]` Extra screenshots only if the current UI changed after the promoted demo video.
-7. `[OPTIONAL]` Repeat recording FPS/sync-latency trace if the final Quest build or recorder settings change.
-8. `[OPTIONAL]` Repeat Linux/Ubuntu performance on the final lab machine/GPU configuration if the current remote workstation is not the intended deployment target.
+1. `[TODO]` Time-boxed cable insertion throughput rows.
+2. `[TODO]` Time-boxed pick/place, dual-arm simultaneous pick/place, and dual-arm handoff rows.
+3. `[OPTIONAL]` New EE visual alignment trace if the thesis needs quantitative EE visual alignment rather than object alignment.
+4. `[OPTIONAL]` Extra screenshots only if the current UI changed after the promoted demo video.
+5. `[OPTIONAL]` Repeat recording FPS/sync-latency trace if the final Quest build or recorder settings change.
+6. `[OPTIONAL]` Repeat Linux/Ubuntu performance on the final lab machine/GPU configuration if the current remote workstation is not the intended deployment target.
+7. `[OPTIONAL]` Repeat Windows/WSL test with ADB installed if the thesis needs Windows wired-Quest evidence rather than backend-only portability.
+
+## Remaining GitHub Demo / README Gaps
+
+These are separate from the thesis trial dataset.
+
+1. `[TODO]` Human-review the demo transcript/captions.
+2. `[TODO]` Select 6-10 public-facing README teaser clips from the promoted demo media.
+3. `[TODO]` Export final 5-8 second H.264 MP4 teasers.
+4. `[TODO]` Upload teasers to GitHub Releases, YouTube, Drive, or lab storage.
+5. `[TODO]` Replace the root `README.md` demo table `TODO` links with hosted URLs.
+6. `[OPTIONAL]` Add a short GIF fallback only for one hero clip if GitHub rendering needs it.
 
 Do not spend thesis time trying to turn the following old runs into pass results unless the underlying scripts are fixed first:
 
@@ -293,47 +309,64 @@ Primary files:
 
 Why this matters: this is the direct evidence for whether camera recording reduces Quest-side FPS or changes visual synchronization behavior.
 
-### 6. Cable Insertion Precision Trials
+### 6. Cable Insertion Throughput Trials
 
 Status: `[TODO]`
+
+Use the new fixed-duration protocol:
+
+```text
+thesis_eval_raw/06_11/timeboxed_trial_protocol.md
+```
 
 Save rows to:
 
 ```text
-thesis_eval_raw/06_11/cable_insertion/cable_insertion_trials.csv
+thesis_eval_raw/06_11/cable_insertion/timeboxed_insertion_trials.csv
 ```
 
 Minimum thesis-safe set:
 
 - Fixed receiver box first.
-- Clearances if time is short: 2.0, 1.0, and 0.5 mm per side.
-- Full set if time allows: 2.0, 1.5, 1.0, 0.5, 0.2 mm per side.
-- 5 attempts per clearance if possible.
-- Record success, completion time, drops, resets, arm used, and notes.
+- Run `60 s` per clearance.
+- Full fixed-box set: 2.0, 1.5, 1.0, 0.5, 0.2 mm per side.
+- Movable receiver box if time allows: run all five clearances, or at least 2.0, 1.0, and 0.5 mm per side.
+- Count successful insertions, attempts, partial insertions, drops, resets, and Servo/collision stops.
+- After a success, withdraw the cable and attempt again within the same `60 s` window.
 
-Why: this is the main precision/manipulation test for the thesis.
+Why: this is the main precision/manipulation test for the thesis. The one-minute design gives a clean throughput metric and avoids ambiguous failed-attempt durations.
 
-### 7. Pick/Place And Dual-Arm Functional Trials
+### 7. Pick/Place And Dual-Arm Throughput Trials
 
 Status: `[TODO]`
 
 Save pick/place rows to:
 
 ```text
-thesis_eval_raw/06_11/pick_place_control_modes/pick_place_trials.csv
+thesis_eval_raw/06_11/pick_place_control_modes/timeboxed_pick_place_trials.csv
+```
+
+Save dual-arm rows to:
+
+```text
+thesis_eval_raw/06_11/dual_arm_demo/timeboxed_dual_arm_trials.csv
 ```
 
 Minimum:
 
-- 10 MR hand-pose teleop pick/place trials.
-- Optional: 5 keyboard and 5 gamepad/thumbstick baseline trials if time allows.
-- Optional: 5 dual-arm handoff attempts if you want a dedicated dual-arm functionality table.
+- Single-arm pick/place: `3` one-minute MR hand-pose teleop runs.
+- Optional single-arm baselines: `3` one-minute keyboard runs and `3` one-minute gamepad/thumbstick runs if time allows.
+- Dual-arm simultaneous pick/place: `3` one-minute runs.
+- Dual-arm air handoff: `3` one-minute runs if stable.
+- Count successful task cycles, attempts, drops, resets, and Servo/collision stops.
 
-Why: this gives a simpler manipulation baseline and supports the functionality-evaluation section.
+Why: this gives a simpler manipulation baseline and supports the functionality-evaluation section. The dual-arm rows show whether two independent arms improve throughput or enable tasks that single-arm control cannot do cleanly.
 
-### 8. Screenshots And Demo Videos
+### 8. GitHub Demo Construction
 
 Status: `[DONE - PROMOTED for source material]`, `[TODO for final README teasers and human caption pass]`
+
+This is GitHub README/demo work, not thesis trial collection. The clips can supply optional thesis figures, but they should not be counted as quantitative trial evidence.
 
 Promoted source material:
 
@@ -366,17 +399,56 @@ Recommended teaser topics:
 
 Use the existing v2 clips as source; no need to re-record unless the UI changed significantly.
 
-## Remote Ubuntu/Linux Tests
+## Cross-Platform Ubuntu And Windows Tests
 
-Status: `[DONE - CAVEAT]`
+Use these to support portability and performance discussion. Present them as platform case studies, not strict operating-system benchmarks, because CPU, GPU, memory, Docker, virtualization, cooling, and driver stacks are not normalized.
 
-Use these to support portability and performance comparison. Present them as a platform case study, not as a strict OS benchmark, because the Linux hardware/Docker stack is not normalized against the Mac.
+### Matched Platform Checklist
+
+| Test block | Ubuntu/Linux | Windows/WSL | Purpose |
+| --- | --- | --- | --- |
+| Hardware/context snapshot | `[TODO]` add CPU/GPU/RAM snapshot | `[TODO]` add Windows host + WSL hardware snapshot | Gives context for RTF/CPU results. |
+| Backend bringup snapshot | `[DONE - CAVEAT]` | `[DONE - CAVEAT]` | Confirms Docker/backend can start. |
+| Dynamic RTF/CPU performance | `[DONE - CAVEAT]` | `[TODO]` | Main cross-platform performance case-study result. |
+| ROS topic-rate audit | `[DONE - CAVEAT]` | `[DONE - CAVEAT]` | Confirms core ROS streams publish and shows sim-time effects. |
+| RTF isolation matrix | `[DONE - CAVEAT]` | `[OPTIONAL]` | Breaks down Gazebo-only, Servo, full-stack bottlenecks. |
+| Quest/ADB wired validation | `[OPTIONAL]` | `[OPTIONAL]` | Only needed if the thesis claims wired Quest transport on those hosts. |
+
+### Ubuntu/Linux Section
+
+Status: `[DONE - CAVEAT]` for bringup, dynamic performance, topic rates, and RTF isolation. Hardware/context snapshot still needs CPU/GPU/RAM details if we want a stronger setup table.
 
 Path casing note: the remote branch currently contains both `thesis_eval_raw/Ubuntu_data` placeholder paths and `thesis_eval_raw/ubuntu_data` result paths. On this Mac's case-insensitive filesystem they appear as one visible `Ubuntu_data` folder, while lowercase `ubuntu_data` also resolves in shell commands. Future cleanup should standardize this to one spelling before more cross-platform data is committed.
 
-### 1. Linux Setup Snapshot
+#### Ubuntu Hardware / Context Snapshot
 
-On Linux:
+Status: `[TODO]`
+
+Run on Ubuntu/Linux:
+
+```bash
+cd ~/ros_unity_project/ros_backend1.1
+mkdir -p ../thesis_eval_raw/ubuntu_data/setup
+{
+  date
+  hostname
+  uname -a
+  lscpu
+  free -h
+  (command -v lspci >/dev/null && lspci | grep -Ei 'vga|3d|display' || true)
+  (command -v nvidia-smi >/dev/null && nvidia-smi || true)
+  docker version
+  docker info
+} > ../thesis_eval_raw/ubuntu_data/setup/linux_hardware_snapshot.txt 2>&1
+```
+
+Use this mainly for CPU model/core count, RAM, GPU model, kernel, and Docker version.
+
+#### Ubuntu Backend Bringup Snapshot
+
+Status: `[DONE - CAVEAT]`
+
+Command used:
 
 ```bash
 cd ~/ros_unity_project/ros_backend1.1
@@ -387,21 +459,17 @@ cp .env.example .env
 python3 scripts/test_tools/eval_scripts/12_cross_platform_backend_bringup_check.py --output-root ../thesis_eval_raw/ubuntu_data/setup/linux_bringup_snapshot
 ```
 
-Save output into the Git-synced Ubuntu data drop folder:
-
-```text
-thesis_eval_raw/ubuntu_data/setup/linux_bringup_snapshot/
-```
-
-After reviewing it on the Mac, copy the accepted subset into:
+Accepted location:
 
 ```text
 complete_material/portability/linux_ubuntu_06_12/setup/
 ```
 
-### 2. Linux Dynamic Performance
+#### Ubuntu Dynamic RTF/CPU Performance
 
-On Linux:
+Status: `[DONE - CAVEAT]`
+
+Command used:
 
 ```bash
 cd ~/ros_unity_project/ros_backend1.1
@@ -409,19 +477,7 @@ DURATION=60 WARMUP=8 ./scripts/test_tools/performance_test_scripts/run_dynamic_b
 ./scripts/backend11_lifecycle.sh safe_down
 ```
 
-Save results into:
-
-```text
-thesis_eval_raw/ubuntu_data/runtime_performance/linux_performance/
-```
-
-After reviewing it on the Mac, copy the accepted subset into:
-
-```text
-complete_material/portability/linux_ubuntu_06_12/runtime_performance/
-```
-
-Accepted result location:
+Accepted locations:
 
 ```text
 complete_material/portability/linux_ubuntu_06_12/runtime_performance/
@@ -430,11 +486,13 @@ complete_material/plots/06_12_evaluation/mac_linux_rtf_bar.svg
 complete_material/plots/06_12_evaluation/mac_linux_cpu_bar.svg
 ```
 
-Why: compares Mac Docker performance against the remote Ubuntu workstation as a deployment case study. In the collected run, Ubuntu RTF was lower than the Mac run, which means the result should be interpreted as "this specific Ubuntu workstation/container setup" rather than "Linux is slower."
+Interpretation: this compares Mac Docker performance against the remote Ubuntu workstation as a deployment case study. In the collected run, Ubuntu RTF was lower than the Mac run, so write it as "this specific Ubuntu workstation/container setup" rather than "Linux is slower."
 
-### 3. Linux Topic Rates
+#### Ubuntu Topic Rates
 
-On Linux:
+Status: `[DONE - CAVEAT]`
+
+Command used:
 
 ```bash
 cd ~/ros_unity_project/ros_backend1.1
@@ -443,15 +501,15 @@ python3 scripts/test_tools/eval_scripts/03_ros_topic_rate_audit.py --duration 20
 ./scripts/backend11_lifecycle.sh safe_down
 ```
 
-Accepted result location:
+Accepted location:
 
 ```text
 complete_material/portability/linux_ubuntu_06_12/topic_rates/
 ```
 
-Linux topic-rate summary: controller input, joint velocity commands, object sync, and haptic topics were near `60 Hz`. Target-twist and Servo twist topics were much lower in wall-clock time because the Gazebo simulation RTF was low and those stages are tied to simulation-time behavior.
+Summary: controller input, joint velocity commands, object sync, and haptic topics were near `60 Hz`. Target-twist and Servo twist topics were lower in wall-clock time because the Gazebo simulation RTF was low and those stages are tied to simulation-time behavior.
 
-### 4. Linux RTF Isolation Matrix
+#### Ubuntu RTF Isolation Matrix
 
 Status: `[DONE - CAVEAT]`
 
@@ -464,13 +522,11 @@ complete_material/plots/06_12_evaluation/linux_isolation_rtf_bar.svg
 complete_material/plots/06_12_evaluation/linux_isolation_cpu_bar.svg
 ```
 
-Interpretation: Gazebo-only headless already ran below real time on the remote Ubuntu workstation (`~0.275` mean RTF). Adding Servo caused a smaller drop, while starting the full stack dropped mean RTF to about `0.194-0.196`. This suggests the main performance bottleneck in this setup is the combined full-stack Docker/Gazebo workload, not the synthetic hand-motion generator alone.
+Interpretation: Gazebo-only headless already ran below real time on the remote Ubuntu workstation (`~0.275` mean RTF). Adding Servo caused a smaller drop, while starting the full stack dropped mean RTF to about `0.194-0.196`.
 
-## Windows/WSL Tests
+### Windows/WSL Section
 
-Status: `[OPTIONAL]`
-
-Do this later if a Windows machine is available. This is a portability case study, not a fair performance comparison unless the hardware is controlled.
+Status: `[PARTIAL - CAVEAT]`. Bringup, topic rates, and no-headset backend checks are collected. To match Ubuntu, Windows still needs dynamic RTF/CPU performance and preferably a hardware/context snapshot.
 
 Expected setup:
 
@@ -479,29 +535,108 @@ Expected setup:
 - Docker Desktop with WSL integration enabled.
 - Repo cloned inside the WSL filesystem, not under `/mnt/c`, for better I/O.
 
-Minimum evidence:
+#### Windows Host + WSL Hardware / Context Snapshot
+
+Status: `[TODO]`
+
+Run from PowerShell on the Windows host:
+
+```powershell
+cd PATH\TO\ros_unity_project
+New-Item -ItemType Directory -Force thesis_eval_raw\Windows_data\setup | Out-Null
+Get-Date | Out-File thesis_eval_raw\Windows_data\setup\windows_host_hardware_snapshot.txt
+Get-CimInstance Win32_Processor | Format-List * | Out-File thesis_eval_raw\Windows_data\setup\windows_host_hardware_snapshot.txt -Append
+Get-CimInstance Win32_VideoController | Format-List * | Out-File thesis_eval_raw\Windows_data\setup\windows_host_hardware_snapshot.txt -Append
+Get-CimInstance Win32_ComputerSystem | Format-List * | Out-File thesis_eval_raw\Windows_data\setup\windows_host_hardware_snapshot.txt -Append
+Get-CimInstance Win32_OperatingSystem | Format-List * | Out-File thesis_eval_raw\Windows_data\setup\windows_host_hardware_snapshot.txt -Append
+```
+
+Run from WSL:
 
 ```bash
 cd ~/ros_unity_project/ros_backend1.1
-cp .env.example .env
-./scripts/backend11_lifecycle.sh up_container_build
-./scripts/backend11_lifecycle.sh build_ws
-python3 scripts/test_tools/eval_scripts/12_cross_platform_backend_bringup_check.py --output-root ../thesis_eval_raw/Windows_data/portability/windows_wsl_bringup_snapshot
-./scripts/backend11_lifecycle.sh safe_down
+mkdir -p ../thesis_eval_raw/Windows_data/setup
+{
+  date
+  hostname
+  uname -a
+  lscpu
+  free -h
+  docker version
+  docker info
+} > ../thesis_eval_raw/Windows_data/setup/windows_wsl_hardware_snapshot.txt 2>&1
 ```
 
-Optional if time allows:
+Use this mainly for CPU model/core count, RAM, GPU model, WSL kernel, Windows version, and Docker version.
 
-```bash
-./scripts/backend11_lifecycle.sh bringup_dual
-python3 scripts/test_tools/eval_scripts/03_ros_topic_rate_audit.py --duration 20 --output-root ../thesis_eval_raw/Windows_data/latency_rates/windows_wsl_topic_rates
-./scripts/backend11_lifecycle.sh safe_down
-```
+#### Windows Backend Bringup Snapshot
 
-After reviewing it on the Mac, copy accepted evidence to:
+Status: `[DONE - CAVEAT]`
+
+Collected material:
 
 ```text
-complete_material/portability/windows_wsl_bringup_snapshot/
+thesis_eval_raw/Windows_data/portability/windows_wsl_bringup_snapshot/
+complete_material/portability/windows_wsl_06_12/portability/windows_wsl_bringup_snapshot/
+complete_material/plots/06_12_evaluation/windows_wsl_platform_case_study_summary.csv
+```
+
+Caveat: `adb` was not on PATH, so this does not validate Quest wired USB reverse tunnels, headset app traffic, MR visual synchronization, or camera recording on Windows.
+
+#### Windows Topic Rates
+
+Status: `[DONE - CAVEAT]`
+
+Collected material:
+
+```text
+thesis_eval_raw/Windows_data/latency_rates/windows_wsl_topic_rates/
+complete_material/plots/06_12_evaluation/windows_wsl_topic_rate_groups.csv
+complete_material/plots/06_12_evaluation/windows_wsl_topic_rate_groups.svg
+```
+
+Summary: receiver pose input, Gazebo velocity commands, Unity object sync, and haptic amplitude streams were near `60 Hz`. Target-twist and Servo delta-twist streams were about `7.8 Hz` in wall-clock time during this WSL run. The `/clock` topic rate is not the same as Gazebo real-time factor.
+
+#### Windows Dynamic RTF/CPU Performance
+
+Status: `[TODO]`
+
+Run from PowerShell:
+
+```powershell
+cd PATH\TO\ros_unity_project
+.\ros_backend1.1\scripts\test_tools\performance_test_scripts\run_dynamic_backend_performance_windows.ps1 -Duration 60 -Warmup 8
+```
+
+Expected output:
+
+```text
+thesis_eval_raw/Windows_data/runtime_performance/
+```
+
+After pulling/reviewing on the Mac, promote the accepted subset to:
+
+```text
+complete_material/portability/windows_wsl_06_12/runtime_performance/
+complete_material/plots/06_12_evaluation/windows_wsl_dynamic_performance_summary.csv
+```
+
+#### Windows RTF Isolation Matrix
+
+Status: `[OPTIONAL]`
+
+Run if we want a fully matched Linux-style bottleneck breakdown:
+
+- Gazebo-only headless.
+- Gazebo plus Servo.
+- Full backend idle.
+- Full backend dynamic.
+
+Save to:
+
+```text
+thesis_eval_raw/Windows_data/isolation_matrix/
+complete_material/portability/windows_wsl_06_12/isolation_matrix/
 ```
 
 ## After Each Test Block
@@ -520,15 +655,19 @@ Already finished:
 - `[DONE - PROMOTED]` Current-code Mac performance results.
 - `[DONE - CAVEAT]` One headset backend latency trace.
 - `[DONE - CAVEAT]` RedCube MR object sync/alignment trace.
-- `[DONE - PROMOTED]` Demo source video, topic clips, and screenshots.
 - `[DONE - CAVEAT]` Camera recording file verification.
 
 Still collect before thesis writing locks:
 
 - `[DONE - CAVEAT]` Linux setup snapshot, dynamic performance, topic rates, and RTF isolation matrix.
 - `[DONE - CAVEAT]` Recording FPS/sync trace with `/unity_eval/recording_state` and `/unity_eval/fps_sample`.
-- `[TODO]` 10 pick/place trials.
-- `[TODO]` Cable insertion trials for 2.0, 1.0, and 0.5 mm clearances.
-- `[TODO]` Final 5-8 second README teaser clips and human-reviewed captions.
-- `[OPTIONAL]` Windows/WSL bringup snapshot.
+- `[TODO]` Time-boxed pick/place throughput trials.
+- `[TODO]` Time-boxed cable insertion throughput trials for fixed receiver all five clearances, plus movable receiver if time allows.
+- `[TODO]` Time-boxed dual-arm simultaneous pick/place and air-handoff trials.
+- `[OPTIONAL]` Repeat Windows/WSL with ADB installed if Windows wired-Quest transport evidence is needed.
 - `[OPTIONAL]` New EE visual alignment trace.
+
+Still build for GitHub repo presentation:
+
+- `[DONE - PROMOTED for source material]` Demo source video, topic clips, and screenshots.
+- `[TODO]` Final 5-8 second README teaser clips and human-reviewed captions.
