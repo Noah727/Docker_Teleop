@@ -132,7 +132,7 @@ Optional controllers are right-arm overrides by default. The left Quest controll
 
 This keeps the Quest app running, but tells only the right-arm backend mapper to ignore right-hand pose following and use the gamepad/thumbstick fields instead.
 
-Enable right-arm thumbstick mode:
+Enable right-arm thumbstick/gamepad mode:
 
 ```bash
 cd ros_backend1.1
@@ -150,10 +150,14 @@ Gamepad mapping:
 
 - `Left stick Y`: forward/back.
 - `Left stick X`: left/right.
-- `Left trigger`: move up.
-- `Left grip`: move down.
-- `Right stick Y`: angular Y.
-- `Right stick X`: angular Z.
+- `Right stick Y`: up/down.
+- `Right trigger`: toggle right gripper open/close.
+- Hold right `A` or left `X`: enter rotation layer.
+- `Left stick X` while holding `A` or `X`: roll.
+- `Right stick Y` while holding `A` or `X`: pitch.
+- `Right stick X` while holding `A` or `X`: yaw.
+- Default linear speed is `gamepad_linear_speed_xyz=[0.30,0.30,0.30]`.
+- Default angular speed is `gamepad_angular_speed_xyz=[0.55,0.70,0.70]`.
 
 Backend parameters live in:
 
@@ -166,12 +170,13 @@ Main tuning keys:
 - `gamepad_deadband`
 - `gamepad_linear_speed_xyz`
 - `gamepad_linear_sign_xyz`
+- `gamepad_rotation_mode`
 - `gamepad_angular_speed_xyz`
 - `gamepad_angular_sign_xyz`
 
 ### Keyboard Override
 
-This starts an interactive terminal keyboard controller for the right arm only. It temporarily stops the right-arm target-to-Servo bridge so right Quest controller pose packets still arrive but do not command the right robot arm. The left arm pipeline stays active.
+This starts an interactive terminal keyboard controller for the right arm only. It temporarily stops the right-arm hand-pose mapper, then publishes into the normal right-arm target-twist stream. The right Servo bridge and coupled gripper controller stay active, so the keyboard path uses the same downstream control pipeline as normal headset teleop. The left arm pipeline stays active.
 
 Start right-arm keyboard override:
 
@@ -185,9 +190,10 @@ Key map:
 - `W/S`: robot `+/-X`.
 - `A/D`: robot `+/-Y`.
 - `Q/E`: robot `+/-Z`.
-- `U/J`: roll, angular `+/-X`.
-- `I/K`: pitch, angular `+/-Y`.
-- `O/L`: yaw, angular `+/-Z`.
+- `U/J`: roll `+/-`.
+- `I/K`: pitch `+/-`.
+- `O/L`: yaw `+/-`.
+- `G`: toggle right gripper close/open.
 - `Space`: stop immediately.
 - `X` or `Ctrl-C`: quit.
 
@@ -200,14 +206,95 @@ cd ros_backend1.1
 
 ### SpaceMouse
 
-Placeholder. SpaceMouse support has not been implemented yet.
+SpaceMouse is implemented as a right-arm optional input. It publishes into the normal right-arm target-twist stream and uses the left-side SpaceMouse button as a gripper open/close toggle.
 
-Intended future behavior:
+Install the official driver first:
+
+- macOS: install 3DxWare 10 for macOS from the 3Dconnexion driver page: <https://3dconnexion.com/us/drivers/>.
+- Ubuntu/Linux: install the Linux 3DxWare driver or make sure the SpaceMouse HID device is visible under `/dev/hidraw*`.
+
+#### macOS Docker Desktop Path
+
+Docker Desktop on macOS does not expose the SpaceMouse HID device directly to the Linux container. Use the macOS host bridge:
 
 ```bash
 cd ros_backend1.1
-# TODO: ./scripts/backend11_lifecycle.sh right_spacemouse
+./scripts/backend11_lifecycle.sh right_spacemouse_host_bridge
 ```
+
+Install the host dependency once:
+
+```bash
+cd /Users/noahli/ros_unity_project
+python3 -m venv ros_backend1.1/.venv_spacemouse_host
+ros_backend1.1/.venv_spacemouse_host/bin/python -m pip install hidapi
+```
+
+Detect the SpaceMouse interfaces:
+
+```bash
+ros_backend1.1/.venv_spacemouse_host/bin/python \
+  ros_backend1.1/src/teleop_bridge/teleop_bridge/optional_inputs/mac_spacemouse_host_bridge.py \
+  --detect-only
+```
+
+Run the host bridge. On this Mac, `MATCH[1]` is the motion interface:
+
+```bash
+ros_backend1.1/.venv_spacemouse_host/bin/python \
+  ros_backend1.1/src/teleop_bridge/teleop_bridge/optional_inputs/mac_spacemouse_host_bridge.py \
+  --host 127.0.0.1 \
+  --port 5036 \
+  --device-index 1 \
+  --linear-sign-xyz -1.0,-1.0,-1.0 \
+  --angular-speed-xyz 1.4,1.4,1.4
+```
+
+Restore right-arm headset control:
+
+```bash
+cd ros_backend1.1
+./scripts/backend11_lifecycle.sh right_spacemouse_host_bridge_off
+```
+
+#### Native Linux Path
+
+On native Linux, if the SpaceMouse appears inside the container under `/dev/hidraw*`, the direct ROS node can be used:
+
+```bash
+cd ros_backend1.1
+./scripts/backend11_lifecycle.sh right_spacemouse
+./scripts/backend11_lifecycle.sh right_spacemouse_off
+```
+
+Default SpaceMouse mapping:
+
+- Cap translation: right-arm XYZ velocity.
+- Cap twist/rotation: right-arm roll/pitch/yaw angular velocity.
+- Left SpaceMouse button: toggle right gripper close/open.
+- The default translation sign is `linear_sign_xyz=[-1.0,-1.0,-1.0]`, which keeps the corrected up/down direction and restores the original X/Y feel.
+- The default angular speed is `angular_speed_xyz=[1.4,1.4,1.4]`.
+- If any rotation axis feels reversed, flip that entry in `angular_sign_xyz`.
+
+SpaceMouse scripts live in:
+
+```text
+ros_backend1.1/src/teleop_bridge/teleop_bridge/optional_inputs/
+```
+
+Current macOS test result: the synthetic TCP path published `/right_arm/target_twist_states` at about 60 Hz, `MATCH[1]` produced physical cap motion, and the right Servo/gripper bridges received the SpaceMouse stream.
+
+The official 3Dconnexion SDK is available through their Software Developer Program (<https://3dconnexion.com/us/software-developer-program/>), but this project currently uses direct HID input so the SpaceMouse path can run as a normal ROS node.
+
+### Optional Input Script Locations
+
+The optional input scripts are grouped here:
+
+```text
+ros_backend1.1/src/teleop_bridge/teleop_bridge/optional_inputs/
+```
+
+Gamepad/thumbstick mode is implemented inside `teleop_bridge/mapping/hand_pose_mapper.py` because it uses thumbstick and trigger fields already sent by the Quest app.
 
 ## Step-By-Step Bringup With Checkpoints
 

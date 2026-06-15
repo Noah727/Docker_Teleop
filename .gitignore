@@ -56,6 +56,7 @@ ros_backend1.1/install/
 ros_backend1.1/log/
 ros_backend1.1/.colcon/
 ros_backend1.1/.ros/
+ros_backend1.1/.venv_spacemouse_host/
 
 # Local backend environment
 ros_backend1.0/.env

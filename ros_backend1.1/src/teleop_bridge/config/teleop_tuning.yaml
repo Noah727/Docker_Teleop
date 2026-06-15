@@ -33,7 +33,8 @@ hand_pose_mapper:
     gamepad_deadband: 0.15
     gamepad_linear_speed_xyz: [0.20, 0.20, 0.20]
     gamepad_linear_sign_xyz: [1.0, -1.0, 1.0]
-    gamepad_angular_speed_xyz: [0.0, 0.75, 0.75]
+    gamepad_rotation_mode: stick_modifier
+    gamepad_angular_speed_xyz: [0.55, 0.70, 0.70]
     gamepad_angular_sign_xyz: [1.0, 1.0, -1.0]
 
     # Position mapping: Unity/controller XYZ -> robot XYZ

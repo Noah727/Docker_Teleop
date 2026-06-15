@@ -11,6 +11,7 @@ services:
       - "51001:50001" # reverse_port (default)
       - "51002:50002" # script_sender_port (commonly used)
       - "51003:50003" # optional (driver/RTDE auxiliaries depending on config)
+      - "${SPACEMOUSE_TCP_HOST_BIND:-127.0.0.1}:${SPACEMOUSE_TCP_HOST_PORT:-5036}:5036" # macOS host SpaceMouse bridge -> container ROS target bridge
     volumes:
       - ./src:/home/noah/ws_moveit/src
       - ./simulation:/home/noah/ws_moveit/simulation

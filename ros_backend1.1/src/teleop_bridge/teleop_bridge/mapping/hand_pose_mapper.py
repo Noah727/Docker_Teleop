@@ -48,10 +48,11 @@ class ReceivedPoseToTargetTwist(Node):
         self.declare_parameter("control_mode", "hand_pose")
         self.declare_parameter("allow_unity_control_mode_switch", False)
         self.declare_parameter("gamepad_deadband", 0.15)
-        self.declare_parameter("gamepad_linear_speed_xyz", [0.20, 0.20, 0.20])
+        self.declare_parameter("gamepad_linear_speed_xyz", [0.30, 0.30, 0.30])
         self.declare_parameter("gamepad_linear_sign_xyz", [1.0, -1.0, 1.0])
-        self.declare_parameter("gamepad_angular_speed_xyz", [0.0, 0.75, 0.75])
-        self.declare_parameter("gamepad_angular_sign_xyz", [1.0, 1.0, 1.0])
+        self.declare_parameter("gamepad_rotation_mode", "stick_modifier")
+        self.declare_parameter("gamepad_angular_speed_xyz", [0.55, 0.70, 0.70])
+        self.declare_parameter("gamepad_angular_sign_xyz", [1.0, 1.0, -1.0])
 
         # Calibrated default for this project setup:
         # Unity/controller: x=forward/back, y=up/down, z=left/right
@@ -112,20 +113,27 @@ class ReceivedPoseToTargetTwist(Node):
         self.gamepad_deadband = max(0.0, float(self.get_parameter("gamepad_deadband").value))
         self.gamepad_linear_speed_xyz = np.array(self.get_parameter("gamepad_linear_speed_xyz").value, dtype=float)
         if self.gamepad_linear_speed_xyz.shape != (3,):
-            self.get_logger().warn("Invalid gamepad_linear_speed_xyz; falling back to [0.20,0.20,0.20].")
-            self.gamepad_linear_speed_xyz = np.array([0.20, 0.20, 0.20], dtype=float)
+            self.get_logger().warn("Invalid gamepad_linear_speed_xyz; falling back to [0.30,0.30,0.30].")
+            self.gamepad_linear_speed_xyz = np.array([0.30, 0.30, 0.30], dtype=float)
         self.gamepad_linear_sign_xyz = np.array(self.get_parameter("gamepad_linear_sign_xyz").value, dtype=float)
         if self.gamepad_linear_sign_xyz.shape != (3,):
             self.get_logger().warn("Invalid gamepad_linear_sign_xyz; falling back to [1,-1,1].")
             self.gamepad_linear_sign_xyz = np.array([1.0, -1.0, 1.0], dtype=float)
+        try:
+            self.gamepad_rotation_mode = self._parse_gamepad_rotation_mode(
+                self.get_parameter("gamepad_rotation_mode").value
+            )
+        except ValueError as exc:
+            self.get_logger().warn(f"{exc}; falling back to none.")
+            self.gamepad_rotation_mode = "none"
         self.gamepad_angular_speed_xyz = np.array(self.get_parameter("gamepad_angular_speed_xyz").value, dtype=float)
         if self.gamepad_angular_speed_xyz.shape != (3,):
-            self.get_logger().warn("Invalid gamepad_angular_speed_xyz; falling back to [0,0.75,0.75].")
-            self.gamepad_angular_speed_xyz = np.array([0.0, 0.75, 0.75], dtype=float)
+            self.get_logger().warn("Invalid gamepad_angular_speed_xyz; falling back to [0.55,0.70,0.70].")
+            self.gamepad_angular_speed_xyz = np.array([0.55, 0.70, 0.70], dtype=float)
         self.gamepad_angular_sign_xyz = np.array(self.get_parameter("gamepad_angular_sign_xyz").value, dtype=float)
         if self.gamepad_angular_sign_xyz.shape != (3,):
-            self.get_logger().warn("Invalid gamepad_angular_sign_xyz; falling back to [1,1,1].")
-            self.gamepad_angular_sign_xyz = np.array([1.0, 1.0, 1.0], dtype=float)
+            self.get_logger().warn("Invalid gamepad_angular_sign_xyz; falling back to [1,1,-1].")
+            self.gamepad_angular_sign_xyz = np.array([1.0, 1.0, -1.0], dtype=float)
 
         self.map_axes = [str(v).lower() for v in self.get_parameter("map_axes").value]
         if len(self.map_axes) != 3 or any(axis not in ("x", "y", "z") for axis in self.map_axes):
@@ -301,6 +309,7 @@ class ReceivedPoseToTargetTwist(Node):
             f"gamepad_deadband={self.gamepad_deadband:.3f}, "
             f"gamepad_linear_speed_xyz={self.gamepad_linear_speed_xyz.tolist()}, "
             f"gamepad_linear_sign_xyz={self.gamepad_linear_sign_xyz.tolist()}, "
+            f"gamepad_rotation_mode={self.gamepad_rotation_mode}, "
             f"gamepad_angular_speed_xyz={self.gamepad_angular_speed_xyz.tolist()}, "
             f"gamepad_angular_sign_xyz={self.gamepad_angular_sign_xyz.tolist()}"
         )
@@ -373,6 +382,33 @@ class ReceivedPoseToTargetTwist(Node):
             raise ValueError("control_mode must be 'hand_pose' or 'gamepad'")
         return mode
 
+    @staticmethod
+    def _parse_gamepad_rotation_mode(value) -> str:
+        if value is None:
+            return "none"
+        mode = str(value).strip().lower().replace("-", "_")
+        aliases = {
+            "": "none",
+            "off": "none",
+            "false": "none",
+            "disabled": "none",
+            "disable": "none",
+            "none": "none",
+            "stick": "stick_modifier",
+            "sticks": "stick_modifier",
+            "thumbstick": "stick_modifier",
+            "thumbsticks": "stick_modifier",
+            "stick_modifier": "stick_modifier",
+            "hand": "hand_pose_modifier",
+            "hand_pose": "hand_pose_modifier",
+            "hand_pose_modifier": "hand_pose_modifier",
+        }
+        if mode not in aliases:
+            raise ValueError(
+                "gamepad_rotation_mode must be one of: none, stick_modifier, hand_pose_modifier"
+            )
+        return aliases[mode]
+
     @classmethod
     def _parse_optional_control_mode(cls, value):
         if value is None:
@@ -426,6 +462,7 @@ class ReceivedPoseToTargetTwist(Node):
         new_gamepad_deadband = self.gamepad_deadband
         new_gamepad_linear_speed_xyz = self.gamepad_linear_speed_xyz
         new_gamepad_linear_sign_xyz = self.gamepad_linear_sign_xyz
+        new_gamepad_rotation_mode = self.gamepad_rotation_mode
         new_gamepad_angular_speed_xyz = self.gamepad_angular_speed_xyz
         new_gamepad_angular_sign_xyz = self.gamepad_angular_sign_xyz
         new_map_axes = self.map_axes
@@ -570,6 +607,9 @@ class ReceivedPoseToTargetTwist(Node):
                 elif param.name == "gamepad_linear_sign_xyz":
                     new_gamepad_linear_sign_xyz = self._parse_vec3(param.value, "gamepad_linear_sign_xyz")
                     touched.append("gamepad_linear_sign_xyz")
+                elif param.name == "gamepad_rotation_mode":
+                    new_gamepad_rotation_mode = self._parse_gamepad_rotation_mode(param.value)
+                    touched.append("gamepad_rotation_mode")
                 elif param.name == "gamepad_angular_speed_xyz":
                     new_gamepad_angular_speed_xyz = self._parse_vec3(param.value, "gamepad_angular_speed_xyz")
                     touched.append("gamepad_angular_speed_xyz")
@@ -605,6 +645,7 @@ class ReceivedPoseToTargetTwist(Node):
         self.gamepad_deadband = new_gamepad_deadband
         self.gamepad_linear_speed_xyz = new_gamepad_linear_speed_xyz
         self.gamepad_linear_sign_xyz = new_gamepad_linear_sign_xyz
+        self.gamepad_rotation_mode = new_gamepad_rotation_mode
         self.gamepad_angular_speed_xyz = new_gamepad_angular_speed_xyz
         self.gamepad_angular_sign_xyz = new_gamepad_angular_sign_xyz
         self.map_axes = new_map_axes
@@ -669,6 +710,7 @@ class ReceivedPoseToTargetTwist(Node):
                 f"gamepad_deadband={self.gamepad_deadband:.3f}, "
                 f"gamepad_linear_speed_xyz={self.gamepad_linear_speed_xyz.tolist()}, "
                 f"gamepad_linear_sign_xyz={self.gamepad_linear_sign_xyz.tolist()}, "
+                f"gamepad_rotation_mode={self.gamepad_rotation_mode}, "
                 f"gamepad_angular_speed_xyz={self.gamepad_angular_speed_xyz.tolist()}, "
                 f"gamepad_angular_sign_xyz={self.gamepad_angular_sign_xyz.tolist()}, "
                 f"pos_map_axes={self.map_axes}, pos_map_signs={self.map_signs.tolist()}, "
@@ -913,13 +955,25 @@ class ReceivedPoseToTargetTwist(Node):
             if self._gamepad_mode:
                 tracked_active = True
                 self._position_session_active = False
-                linear = self._compute_gamepad_linear()
-                pose_tf_ok, ee_pos_for_pose, ee_rot_for_pose = self._lookup_ee_pose(now)
-                if pose_tf_ok:
-                    tf_ok = True
-                    target_pos_for_pose = ee_pos_for_pose + self._estimate_velocity_target_offset(linear)
-                    target_rot_for_pose = ee_rot_for_pose
-                if self._rotate_enable:
+                if self._rotate_enable and self.gamepad_rotation_mode == "stick_modifier":
+                    angular = self._compute_gamepad_angular()
+                    if np.linalg.norm(angular) > 0.0:
+                        rotate_enable = True
+                    pose_tf_ok, ee_pos_for_pose, ee_rot_for_pose = self._lookup_ee_pose(now)
+                    if pose_tf_ok:
+                        tf_ok = True
+                        target_pos_for_pose = ee_pos_for_pose
+                        target_rot_for_pose = ee_rot_for_pose
+                    self._rotate_session_active = False
+                else:
+                    linear = self._compute_gamepad_linear()
+                    pose_tf_ok, ee_pos_for_pose, ee_rot_for_pose = self._lookup_ee_pose(now)
+                    if pose_tf_ok:
+                        tf_ok = True
+                        target_pos_for_pose = ee_pos_for_pose + self._estimate_velocity_target_offset(linear)
+                        target_rot_for_pose = ee_rot_for_pose
+
+                if self._rotate_enable and self.gamepad_rotation_mode == "hand_pose_modifier":
                     tf_ok, _, ee_rot = self._lookup_ee_pose(now)
                     if tf_ok:
                         ee_rot_for_pose = ee_rot
@@ -942,9 +996,6 @@ class ReceivedPoseToTargetTwist(Node):
                         self._rotate_session_active = False
                 else:
                     self._rotate_session_active = False
-                    angular = self._compute_gamepad_angular()
-                    if np.linalg.norm(angular) > 0.0:
-                        rotate_enable = True
             else:
                 tf_ok, ee_pos, ee_rot = self._lookup_ee_pose(now)
                 if tf_ok:
@@ -1366,7 +1417,7 @@ class ReceivedPoseToTargetTwist(Node):
             [
                 float(self._left_stick[1]),
                 float(self._left_stick[0]),
-                float(self._left_trigger_value - self._left_grip_value),
+                float(self._right_stick[1]),
             ],
             dtype=float,
         )
@@ -1379,7 +1430,7 @@ class ReceivedPoseToTargetTwist(Node):
     def _compute_gamepad_angular(self) -> np.ndarray:
         raw = np.array(
             [
-                0.0,
+                float(self._left_stick[0]),
                 float(self._right_stick[1]),
                 float(self._right_stick[0]),
             ],

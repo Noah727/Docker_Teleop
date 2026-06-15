@@ -64,6 +64,21 @@ Unity ROS-TCP-Connector
 
 Unity should be treated mostly as a visualizer and UI layer. Robot/object physics should come from Gazebo.
 
+### Unity Visual-Only Rule
+
+For synchronized task objects, Unity must not run a second physical simulation. Gazebo is the physics authority, and Unity objects are visual followers of Gazebo/ROS state.
+
+Current implementation:
+
+- Generated task visuals live under `GazeboWorkspace/TaskGroups/TaskGroup_Main/GameObjects_sync`.
+- `GazeboReplicaDualArmSceneBuilder.cs` disables colliders when it generates synchronized task visuals.
+- `SceneObjectPoseSyncManager.cs` keeps `disableTargetCollidersForVisualization` enabled and disables child colliders whenever sync targets are bound or rebound.
+- `GazeboPoseStampedSubscriber.cs` keeps the same `disableTargetCollider` path for older direct-pose sync objects.
+- Synchronized task objects should not have active `Rigidbody`, active physical `Collider`, or Unity `ArticulationBody` components that can affect object motion.
+- UI/raycast colliders are allowed only on interaction widgets such as the workspace skirt/ring, camera handles, control-panel handles, and buttons.
+
+Debug rule: if a synchronized object jitters or appears offset in MR while Gazebo looks correct, compare Gazebo pose, `/unity_sync/<object>_pose`, and the Unity visual transform first. Do not fix it by manually moving only the Unity visual unless the Gazebo task profile is also updated.
+
 ## ROS Backend Responsibilities
 
 - Run Gazebo simulation.
@@ -73,6 +88,8 @@ Unity should be treated mostly as a visualizer and UI layer. Robot/object physic
 - Run MoveIt Servo and gripper command bridges.
 - Publish Gazebo object poses back to Unity.
 - Reset robot and scene objects.
+
+Gazebo/ROS physics and control are primarily CPU-bound in the current Docker backend. Headless Gazebo is therefore the default: it avoids paying for simulator GUI rendering during normal teleoperation and lets the project run on machines without strong GPU support. The limitation is that real-time factor depends heavily on host CPU performance and virtualization overhead. If CPU load is high, Gazebo advances below real time and the robot can feel slow even when the controller TCP stream is healthy.
 
 ## Main Runtime Nodes
 
@@ -839,6 +856,7 @@ docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param get /received_pose_to_
 docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param get /received_pose_to_target_twist gamepad_deadband"
 docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param get /received_pose_to_target_twist gamepad_linear_speed_xyz"
 docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param get /received_pose_to_target_twist gamepad_linear_sign_xyz"
+docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param get /received_pose_to_target_twist gamepad_rotation_mode"
 docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param get /received_pose_to_target_twist gamepad_angular_speed_xyz"
 docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param get /received_pose_to_target_twist gamepad_angular_sign_xyz"
 docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param get /keyboard_servo_cmd linear_speed_xyz"
@@ -901,7 +919,7 @@ Control mode:
 # Hand/controller pose drives EE position.
 docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /received_pose_to_target_twist control_mode hand_pose"
 
-# Left stick + left trigger/grip drives EE position.
+# Left stick + right stick drives EE position.
 docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /received_pose_to_target_twist control_mode gamepad"
 ```
 
@@ -910,24 +928,23 @@ Gamepad mode defaults/tuning:
 ```bash
 docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /received_pose_to_target_twist start_in_gamepad_mode false"
 docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /received_pose_to_target_twist gamepad_deadband 0.15"
-docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /received_pose_to_target_twist gamepad_linear_speed_xyz \"[0.20,0.20,0.20]\""
+docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /received_pose_to_target_twist gamepad_linear_speed_xyz \"[0.30,0.30,0.30]\""
 docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /received_pose_to_target_twist gamepad_linear_sign_xyz \"[1.0,-1.0,1.0]\""
-docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /received_pose_to_target_twist gamepad_angular_speed_xyz \"[0.0,0.75,0.75]\""
+docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /received_pose_to_target_twist gamepad_rotation_mode stick_modifier"
+docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /received_pose_to_target_twist gamepad_angular_speed_xyz \"[0.55,0.70,0.70]\""
 docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /received_pose_to_target_twist gamepad_angular_sign_xyz \"[1.0,1.0,-1.0]\""
 ```
 
 Control-mode notes:
 
-- Left controller `Y` toggles between `hand_pose` and `gamepad` mode.
+- In the current dual-arm app, control-mode switching is normally done from lifecycle commands instead of the in-headset `Y` button.
 - In `gamepad` mode:
   - left stick `Y` drives robot `+/-X` (forward/back)
   - left stick `X` drives robot `-/+Y` (right/left with the default sign setting)
-  - left trigger drives robot `+Z` (up)
-  - left grip drives robot `-Z` (down)
-  - right stick `Y` drives robot angular `Y`
-  - right stick `X` drives robot angular `Z`
-- Right controller `A` still enables rotate mode.
-- If `A` is held in gamepad mode, the existing controller-orientation delta rotation takes priority over right-stick rotation.
+  - right stick `Y` drives robot `+/-Z` (up/down)
+  - right trigger toggles the gripper close/open
+  - holding right `A` or left `X` enables the rotation layer
+- `right_gamepad_on` is the single gamepad baseline. It sets `gamepad_rotation_mode` to `stick_modifier`; while holding right `A` or left `X`, left stick `X` rolls, right stick `Y` pitches, and right stick `X` yaws.
 - Right controller `B` still triggers reset.
 - Hold right grip to engage teleop. The arm only follows hand/gamepad motion while right grip is held; releasing right grip pauses arm motion so you can move your hand freely.
 - Hold right thumbstick to pause arm motion and move your hand freely; release it to recenter the hand reference at the current hand pose. This does not home the robot or reset objects.
@@ -936,36 +953,52 @@ Control-mode notes:
 After changing controller fields such as right-thumbstick recenter or right-grip teleop engage, rebuild the backend once so the ROS message definition is regenerated:
 
 ```bash
-./scripts/backend10_lifecycle.sh up_container
-./scripts/backend10_lifecycle.sh build_ws
+./scripts/backend11_lifecycle.sh up_container
+./scripts/backend11_lifecycle.sh build_ws
 ```
 
 Keyboard controller tuning:
 
 ```bash
-# Start keyboard mode from a real terminal first:
-./scripts/backend10_lifecycle.sh keyboard
+# Start right-arm keyboard mode from a real terminal first:
+./scripts/backend11_lifecycle.sh right_keyboard
 
 # Then, from another terminal:
-docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /keyboard_servo_cmd linear_speed_xyz \"[0.15,0.15,0.15]\""
-docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /keyboard_servo_cmd linear_sign_xyz \"[1.0,1.0,1.0]\""
-docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /keyboard_servo_cmd angular_speed_xyz \"[0.50,0.50,0.50]\""
-docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /keyboard_servo_cmd angular_sign_xyz \"[1.0,1.0,1.0]\""
-docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /keyboard_servo_cmd key_timeout_sec 0.25"
+docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /keyboard_single_arm_controller linear_speed_xyz \"[0.20,0.20,0.16]\""
+docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /keyboard_single_arm_controller linear_sign_xyz \"[1.0,1.0,1.0]\""
+docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /keyboard_single_arm_controller angular_speed_xyz \"[0.75,0.75,0.75]\""
+docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /keyboard_single_arm_controller angular_sign_xyz \"[1.0,1.0,1.0]\""
+docker exec "$CONTAINER" bash -lc "$ROS_ENV && ros2 param set /keyboard_single_arm_controller key_timeout_sec 0.25"
 ```
 
 Keyboard notes:
 - `W/S`: robot `+/-X`
 - `A/D`: robot `+/-Y`
 - `Q/E`: robot `+/-Z`
-- `U/J`: angular `+/-X`
-- `I/K`: angular `+/-Y`
-- `O/L`: angular `+/-Z`
+- `U/J`: roll `+/-`
+- `I/K`: pitch `+/-`
+- `O/L`: yaw `+/-`
+- `G`: toggle gripper close/open
 - `Space`: stop immediately
 - `X` or `Ctrl-C`: quit keyboard mode
-- `keyboard` publishes directly to `/servo_node/delta_twist_cmds`, so the lifecycle command stops `target_twist_to_servo_cmd` first to avoid fighting the headset path.
-- After quitting keyboard mode, run `./scripts/backend10_lifecycle.sh start_part23` to restore headset control.
+- `right_keyboard` publishes `TargetTwistStates`, so the normal right Servo bridge and coupled gripper controller stay active.
+- After quitting keyboard mode, run `./scripts/backend11_lifecycle.sh right_keyboard_off` to restore right headset control.
 - If holding a key feels pulsed, increase `key_timeout_sec` slightly, for example `0.35`.
+
+SpaceMouse optional input:
+
+```bash
+./scripts/backend11_lifecycle.sh right_spacemouse
+./scripts/backend11_lifecycle.sh right_spacemouse_off
+```
+
+- SpaceMouse cap translation drives right-arm XYZ velocity.
+- SpaceMouse cap twist/rotation drives right-arm roll/pitch/yaw angular velocity.
+- Left SpaceMouse button toggles the right gripper close/open.
+- Current defaults use `linear_sign_xyz=[-1.0,-1.0,-1.0]` to keep the corrected up/down direction while restoring the original X/Y feel, and `angular_speed_xyz=[1.4,1.4,1.4]` to enable rotation.
+- If one rotation direction is backwards, tune `angular_sign_xyz` for that axis.
+- The implementation lives in `ros_backend1.1/src/teleop_bridge/teleop_bridge/optional_inputs/spacemouse_single_arm_controller.py`.
+- Install 3Dconnexion 3DxWare first. On macOS Docker Desktop, the container may not see the HID device; native Ubuntu/Linux `/dev/hidraw*` access is the expected first working target.
 
 Scale/offset/workspace:
 
@@ -1607,7 +1640,7 @@ Common causes:
 
 The in-headset `Y` mode switch is disabled by default. Gamepad/thumbstick mode is now a backend terminal command, normally for the right arm only.
 
-- `right_gamepad_on`: right mapper ignores hand-position motion and uses stick/trigger fields.
+- `right_gamepad_on`: right mapper ignores hand-position motion and uses stick/trigger fields. Holding right `A` or left `X` becomes a rotation clutch for roll/pitch/yaw thumbstick control.
 - `right_gamepad_off`: right mapper returns to hand-pose mode.
 - Left arm headset control stays active.
 

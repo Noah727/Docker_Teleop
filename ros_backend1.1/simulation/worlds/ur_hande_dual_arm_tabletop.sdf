@@ -46,6 +46,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <visual name="table_visual">
@@ -80,6 +86,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <visual name="visual">
@@ -100,17 +112,6 @@
       <static>false</static>
       <pose>0.235 0.055 0.12 0 0 0</pose>
       <link name="body_link">
-        <inertial>
-          <mass>0.03</mass>
-          <inertia>
-            <ixx>2e-06</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>2e-06</iyy>
-            <iyz>0</iyz>
-            <izz>2e-06</izz>
-          </inertia>
-        </inertial>
         <collision name="collision">
           <geometry>
             <box>
@@ -124,6 +125,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <visual name="visual">
@@ -138,23 +145,23 @@
             <specular>0.1 0.1 0.1 1</specular>
           </material>
         </visual>
+        <inertial>
+          <mass>0.03</mass>
+          <inertia>
+            <ixx>5e-06</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>5e-06</iyy>
+            <iyz>0</iyz>
+            <izz>2e-06</izz>
+          </inertia>
+        </inertial>
       </link>
     </model>
     <model name="Sync_GreenCube">
       <static>false</static>
       <pose>0.235 -0.055 0.12 0 0 0</pose>
       <link name="body_link">
-        <inertial>
-          <mass>0.03</mass>
-          <inertia>
-            <ixx>2e-06</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>2e-06</iyy>
-            <iyz>0</iyz>
-            <izz>2e-06</izz>
-          </inertia>
-        </inertial>
         <collision name="collision">
           <geometry>
             <box>
@@ -168,6 +175,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <visual name="visual">
@@ -182,23 +195,23 @@
             <specular>0.1 0.1 0.1 1</specular>
           </material>
         </visual>
+        <inertial>
+          <mass>0.03</mass>
+          <inertia>
+            <ixx>5e-06</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>5e-06</iyy>
+            <iyz>0</iyz>
+            <izz>2e-06</izz>
+          </inertia>
+        </inertial>
       </link>
     </model>
     <model name="Sync_RedCylinder">
       <static>false</static>
       <pose>0.31 0.055 0.124 0 0 0</pose>
       <link name="body_link">
-        <inertial>
-          <mass>0.03</mass>
-          <inertia>
-            <ixx>1.5e-06</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>1.5e-06</iyy>
-            <iyz>0</iyz>
-            <izz>1e-06</izz>
-          </inertia>
-        </inertial>
         <collision name="collision">
           <geometry>
             <cylinder>
@@ -213,6 +226,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <visual name="visual">
@@ -228,23 +247,23 @@
             <specular>0.1 0.1 0.1 1</specular>
           </material>
         </visual>
+        <inertial>
+          <mass>0.03</mass>
+          <inertia>
+            <ixx>6.51e-06</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>6.51e-06</iyy>
+            <iyz>0</iyz>
+            <izz>1.5e-06</izz>
+          </inertia>
+        </inertial>
       </link>
     </model>
     <model name="Sync_GreenCylinder">
       <static>false</static>
       <pose>0.31 -0.055 0.124 0 0 0</pose>
       <link name="body_link">
-        <inertial>
-          <mass>0.03</mass>
-          <inertia>
-            <ixx>1.5e-06</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>1.5e-06</iyy>
-            <iyz>0</iyz>
-            <izz>1e-06</izz>
-          </inertia>
-        </inertial>
         <collision name="collision">
           <geometry>
             <cylinder>
@@ -259,6 +278,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <visual name="visual">
@@ -274,6 +299,17 @@
             <specular>0.1 0.1 0.1 1</specular>
           </material>
         </visual>
+        <inertial>
+          <mass>0.03</mass>
+          <inertia>
+            <ixx>6.51e-06</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>6.51e-06</iyy>
+            <iyz>0</iyz>
+            <izz>1.5e-06</izz>
+          </inertia>
+        </inertial>
       </link>
     </model>
     <model name="Sync_Plate_A">
@@ -293,6 +329,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <visual name="visual">
@@ -326,6 +368,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <visual name="visual">
@@ -360,6 +408,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_gap_1_collision">
@@ -376,6 +430,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_gap_2_collision">
@@ -392,6 +452,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_gap_3_collision">
@@ -408,6 +474,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_gap_4_collision">
@@ -424,6 +496,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_gap_end_collision">
@@ -440,6 +518,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_loose_2p0mm_top_collision">
@@ -456,6 +540,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_loose_2p0mm_bottom_collision">
@@ -472,6 +562,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_loose_1p5mm_top_collision">
@@ -488,6 +584,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_loose_1p5mm_bottom_collision">
@@ -504,6 +606,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_default_1p0mm_top_collision">
@@ -520,6 +628,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_default_1p0mm_bottom_collision">
@@ -536,6 +650,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_tight_0p5mm_top_collision">
@@ -552,6 +672,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_tight_0p5mm_bottom_collision">
@@ -568,6 +694,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_tight_0p2mm_top_collision">
@@ -584,6 +716,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_tight_0p2mm_bottom_collision">
@@ -600,6 +738,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_back_wall_collision">
@@ -616,6 +760,12 @@
                 <mu2>1</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <visual name="port_frame_gap_0_visual">
@@ -848,12 +998,12 @@
         <inertial>
           <mass>0.045</mass>
           <inertia>
-            <ixx>2e-06</ixx>
+            <ixx>9.0375e-05</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>2e-06</iyy>
+            <iyy>1.35938e-05</iyy>
             <iyz>0</iyz>
-            <izz>2e-06</izz>
+            <izz>9.19687e-05</izz>
           </inertia>
         </inertial>
         <collision name="port_frame_gap_0_collision">
@@ -870,6 +1020,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_gap_1_collision">
@@ -886,6 +1042,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_gap_2_collision">
@@ -902,6 +1064,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_gap_3_collision">
@@ -918,6 +1086,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_gap_4_collision">
@@ -934,6 +1108,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_gap_end_collision">
@@ -950,6 +1130,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_loose_2p0mm_top_collision">
@@ -966,6 +1152,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_loose_2p0mm_bottom_collision">
@@ -982,6 +1174,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_loose_1p5mm_top_collision">
@@ -998,6 +1196,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_loose_1p5mm_bottom_collision">
@@ -1014,6 +1218,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_default_1p0mm_top_collision">
@@ -1030,6 +1240,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_default_1p0mm_bottom_collision">
@@ -1046,6 +1262,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_tight_0p5mm_top_collision">
@@ -1062,6 +1284,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_tight_0p5mm_bottom_collision">
@@ -1078,6 +1306,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_tight_0p2mm_top_collision">
@@ -1094,6 +1328,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_frame_tight_0p2mm_bottom_collision">
@@ -1110,6 +1350,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <collision name="port_back_wall_collision">
@@ -1126,6 +1372,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <visual name="port_frame_gap_0_visual">
@@ -1355,17 +1607,6 @@
       <static>false</static>
       <pose>0.385 0.055 0.1045 0 0 0</pose>
       <link name="body_link">
-        <inertial>
-          <mass>0.018</mass>
-          <inertia>
-            <ixx>2e-06</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>2e-06</iyy>
-            <iyz>0</iyz>
-            <izz>2e-06</izz>
-          </inertia>
-        </inertial>
         <collision name="collision">
           <geometry>
             <box>
@@ -1379,6 +1620,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <visual name="visual">
@@ -1393,6 +1640,17 @@
             <specular>0.1 0.1 0.1 1</specular>
           </material>
         </visual>
+        <inertial>
+          <mass>0.018</mass>
+          <inertia>
+            <ixx>5.34e-07</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1.25715e-05</iyy>
+            <iyz>0</iyz>
+            <izz>1.28055e-05</izz>
+          </inertia>
+        </inertial>
         <collision name="plug_end_collision">
           <pose>-0.0455 0 0 0 0 0</pose>
           <geometry>
@@ -1407,6 +1665,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <visual name="plug_end_visual">
@@ -1428,17 +1692,6 @@
       <static>false</static>
       <pose>0.385 -0.055 0.154 0 -1.5708 0</pose>
       <link name="body_link">
-        <inertial>
-          <mass>0.018</mass>
-          <inertia>
-            <ixx>2e-06</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>2e-06</iyy>
-            <iyz>0</iyz>
-            <izz>2e-06</izz>
-          </inertia>
-        </inertial>
         <collision name="collision">
           <geometry>
             <box>
@@ -1452,6 +1705,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <visual name="visual">
@@ -1466,6 +1725,17 @@
             <specular>0.1 0.1 0.1 1</specular>
           </material>
         </visual>
+        <inertial>
+          <mass>0.018</mass>
+          <inertia>
+            <ixx>5.34e-07</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1.25715e-05</iyy>
+            <iyz>0</iyz>
+            <izz>1.28055e-05</izz>
+          </inertia>
+        </inertial>
         <collision name="plug_end_collision">
           <pose>-0.0455 0 0 0 0 0</pose>
           <geometry>
@@ -1480,6 +1750,12 @@
                 <mu2>0.9</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <max_vel>0.2</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <visual name="plug_end_visual">

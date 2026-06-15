@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     xterm \
     net-tools \
     procps \
+    libhidapi-dev \
     python3-colcon-common-extensions \
     python3-pip \
     ros-humble-xacro \
@@ -33,7 +34,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Python deps used by teleop_bridge
-RUN python3 -m pip install --no-cache-dir transforms3d
+RUN python3 -m pip install --no-cache-dir transforms3d hidapi
 
 ARG USERNAME=noah
 ARG UID=1000

@@ -31,9 +31,10 @@
     start_in_gamepad_mode: false
     allow_unity_control_mode_switch: false
     gamepad_deadband: 0.15
-    gamepad_linear_speed_xyz: [0.42, 0.42, 0.42]
+    gamepad_linear_speed_xyz: [0.30, 0.30, 0.30]
     gamepad_linear_sign_xyz: [1.0, -1.0, 1.0]
-    gamepad_angular_speed_xyz: [0.0, 2.40, 2.40]
+    gamepad_rotation_mode: stick_modifier
+    gamepad_angular_speed_xyz: [0.55, 0.70, 0.70]
     gamepad_angular_sign_xyz: [1.0, 1.0, -1.0]
     map_axes: ["z", "x", "y"]
     map_signs: [1.0, -1.0, 1.0]

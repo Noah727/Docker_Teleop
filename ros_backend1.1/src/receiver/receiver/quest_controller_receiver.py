@@ -313,9 +313,13 @@ class QuestControllerReceiver(Node):
             open_flag = self._as_optional_bool(
                 controls.get("right_open_enable", controls.get("open_enable", controls.get("open_held")))
             )
-            rotate_enable = self._as_bool(
+            right_rotate_enable = self._as_bool(
                 controls.get("right_rotate_enable", controls.get("rotate_enable", controls.get("rotate_held", False)))
             )
+            left_rotate_enable = self._as_bool(
+                controls.get("left_rotate_enable", controls.get("left_rotate_held", False))
+            )
+            rotate_enable = right_rotate_enable or left_rotate_enable
             teleop_flag = self._as_optional_bool(
                 controls.get("right_teleop_enable", controls.get("teleop_enable", controls.get("teleop_held")))
             )

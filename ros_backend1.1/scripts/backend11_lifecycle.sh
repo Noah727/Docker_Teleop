@@ -15,7 +15,7 @@ KEEP_RUNTIME_LOGS="${KEEP_RUNTIME_LOGS:-5}"
 KEEP_RECORDING_SESSIONS="${KEEP_RECORDING_SESSIONS:-5}"
 CLEAN_UNITY_BUILD_OUTPUTS="${CLEAN_UNITY_BUILD_OUTPUTS:-0}"
 
-TELEOP_PATTERN="quest_controller_receiver|hand_pose_mapper|servo_command_bridge|simple_gripper_command_bridge|coupled_gripper_controller|reset_manager|keyboard_servo_override|debug_hand_generator|servo_response_sampler|task_pose_sync_publisher|contact_haptic_publisher|rubik_task_controller|runtime_task_manager|received_pose_to_target_twist|target_twist_to_servo_cmd|target_twist_to_gripper_cmd|coupled_hande_gripper_controller|target_twist_reset_manager|keyboard_servo_cmd|dual_debug_hand_generator|cube_pose_sync_publisher|gazebo_contact_haptic_publisher|rubik2x2_mechanism_controller|task_manager|ros_tcp_endpoint.*endpoint.py|default_server_endpoint|run_tabletop_sim.sh|run_dual_arm_tabletop_sim.sh|servo_gz.launch.py|servo_dual_gz.launch.py|servo_node_main|joint_states_filter|ros_gz_bridge.* /clock@|ros_gz_bridge.*dynamic_pose/info"
+TELEOP_PATTERN="quest_controller_receiver|hand_pose_mapper|servo_command_bridge|simple_gripper_command_bridge|coupled_gripper_controller|reset_manager|keyboard_servo_override|debug_hand_generator|servo_response_sampler|task_pose_sync_publisher|contact_haptic_publisher|rubik_task_controller|runtime_task_manager|received_pose_to_target_twist|target_twist_to_servo_cmd|target_twist_to_gripper_cmd|coupled_hande_gripper_controller|target_twist_reset_manager|keyboard_servo_cmd|dual_debug_hand_generator|cube_pose_sync_publisher|gazebo_contact_haptic_publisher|rubik2x2_mechanism_controller|task_manager|keyboard_single_arm_controller|keyboard_target_override|spacemouse_single_arm_controller|spacemouse_target_override|spacemouse_tcp_target_bridge|spacemouse_host_target_bridge|ros_tcp_endpoint.*endpoint.py|default_server_endpoint|run_tabletop_sim.sh|run_dual_arm_tabletop_sim.sh|servo_gz.launch.py|servo_dual_gz.launch.py|servo_node_main|joint_states_filter|ros_gz_bridge.* /clock@|ros_gz_bridge.*dynamic_pose/info"
 
 dc() {
   (cd "${ROOT_DIR}" && docker compose "$@")
@@ -724,30 +724,64 @@ keyboard() {
 right_gamepad_on() {
   require_running
   ensure_ws_built
+  start_right_hand_pose_mapper
+  sleep 0.8
   dexec "source /opt/ros/humble/setup.bash && source /home/noah/ws_moveit/install/setup.bash && \
     ros2 param set /right_arm/hand_pose_mapper allow_unity_control_mode_switch false && \
+    ros2 param set /right_arm/hand_pose_mapper gamepad_rotation_mode stick_modifier && \
+    ros2 param set /right_arm/hand_pose_mapper gamepad_linear_speed_xyz \"[0.30,0.30,0.30]\" && \
+    ros2 param set /right_arm/hand_pose_mapper gamepad_angular_speed_xyz \"[0.55,0.70,0.70]\" && \
+    ros2 param set /right_arm/hand_pose_mapper gamepad_angular_sign_xyz \"[1.0,1.0,-1.0]\" && \
     ros2 param set /right_arm/hand_pose_mapper control_mode gamepad"
-  echo "[ok] Right arm mapper set to GAMEPAD/thumbstick mode. Left arm headset control is unchanged."
+  echo "[ok] Right arm mapper set to GAMEPAD+ROTATION mode. Left arm headset control is unchanged."
+  echo "     Normal: left stick plane, right stick Y up/down, right trigger gripper toggle."
+  echo "     Hold right A or left X: left stick X roll, right stick Y pitch, right stick X yaw."
+}
+
+right_gamepad_rot_on() {
+  echo "[info] right_gamepad_rot_on is now an alias; right_gamepad_on is the only gamepad mode."
+  right_gamepad_on
 }
 
 right_gamepad_off() {
   require_running
   ensure_ws_built
+  start_right_hand_pose_mapper
+  sleep 0.8
   dexec "source /opt/ros/humble/setup.bash && source /home/noah/ws_moveit/install/setup.bash && \
     ros2 param set /right_arm/hand_pose_mapper allow_unity_control_mode_switch false && \
+    ros2 param set /right_arm/hand_pose_mapper gamepad_rotation_mode none && \
     ros2 param set /right_arm/hand_pose_mapper control_mode hand_pose"
   echo "[ok] Right arm mapper restored to HAND_POSE mode."
 }
 
-stop_right_keyboard_override_processes() {
+stop_right_optional_input_processes() {
   dexec "self=\$\$; \
-    for p in \$(pgrep -f 'servo_command_bridge.*__ns:=/right_arm|target_twist_to_servo_cmd.*__ns:=/right_arm|keyboard_servo_override.*right_arm/servo_node/delta_twist_cmds|keyboard_servo_cmd.*right_arm/servo_node/delta_twist_cmds' || true); do \
+    for p in \$(pgrep -f 'keyboard_single_arm_controller|keyboard_target_override|spacemouse_single_arm_controller|spacemouse_target_override|spacemouse_tcp_target_bridge|spacemouse_host_target_bridge' || true); do \
       [ \"\$p\" = \"\$self\" ] && continue; kill -2 \"\$p\" 2>/dev/null || true; \
     done; \
     sleep 0.3; \
-    for p in \$(pgrep -f 'servo_command_bridge.*__ns:=/right_arm|target_twist_to_servo_cmd.*__ns:=/right_arm|keyboard_servo_override.*right_arm/servo_node/delta_twist_cmds|keyboard_servo_cmd.*right_arm/servo_node/delta_twist_cmds' || true); do \
+    for p in \$(pgrep -f 'keyboard_single_arm_controller|keyboard_target_override|spacemouse_single_arm_controller|spacemouse_target_override|spacemouse_tcp_target_bridge|spacemouse_host_target_bridge' || true); do \
       [ \"\$p\" = \"\$self\" ] && continue; kill -9 \"\$p\" 2>/dev/null || true; \
     done"
+}
+
+stop_right_hand_pose_mapper() {
+  dexec "self=\$\$; \
+    for p in \$(pgrep -f 'hand_pose_mapper.*__ns:=/right_arm|received_pose_to_target_twist.*__ns:=/right_arm' || true); do \
+      [ \"\$p\" = \"\$self\" ] && continue; kill -2 \"\$p\" 2>/dev/null || true; \
+    done; \
+    sleep 0.3; \
+    for p in \$(pgrep -f 'hand_pose_mapper.*__ns:=/right_arm|received_pose_to_target_twist.*__ns:=/right_arm' || true); do \
+      [ \"\$p\" = \"\$self\" ] && continue; kill -9 \"\$p\" 2>/dev/null || true; \
+    done"
+}
+
+start_right_hand_pose_mapper() {
+  stop_right_optional_input_processes
+  stop_right_hand_pose_mapper
+  dexec "source /opt/ros/humble/setup.bash && source /home/noah/ws_moveit/install/setup.bash && \
+    nohup /opt/ros/humble/bin/ros2 run teleop_bridge hand_pose_mapper --ros-args -r __ns:=/right_arm --params-file ${DUAL_RIGHT_TUNING_FILE} >/tmp/dual_right_mapper.log 2>&1 < /dev/null &"
 }
 
 start_right_target_to_servo_bridge() {
@@ -758,25 +792,82 @@ start_right_target_to_servo_bridge() {
 right_keyboard() {
   require_running
   ensure_ws_built
-  stop_right_keyboard_override_processes
+  stop_right_optional_input_processes
+  stop_right_hand_pose_mapper
   echo "[info] Starting right-arm keyboard override."
-  echo "[info] Right Quest controller packets still arrive, but the right target-to-Servo bridge is stopped while keyboard is active."
+  echo "[info] Right Quest controller packets still arrive, but the right hand-pose mapper is stopped while keyboard is active."
   echo "[info] Left arm headset control remains active. Press x or Ctrl-C inside the keyboard controller to quit."
   docker exec -it "${CONTAINER}" bash -lc "source /opt/ros/humble/setup.bash && \
     source /home/noah/ws_moveit/install/setup.bash && \
-    ros2 run teleop_bridge keyboard_servo_override --ros-args \
-      -p output_topic:=/right_arm/servo_node/delta_twist_cmds \
+    ros2 run teleop_bridge keyboard_single_arm_controller --ros-args \
+      -p output_topic:=/right_arm/target_twist_states \
       -p frame_id:=right_base_link \
-      -p start_servo_service:=/right_arm/servo_node/start_servo"
+      -p linear_speed_xyz:=\"[0.20,0.20,0.16]\" \
+      -p linear_sign_xyz:=\"[1.0,1.0,1.0]\" \
+      -p angular_speed_xyz:=\"[0.75,0.75,0.75]\" \
+      -p angular_sign_xyz:=\"[1.0,1.0,1.0]\""
 }
 
 right_keyboard_off() {
   require_running
   ensure_ws_built
-  stop_right_keyboard_override_processes
-  start_right_target_to_servo_bridge
-  right_gamepad_off
-  echo "[ok] Right-arm keyboard override stopped and right headset hand-pose bridge restarted."
+  start_right_hand_pose_mapper
+  echo "[ok] Right-arm keyboard override stopped and right headset hand-pose mapper restarted."
+}
+
+right_spacemouse() {
+  require_running
+  ensure_ws_built
+  stop_right_optional_input_processes
+  stop_right_hand_pose_mapper
+  echo "[info] Starting right-arm direct-HID SpaceMouse override."
+  echo "[warn] This direct mode is for native Linux or a container that can see /dev/hidraw*."
+  echo "[warn] On macOS Docker Desktop, use: ./scripts/backend11_lifecycle.sh right_spacemouse_host_bridge"
+  echo "[info] SpaceMouse publishes TargetTwistStates into the normal right Servo/gripper pipeline."
+  echo "[info] Left arm headset control remains active. Press Ctrl-C to quit."
+  docker exec -it "${CONTAINER}" bash -lc "source /opt/ros/humble/setup.bash && \
+    source /home/noah/ws_moveit/install/setup.bash && \
+    ros2 run teleop_bridge spacemouse_single_arm_controller --ros-args \
+      -p output_topic:=/right_arm/target_twist_states \
+      -p frame_id:=right_base_link \
+      -p linear_sign_xyz:=\"[-1.0,-1.0,-1.0]\" \
+      -p angular_speed_xyz:=\"[1.4,1.4,1.4]\" \
+      -p angular_sign_xyz:=\"[1.0,1.0,1.0]\""
+}
+
+right_spacemouse_off() {
+  require_running
+  ensure_ws_built
+  start_right_hand_pose_mapper
+  echo "[ok] Right-arm SpaceMouse override stopped and right headset hand-pose mapper restarted."
+}
+
+right_spacemouse_host_bridge() {
+  require_running
+  ensure_ws_built
+  stop_right_optional_input_processes
+  stop_right_hand_pose_mapper
+  local host_port
+  host_port="$(env_value SPACEMOUSE_TCP_HOST_PORT 5036)"
+  dexec "source /opt/ros/humble/setup.bash && source /home/noah/ws_moveit/install/setup.bash && \
+    nohup /opt/ros/humble/bin/ros2 run teleop_bridge spacemouse_tcp_target_bridge --ros-args \
+      -p listen_host:=0.0.0.0 \
+      -p listen_port:=5036 \
+      -p output_topic:=/right_arm/target_twist_states \
+      -p frame_id:=right_base_link \
+      >/tmp/right_spacemouse_host_bridge.log 2>&1 < /dev/null &"
+  echo "[ok] Started right-arm macOS SpaceMouse TCP target bridge (log: /tmp/right_spacemouse_host_bridge.log)."
+  echo "     Run this from the repo root on the macOS host:"
+  echo "     cd ${ROOT_DIR}/.."
+  echo "     ros_backend1.1/.venv_spacemouse_host/bin/python ros_backend1.1/src/teleop_bridge/teleop_bridge/optional_inputs/mac_spacemouse_host_bridge.py --host 127.0.0.1 --port ${host_port} --device-index 1 --linear-sign-xyz -1.0,-1.0,-1.0 --angular-speed-xyz 1.4,1.4,1.4"
+  echo "     If the SpaceMouse interface changes, run the same script with --detect-only and update --device-index."
+}
+
+right_spacemouse_host_bridge_off() {
+  require_running
+  ensure_ws_built
+  start_right_hand_pose_mapper
+  echo "[ok] Right-arm macOS SpaceMouse TCP target bridge stopped and right headset hand-pose mapper restarted."
 }
 
 debug_hand_start() {
@@ -961,6 +1052,10 @@ Usage:
   ./scripts/backend11_lifecycle.sh right_gamepad_off
   ./scripts/backend11_lifecycle.sh right_keyboard
   ./scripts/backend11_lifecycle.sh right_keyboard_off
+  ./scripts/backend11_lifecycle.sh right_spacemouse
+  ./scripts/backend11_lifecycle.sh right_spacemouse_off
+  ./scripts/backend11_lifecycle.sh right_spacemouse_host_bridge
+  ./scripts/backend11_lifecycle.sh right_spacemouse_host_bridge_off
   ./scripts/backend11_lifecycle.sh debug_hand_start
   ./scripts/backend11_lifecycle.sh debug_hand_stop
   ./scripts/backend11_lifecycle.sh debug_servo_sample
@@ -1013,9 +1108,14 @@ case "${cmd}" in
   start_dual_servo) start_dual_servo ;;
   keyboard) keyboard ;;
   right_gamepad_on) right_gamepad_on ;;
+  right_gamepad_rot_on) right_gamepad_rot_on ;;
   right_gamepad_off) right_gamepad_off ;;
   right_keyboard) right_keyboard ;;
   right_keyboard_off) right_keyboard_off ;;
+  right_spacemouse) right_spacemouse ;;
+  right_spacemouse_off) right_spacemouse_off ;;
+  right_spacemouse_host_bridge) right_spacemouse_host_bridge ;;
+  right_spacemouse_host_bridge_off) right_spacemouse_host_bridge_off ;;
   debug_hand_start) debug_hand_start ;;
   debug_hand_stop) debug_hand_stop ;;
   debug_servo_sample) debug_servo_sample ;;

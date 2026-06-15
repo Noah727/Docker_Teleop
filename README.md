@@ -225,31 +225,40 @@ adb pull "/storage/emulated/0/Android/data/com.noahli.ROSUNITY/files/GripperCame
 
 Do not commit recordings, APKs, or demo videos to Git. Upload final clips to GitHub Releases, YouTube, Google Drive, or lab storage, then link the hosted URLs in the demo section.
 
-## Demo Videos
+## Demo Media
 
 This section should show Unity app features, not backend bringup. Backend startup is already covered in Quick Start.
 
 Recommended format:
 
-- Keep each feature clip around 5-8 seconds.
+- Use the current v2 topic clips as the README upload set.
 - Use muted MP4/H.264 for hosted clips.
 - Use GIF only as a tiny fallback preview if needed.
 - Keep raw Quest recordings outside Git.
-- Replace local draft links with hosted URLs before publishing the repo broadly.
+- Public demo links are hosted as unlisted YouTube videos; raw recordings remain outside Git.
 
-| Feature | Suggested Clip | What To Show | Link |
-| --- | --- | --- | --- |
-| MR passthrough workspace | `demo_01_mr_workspace.mp4` | Quest passthrough with the simulated workspace, robots, and task objects placed in the room. | TODO |
-| Workspace drag/rotate | `demo_02_workspace_drag.mp4` | Use the controller ray to move/rotate the whole workspace while robots and task objects stay together. | TODO |
-| Central control panel | `demo_03_control_panel.mp4` | Page switching, reset buttons, status display, camera page, and draggable panel behavior. | TODO |
-| Dual-arm teleoperation | `demo_04_dual_arm_teleop.mp4` | Left and right controllers independently drive the two robot arms. | TODO |
-| Coupled gripper grasp | `demo_05_coupled_gripper.mp4` | Stable two-finger Hand-E closing/opening and object grasp behavior. | TODO |
-| Pick/place task | `demo_06_pick_place.mp4` | Pick up a cube/cylinder and place it on a target plate. | TODO |
-| Cable insertion task objects | `demo_07_cable_insertion.mp4` | Show the cable/port task objects in the shared workspace. | TODO |
-| Attachment mode | `demo_08_attachment_mode.mp4` | End-effector alignment with the controller and attachment offset behavior. | TODO |
-| Haptic/contact feedback | `demo_09_haptics.mp4` | Contact or gripper pinch feedback behavior, if visible through the control panel/log cue. | TODO |
-| Camera preview/recording | `demo_10_recording.mp4` | Select wrist/floating camera preview and start/stop recording from the control panel. | TODO |
-| Full walkthrough | `full_demo.mp4` | Optional longer run showing the complete system in use. | TODO |
+<img src="docs/assets/demo/demo_contact_sheet.png" alt="Labeled v2 demo contact sheet" width="900">
+
+[Full demo video](https://youtu.be/xJCyWlMuZTQ)
+
+| Feature | Preview | V2 Clip | What To Show | Hosted Video |
+| --- | --- | --- | --- | --- |
+| Project intro / MR workspace | <img src="docs/assets/demo/v2_01_intro.jpg" alt="Project intro and MR workspace overview" width="180"> | `01_intro_Project_intro.mp4` | Quest passthrough with the simulated dual-arm workspace, task objects, and control panel placed in the room. | [Watch](https://youtu.be/5J4qUSEHJ8Q) |
+| Central control panel | <img src="docs/assets/demo/v2_02_control_panel.jpg" alt="Central control panel" width="180"> | `02_control_panel_Central_control_panel_buttons.mp4` | Page switching, reset buttons, swap hands, camera controls, task controls, and debug controls. | [Watch](https://youtu.be/Pfm06HfjQYs) |
+| Workspace drag/reset/rotation | <img src="docs/assets/demo/v2_03_workspace_drag.jpg" alt="Workspace drag, reset, and rotation" width="180"> | `03_workspace_drag_Workspace_reset_drag_and_rotation.mp4` | Move and rotate the shared workspace while robot and task visuals stay grouped. | [Watch](https://youtu.be/7B3oCiTcR_Q) |
+| Floating camera placement | <img src="docs/assets/demo/v2_04_floating_camera.jpg" alt="Floating camera placement and rotation" width="180"> | `04_floating_camera_Floating_camera_placement_and_rotation.mp4` | Place the floating camera and adjust its rotation handles in MR. | [Watch](https://youtu.be/Oz-em5T_6e8) |
+| Wrist camera recording | <img src="docs/assets/demo/v2_05_wrist_camera.jpg" alt="Wrist camera recording and capture" width="180"> | `05_wrist_camera_Wrist_camera_recording_and_capture.mp4` | Select wrist/floating camera views and start/stop recording or capture from the panel. | [Watch](https://youtu.be/D6pof3wCspg) |
+| Attachment mode | <img src="docs/assets/demo/v2_06_attachment.jpg" alt="Attachment mode and offset calibration" width="180"> | `06_attachment_Attachment_mode_and_offset_calibration.mp4` | Align the controller and gripper using attachment mode and offset calibration. | [Watch](https://youtu.be/YCunphtiU4U) |
+| Haptic feedback | <img src="docs/assets/demo/v2_07_haptics.jpg" alt="Haptic feedback modes" width="180"> | `07_haptics_Haptic_feedback_modes.mp4` | Show haptic/contact feedback controls and feedback-mode behavior. | [Watch](https://youtu.be/SlRmVWTV-x4) |
+| Task/debug pages | <img src="docs/assets/demo/v2_08_task_page.jpg" alt="Task and debug pages" width="180"> | `08_task_page_Task_and_debug_pages.mp4` | Show task selection, status, and debug controls on the central panel. | [Watch](https://youtu.be/uySzKrMUrYk) |
+| Pick/place task | <img src="docs/assets/demo/v2_09_pick_place.jpg" alt="Pick and place task" width="180"> | `09_pick_place_Pick_and_place_task.mp4` | Pick and place task objects on target plates. | [Watch](https://youtu.be/3RRWzHUXET4) |
+| Dual-arm handoff | <img src="docs/assets/demo/v2_10_dual_handoff.jpg" alt="Dual-arm handoff" width="180"> | `10_dual_handoff_Dual_arm_handoff.mp4` | Use both arms together for a coordinated handoff. | [Watch](https://youtu.be/W380J-VKKL8) |
+| Cable task layout | <img src="docs/assets/demo/v2_11_cable_intro.jpg" alt="Cable insertion task layout" width="180"> | `11_cable_intro_Cable_insertion_task_intro.mp4` | Introduce the cable rods, receiver boxes, and multiple port clearances. | [Watch](https://youtu.be/hWEKjaqdx6k) |
+| Loose port insertion | <img src="docs/assets/demo/v2_13_loose_ports.jpg" alt="Loose port insertion" width="180"> | `13_loose_ports_Loose_port_insertions.mp4` | Demonstrate easier cable insertion ports. | [Watch](https://youtu.be/Nkdtu-we2gI) |
+| Tighter port insertion | <img src="docs/assets/demo/v2_14_tighter_ports.jpg" alt="Tighter port insertion" width="180"> | `14_tighter_ports_Tighter_port_insertion_behavior.mp4` | Show insertion behavior as port tolerance becomes tighter. | [Watch](https://youtu.be/m0dovinv2Hs) |
+| Fixed receiver box | <img src="docs/assets/demo/v2_15_fixed_box.jpg" alt="Fixed receiver box insertion" width="180"> | `15_fixed_box_Fixed_insertion_box.mp4` | Demonstrate the fixed receiver-box insertion setup. | [Watch](https://youtu.be/mO-z67oC6no) |
+| Tightest ports / conclusion | <img src="docs/assets/demo/v2_16_tightest_ports.jpg" alt="Tightest ports and conclusion" width="180"> | `16_tightest_ports_Tightest_ports_and_conclusion.mp4` | Show the most difficult port condition and closing demo frame. | [Watch](https://youtu.be/RCicppveXlI) |
+| Control panel drag/resize | <img src="docs/assets/demo/v2_17_control_panel_drag_resize.jpg" alt="Control panel drag and resize" width="180"> | `17_control_panel_drag_resize_Control_panel_drag_and_resize.mp4` | Drag the central panel and resize it with the corner handles. | [Watch](https://youtu.be/g5qecVFjjOM) |
 
 ## Current Limitations
 

@@ -201,6 +201,11 @@ def add_friction(collision: ET.Element, mu: float, mu2: float):
     ode = sub(friction, "ode")
     sub(ode, "mu", fmt_float(mu))
     sub(ode, "mu2", fmt_float(mu2))
+    contact = sub(surface, "contact")
+    contact_ode = sub(contact, "ode")
+    # Keep small task-object contacts from exploding into extreme velocities.
+    sub(contact_ode, "max_vel", "0.2")
+    sub(contact_ode, "min_depth", "0.001")
 
 
 def add_box_collision(link: ET.Element, name: str, size_xyz, pose_xyz, mu: float, mu2: float):
@@ -628,16 +633,54 @@ def add_table(world: ET.Element, table: dict[str, Any]):
     add_material(visual, color)
 
 
-def add_inertial(link: ET.Element, object_type: str, mass: float):
+def add_inertial_values(link: ET.Element, mass: float, values: dict[str, float]):
     inertial = sub(link, "inertial")
-    sub(inertial, "mass", fmt_float(mass))
+    sub(inertial, "mass", fmt_float(max(0.0001, mass)))
     inertia = sub(inertial, "inertia")
-    if object_type == "cylinder":
-        values = {"ixx": 0.0000015, "ixy": 0, "ixz": 0, "iyy": 0.0000015, "iyz": 0, "izz": 0.0000010}
-    else:
-        values = {"ixx": 0.000002, "ixy": 0, "ixz": 0, "iyy": 0.000002, "iyz": 0, "izz": 0.000002}
     for key, value in values.items():
-        sub(inertia, key, fmt_float(value))
+        sub(inertia, key, fmt_float(max(1e-8, value)))
+
+
+def add_box_inertial(link: ET.Element, mass: float, size_xyz):
+    sx, sy, sz = (max(0.001, abs(float(v))) for v in size_xyz)
+    m = max(0.0001, float(mass))
+    add_inertial_values(
+        link,
+        m,
+        {
+            "ixx": m * (sy * sy + sz * sz) / 12.0,
+            "ixy": 0.0,
+            "ixz": 0.0,
+            "iyy": m * (sx * sx + sz * sz) / 12.0,
+            "iyz": 0.0,
+            "izz": m * (sx * sx + sy * sy) / 12.0,
+        },
+    )
+
+
+def add_cylinder_inertial(link: ET.Element, mass: float, radius: float, length: float):
+    r = max(0.001, abs(float(radius)))
+    h = max(0.001, abs(float(length)))
+    m = max(0.0001, float(mass))
+    add_inertial_values(
+        link,
+        m,
+        {
+            "ixx": m * (3.0 * r * r + h * h) / 12.0,
+            "ixy": 0.0,
+            "ixz": 0.0,
+            "iyy": m * (3.0 * r * r + h * h) / 12.0,
+            "iyz": 0.0,
+            "izz": 0.5 * m * r * r,
+        },
+    )
+
+
+def add_inertial(link: ET.Element, object_type: str, mass: float):
+    if object_type == "cylinder":
+        add_cylinder_inertial(link, mass, 0.01, 0.048)
+    else:
+        add_box_inertial(link, mass, (0.025, 0.025, 0.025))
 
 
 def add_task_object(world: ET.Element, obj: dict[str, Any], task_group: dict[str, Any]):
@@ -661,8 +704,7 @@ def add_task_object(world: ET.Element, obj: dict[str, Any], task_group: dict[str
     sub(model, "static", "true" if is_static else "false")
     sub(model, "pose", fmt_values((*gazebo_pose_xyz, *gazebo_pose_rpy)))
     link = sub(model, "link", attrib={"name": link_name})
-    if not is_static:
-        add_inertial(link, object_type, float(obj.get("mass_kg", 0.03)))
+    mass = float(obj.get("mass_kg", 0.03))
 
     collision = sub(link, "collision", attrib={"name": "collision"})
     visual = sub(link, "visual", attrib={"name": "visual"})
@@ -670,11 +712,15 @@ def add_task_object(world: ET.Element, obj: dict[str, Any], task_group: dict[str
     if object_type == "cylinder":
         radius = float(obj.get("radius", 0.01))
         height = float(obj.get("height", 0.048))
+        if not is_static:
+            add_cylinder_inertial(link, mass, radius, height)
         add_cylinder_geometry(collision, radius, height)
         add_cylinder_geometry(visual, radius, height)
         add_material(visual, color)
     elif object_type in {"rubik", "rubik_2x2", "rubiks_cube"}:
         size = unity_size_to_gazebo(vec3(obj.get("size_xyz"), (0.04, 0.04, 0.04)))
+        if not is_static:
+            add_box_inertial(link, mass, size)
         add_box_geometry(collision, size)
         add_box_geometry(visual, size)
         add_material(visual, color)
@@ -686,6 +732,8 @@ def add_task_object(world: ET.Element, obj: dict[str, Any], task_group: dict[str
         )
     elif object_type == "port_box":
         size = unity_size_to_gazebo(vec3(obj.get("size_xyz"), (0.04, 0.04, 0.04)))
+        if not is_static:
+            add_box_inertial(link, mass, size)
         port_defs = gazebo_port_defs_from_unity(obj)
         link.remove(collision)
         link.remove(visual)
@@ -704,13 +752,20 @@ def add_task_object(world: ET.Element, obj: dict[str, Any], task_group: dict[str
             add_wood_grain_visuals(link, "port_box_wood_side", size, rgba=grain_color, face_axis="y", stripe_count=5)
     elif object_type == "cable_rod":
         size = unity_size_to_gazebo(vec3(obj.get("size_xyz"), (0.009, 0.009, 0.075)))
+        plug_size = unity_size_to_gazebo(vec3(obj.get("plug_size_xyz"), (0.016, 0.010, 0.016)))
+        composite_size = (
+            size[0] + plug_size[0],
+            max(size[1], plug_size[1]),
+            max(size[2], plug_size[2]),
+        )
+        if not is_static:
+            add_box_inertial(link, mass, composite_size)
         add_box_geometry(collision, size)
         add_box_geometry(visual, size)
         add_material(visual, color)
         grain_color = vec4(obj.get("wood_grain_color_rgba"), (0.33, 0.18, 0.08, 1.0))
         if wood_enabled(obj):
             add_wood_grain_visuals(link, "cable_rod_wood_top", size, rgba=grain_color, face_axis="z", stripe_count=4)
-        plug_size = unity_size_to_gazebo(vec3(obj.get("plug_size_xyz"), (0.016, 0.010, 0.016)))
         plug_color = vec4(obj.get("plug_color_rgba"), (0.12, 0.12, 0.13, 1.0))
         plug_center = (-(size[0] * 0.5 + plug_size[0] * 0.5), 0.0, 0.0)
         add_box_collision(link, "plug_end_collision", plug_size, plug_center, 0.9, 0.9)
@@ -725,6 +780,8 @@ def add_task_object(world: ET.Element, obj: dict[str, Any], task_group: dict[str
             add_wood_grain_visuals(link, "cable_plug_wood_top", plug_size, center_xyz=plug_center, rgba=grain_color, face_axis="z", stripe_count=3)
     else:
         size = unity_size_to_gazebo(vec3(obj.get("size_xyz"), (0.02, 0.04, 0.02)))
+        if not is_static:
+            add_box_inertial(link, mass, size)
         add_box_geometry(collision, size)
         add_box_geometry(visual, size)
         add_material(visual, color)

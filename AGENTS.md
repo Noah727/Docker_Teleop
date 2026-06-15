@@ -80,7 +80,7 @@ Current accepted material in `complete_material/`:
 - Mac runtime performance comparison: plain headless backend, noVNC-only headless backend, and noVNC + headed Gazebo.
 - Task profile/SDF/Unity JSON consistency and saved-scene smoke checks.
 - Mac portability snapshot.
-- Demo source video, v2 topic-level clips, screenshots, contact sheet, checksums, and draft captions.
+- Demo source video, v2 topic-level clips, screenshots, contact sheet, checksums, and draft captions. Treat this as GitHub README/demo source material, not quantitative thesis trial evidence. It can supply optional thesis figures only.
 - Headset backend latency traces, with caveat: ROS/container arrival-time latency after receiver publication, not optical end-to-end display latency.
 - RedCube MR sync/visual alignment, with caveat: RedCube object sync is usable; old EE absolute alignment rows are not usable because they compare mixed reference points.
 - Wrist-camera recording file verification, with caveat: confirms recording and estimates capture rate, but does not measure Unity FPS/sync latency.
@@ -88,12 +88,16 @@ Current accepted material in `complete_material/`:
 
 Still-needed thesis material is tracked in `TODO.md`, not by memory:
 
-- Human-reviewed captions and final 5-8 second README teaser clips.
-- Cable insertion trial rows.
-- Pick/place trial rows and optional dual-arm handoff rows.
-- Valid recording-on FPS/sync-latency trace after deploying an app that publishes `/unity_eval/recording_state` and `/unity_eval/fps_sample`.
-- Linux/Ubuntu performance and portability data.
-- Optional Windows/WSL portability data.
+- Time-boxed cable insertion throughput rows.
+- Time-boxed pick/place throughput rows.
+- Time-boxed dual-arm simultaneous pick/place and air-handoff rows.
+- Optional new EE visual alignment trace if quantitative EE visual alignment is needed.
+
+Separate GitHub demo/README work is also tracked in `TODO.md`:
+
+- Human-review captions.
+- Select/export 5-8 second public-facing teaser clips.
+- Upload hosted clips and replace root `README.md` demo table links.
 - Optional new EE visual alignment trace if quantitative EE visual alignment is needed.
 
 Do not present these as passing thesis results unless fixed and rerun:

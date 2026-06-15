@@ -150,10 +150,14 @@ simulation/launch/run_dual_arm_tabletop_sim.sh
 | `start_part23` | Starts the legacy single-arm teleop mapping pipeline. |
 | `start_part4` | Starts legacy single-arm Unity sync and ROS-TCP endpoint. |
 | `keyboard` | Legacy single-arm keyboard controller. Prefer `right_keyboard` for the current dual-arm app. |
-| `right_gamepad_on` | Right-arm-only thumbstick/gamepad mode. Left arm headset control stays active. |
+| `right_gamepad_on` | Right-arm-only thumbstick/gamepad mode with an `A`-held rotation layer. Left arm headset control stays active. |
 | `right_gamepad_off` | Restores right-arm hand-pose mode. |
-| `right_keyboard` | Right-arm-only terminal keyboard override. Stops only the right target-to-Servo bridge while active. |
-| `right_keyboard_off` | Stops right keyboard override and restarts the right headset hand-pose bridge. |
+| `right_keyboard` | Right-arm-only terminal keyboard override. Stops only the right hand-pose mapper while active. |
+| `right_keyboard_off` | Stops right keyboard override and restarts the right headset hand-pose mapper. |
+| `right_spacemouse` | Right-arm-only direct-HID SpaceMouse override for Linux/container-visible HID. |
+| `right_spacemouse_off` | Stops direct-HID SpaceMouse override and restarts the right headset hand-pose mapper. |
+| `right_spacemouse_host_bridge` | Right-arm-only macOS host SpaceMouse TCP bridge receiver. Stops only the right hand-pose mapper while active. |
+| `right_spacemouse_host_bridge_off` | Stops macOS host bridge receiver and restarts the right headset hand-pose mapper. |
 | `status` | Prints Docker status, live backend processes, TCP listeners, and recent log tails. |
 
 ### Optional Right-Arm Controllers
@@ -171,6 +175,10 @@ cd ros_backend1.1
 ./scripts/backend11_lifecycle.sh right_gamepad_off
 ```
 
+Mapping: left thumbstick moves in the workspace plane, right thumbstick Y moves up/down, and right trigger toggles the right gripper open/close.
+
+Rotation mapping: `right_gamepad_on` uses right `A` or left `X` as a rotation clutch. While holding either button, left thumbstick X rolls, right thumbstick Y pitches, and right thumbstick X yaws. Current speeds are `gamepad_linear_speed_xyz=[0.30,0.30,0.30]` and `gamepad_angular_speed_xyz=[0.55,0.70,0.70]`.
+
 Right-arm keyboard override:
 
 ```bash
@@ -179,7 +187,38 @@ cd ros_backend1.1
 ./scripts/backend11_lifecycle.sh right_keyboard_off
 ```
 
-SpaceMouse support is a placeholder for now and has no lifecycle command yet.
+Mapping: `WASD` moves in the workspace plane, `Q/E` moves up/down, `U/J`, `I/K`, and `O/L` control roll, pitch, and yaw, and `G` toggles the right gripper open/close.
+
+Right-arm SpaceMouse override on macOS Docker Desktop:
+
+```bash
+cd ros_backend1.1
+./scripts/backend11_lifecycle.sh right_spacemouse_host_bridge
+cd /Users/noahli/ros_unity_project
+ros_backend1.1/.venv_spacemouse_host/bin/python \
+  ros_backend1.1/src/teleop_bridge/teleop_bridge/optional_inputs/mac_spacemouse_host_bridge.py \
+  --host 127.0.0.1 \
+  --port 5036 \
+  --device-index 1 \
+  --linear-sign-xyz -1.0,-1.0,-1.0 \
+  --angular-speed-xyz 1.4,1.4,1.4
+cd ros_backend1.1
+./scripts/backend11_lifecycle.sh right_spacemouse_host_bridge_off
+```
+
+Use `--detect-only` if the SpaceMouse interface index changes. The direct `right_spacemouse`/`right_spacemouse_off` lifecycle commands are still available for native Linux setups where the SpaceMouse HID device is visible inside the container.
+
+Mapping: SpaceMouse cap translation controls right-arm translation, cap twist/rotation controls right-arm roll/pitch/yaw, and the left SpaceMouse button toggles the right gripper open/close. The current default uses `linear_sign_xyz=[-1.0,-1.0,-1.0]`, which keeps the corrected Z direction and restores the original X/Y feel; if a rotation axis feels reversed, flip that entry in `angular_sign_xyz`.
+
+Install 3Dconnexion 3DxWare first from <https://3dconnexion.com/us/drivers/>. The official SDK is available through the 3Dconnexion Software Developer Program (<https://3dconnexion.com/us/software-developer-program/>), but this backend node uses the HID device path directly.
+
+Optional input scripts live in:
+
+```text
+ros_backend1.1/src/teleop_bridge/teleop_bridge/optional_inputs/
+```
+
+Quest gamepad/thumbstick mode is implemented inside `teleop_bridge/mapping/hand_pose_mapper.py` because it uses fields already sent by the Quest app.
 
 ### Maintenance
 
