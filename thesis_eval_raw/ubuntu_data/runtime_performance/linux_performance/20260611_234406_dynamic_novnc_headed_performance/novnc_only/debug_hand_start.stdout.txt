@@ -1,0 +1,5 @@
+[ok] Workspace already built (teleop_bridge + servo_test_config found).
+[ok] Started dual debug hand generator (log: /tmp/debug_hand_generator.log).
+     arm=both, pattern=line_y, duration=62.0, period=8.0, amp=(0.0,0.55,0.0), workspace_yaw=0.0
+     quest_controller_receiver was stopped to avoid competing headset/stale messages.
+     Run ./scripts/backend11_lifecycle.sh start_receiver to restore headset input.
