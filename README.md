@@ -95,7 +95,7 @@ flowchart LR
     └── src/
 ```
 
-Local recordings, APKs, generated Unity folders, ROS build folders, and private developer notes are intentionally ignored by Git.
+Local recordings, APKs, generated Unity folders, ROS build folders, raw thesis/evaluation material, and private developer notes are not part of the public repository. Keep those artifacts in local-only folders or external storage.
 
 ## Quick Start
 
@@ -175,7 +175,7 @@ In wired mode, the Unity app should use:
 | ROS Settings IP Address | `127.0.0.1` |
 | ROS Settings Port | `10001` |
 
-Build and run the Android/Quest profile from Unity only if you are rebuilding instead of installing a prebuilt APK.
+Build and run the Android/Quest profile from Unity only when rebuilding instead of installing a prebuilt APK.
 
 ## Control Summary
 
@@ -202,7 +202,7 @@ The current app is built around independent dual-arm teleoperation. Each physica
 - Workspace drag/rotation is available when teleop grip is not engaged.
 - Attachment mode attempts to make the robot end effector follow the controller pose more directly in the MR workspace frame.
 - The coupled Hand-E gripper controller is the default backend gripper mode for dual-arm bringup.
-- The old in-headset hand-pose/thumbstick mode switch is disabled by default. Optional keyboard/thumbstick modes are terminal-driven right-arm overrides; see [docs/Getting_Started.md](docs/Getting_Started.md).
+- The legacy in-headset hand-pose/thumbstick mode switch is disabled by default. Optional keyboard/thumbstick modes are terminal-driven right-arm overrides; see [docs/Getting_Started.md](docs/Getting_Started.md).
 
 ### Recording
 
@@ -229,21 +229,13 @@ Do not commit recordings, APKs, or demo videos to Git. Upload final clips to Git
 
 ## Demo Media
 
-This section should show Unity app features, not backend bringup. Backend startup is already covered in Quick Start.
-
-Recommended format:
-
-- Use the current v2 topic clips as the README upload set.
-- Use muted MP4/H.264 for hosted clips.
-- Use GIF only as a tiny fallback preview if needed.
-- Keep raw Quest recordings outside Git.
-- Public demo links are hosted as unlisted YouTube videos; raw recordings remain outside Git.
+The hosted demo media documents the current Unity/Quest user-facing workflow. Raw Quest recordings and source video clips are stored outside the repository; the repository keeps only lightweight preview images and links to hosted videos.
 
 <img src="docs/assets/demo/demo_contact_sheet.png" alt="Labeled v2 demo contact sheet" width="900">
 
 [Full demo video](https://youtu.be/xJCyWlMuZTQ)
 
-| Feature | Preview | V2 Clip | What To Show | Hosted Video |
+| Feature | Preview | Source Clip | Demonstrated Capability | Hosted Video |
 | --- | --- | --- | --- | --- |
 | Project intro / MR workspace | <img src="docs/assets/demo/v2_01_intro.jpg" alt="Project intro and MR workspace overview" width="180"> | `01_intro_Project_intro.mp4` | Quest passthrough with the simulated dual-arm workspace, task objects, and control panel placed in the room. | [Watch](https://youtu.be/5J4qUSEHJ8Q) |
 | Central control panel | <img src="docs/assets/demo/v2_02_control_panel.jpg" alt="Central control panel" width="180"> | `02_control_panel_Central_control_panel_buttons.mp4` | Page switching, reset buttons, swap hands, camera controls, task controls, and debug controls. | [Watch](https://youtu.be/Pfm06HfjQYs) |
@@ -262,13 +254,17 @@ Recommended format:
 | Tightest ports / conclusion | <img src="docs/assets/demo/v2_16_tightest_ports.jpg" alt="Tightest ports and conclusion" width="180"> | `16_tightest_ports_Tightest_ports_and_conclusion.mp4` | Show the most difficult port condition and closing demo frame. | [Watch](https://youtu.be/RCicppveXlI) |
 | Control panel drag/resize | <img src="docs/assets/demo/v2_17_control_panel_drag_resize.jpg" alt="Control panel drag and resize" width="180"> | `17_control_panel_drag_resize_Control_panel_drag_and_resize.mp4` | Drag the central panel and resize it with the corner handles. | [Watch](https://youtu.be/g5qecVFjjOM) |
 
-## Current Limitations
+## Operational Boundaries
 
-- The current setup is tuned for dual UR5e + Robotiq Hand-E in simulation; switching robot arms still requires coordinated backend profiles, MoveIt configuration, controller topics, Unity visualization, and mapping parameters.
-- Gazebo is the physics authority; Unity should not be used as a competing physics simulation for synchronized objects.
-- macOS Docker/Gazebo rendering can be CPU-heavy and may not use GPU acceleration like a native Linux workstation.
-- Wired Quest mode is the recommended path, but it requires USB connection, ADB authorization, and working `adb reverse` tunnels.
-- Runtime task switching is still evolving. The profile system exists, but polished end-user task switching should eventually be handled by a robust ROS task manager and Unity task-selection UI.
-- Haptic feedback should stay contact-driven. EE-error vibration can be useful for debugging but can be misleading during normal fast motion.
-- Demo clips, recordings, datasets, APKs, Unity generated folders, and ROS build artifacts are intentionally not stored in Git.
-- License is not finalized yet. MIT is a good candidate if the lab/advisor wants broad reuse, but this should be confirmed before adding a `LICENSE` file because license choice affects legal reuse rights.
+This repository is a simulation-first research platform rather than a validated physical robot deployment.
+
+| Area | Current Boundary |
+| --- | --- |
+| Robot platform | The maintained configuration targets dual UR5e arms with Robotiq Hand-E grippers. Supporting another robot requires coordinated changes to ROS descriptions, MoveIt configuration, controller topics, Unity visualization, and mapping parameters. |
+| Physics authority | Gazebo is the authoritative source for robot and object physics. Unity objects are visual/control representations and should not run a competing physics simulation for synchronized task objects. |
+| Host performance | Gazebo and MoveIt Servo are CPU-sensitive in the current Docker workflow. Headless Gazebo is the default because macOS Docker rendering can reduce real-time factor compared with a native Linux workstation. |
+| Quest connection | Wired Quest mode through USB and `adb reverse` is the recommended operational path. It depends on ADB authorization and active reverse tunnels for both controller TCP and ROS-TCP traffic. |
+| Task switching | Profile-based task generation is supported. Live runtime task switching exists as an experimental path and should be validated per task before use in formal studies. |
+| Haptics | Haptic feedback is intended to be contact/proximity-driven. End-effector error signals are useful for diagnostics but can be misleading as user-facing feedback during fast or constrained motion. |
+| Repository contents | Source code, profiles, lightweight documentation assets, and hosted-demo links are tracked. Raw recordings, APKs, evaluation archives, generated Unity folders, ROS build outputs, and private notes remain outside the public repository. |
+| License | A project license has not been finalized. Select and add a root `LICENSE` before distributing the project for reuse outside the lab. |

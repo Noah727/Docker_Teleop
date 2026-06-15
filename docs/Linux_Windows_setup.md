@@ -1,6 +1,6 @@
 # Linux / Windows Setup
 
-This guide records the Ubuntu setup path used on Noah's Linux workstation and the Windows path through WSL2 Ubuntu. The ROS/Gazebo backend is Linux-first; on Windows, use WSL2 as the backend environment and then run the same Linux commands from the WSL shell.
+This document defines the supported native Linux and Windows/WSL2 setup paths for the ROS/Gazebo backend. The backend is Linux-first; Windows hosts should run the backend from a WSL2 Ubuntu environment and use the same backend commands from the WSL shell.
 
 Windows is not a fully native backend target in this project. Treat Windows as:
 
@@ -8,9 +8,9 @@ Windows is not a fully native backend target in this project. Treat Windows as:
 - WSL2 Ubuntu environment for Git, Docker, ROS/Gazebo backend commands, and scripted backend tests.
 - Docker Desktop or Docker Engine backing the WSL2 Docker workflow.
 
-## Confirmed Linux Host
+## Confirmed Native Linux Host
 
-The native Linux setup was exercised on:
+The native Linux setup has been exercised on:
 
 ```text
 OS: Ubuntu 24.04.4 LTS
@@ -32,7 +32,7 @@ Backend status from the first Ubuntu setup pass:
 - Only setuptools deprecation warnings were seen during the successful workspace build.
 - Quest USB / `adb reverse` was not tested yet on this machine.
 
-## Windows / WSL2 Model
+## Windows / WSL2 Operating Model
 
 For Windows, install WSL2 with Ubuntu and run the Linux backend from inside WSL. This is the recommended Windows backend path because the repository's backend scripts, Docker container, ROS tooling, and Gazebo runtime are Linux-oriented.
 
@@ -45,7 +45,7 @@ Minimum Windows-side setup:
 5. Use the Windows Unity Editor for Quest builds if needed.
 6. Use Windows `adb` for Quest install/reverse unless USB forwarding into WSL has been configured and tested.
 
-Windows can use the Linux commands below once you are inside the WSL Ubuntu shell. Replace paths such as `/home/noah/ros_unity_project` with the WSL home path you used.
+Windows can use the Linux commands below from inside the WSL Ubuntu shell. Replace paths such as `/home/noah/ros_unity_project` with the selected WSL home path.
 
 Important caveat for Quest wired mode:
 
@@ -181,7 +181,7 @@ When GitHub asks to trust the host key, type the full word:
 yes
 ```
 
-Do not answer only `y`; OpenSSH will keep asking until it receives `yes`, `no`, or the fingerprint.
+Do not answer only `y`; OpenSSH expects `yes`, `no`, or the fingerprint.
 
 If SSH fails with:
 
@@ -400,7 +400,7 @@ The performance wrapper compares:
 - noVNC enabled with headless Gazebo.
 - noVNC enabled with headed Gazebo.
 
-Outputs default into:
+Outputs default into local-only evaluation folders:
 
 ```text
 thesis_eval_raw/MM_DD/runtime_performance/
@@ -463,7 +463,7 @@ adb kill-server
 adb start-server
 adb devices
 ```
-- On Windows/WSL, first decide whether ADB is running on Windows or inside WSL. Do not run two competing ADB servers unless you are intentionally debugging USB forwarding.
+- On Windows/WSL, first decide whether ADB is running on Windows or inside WSL. Avoid running two competing ADB servers except during intentional USB-forwarding diagnostics.
 
 Sandboxed agent sessions:
 

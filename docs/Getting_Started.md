@@ -1,6 +1,6 @@
 # Getting Started
 
-This is the day-to-day run guide for the current dual-arm MR teleoperation system. For full machine replication from scratch, start with `docs/System_Setup.md` first.
+This document is the operational run guide for the current dual-arm mixed-reality teleoperation system. It assumes the repository, Unity project, Docker backend, and Quest development environment have already been set up. For first-time machine setup, use [System_Setup.md](System_Setup.md).
 
 ## Current Defaults
 
@@ -18,7 +18,7 @@ This is the day-to-day run guide for the current dual-arm MR teleoperation syste
 
 ## Fast Start
 
-Use this when the backend has already been built and the Quest app is installed or ready to install:
+Use this sequence when the backend has already been built and the Quest app is installed or ready to install:
 
 ```bash
 cd ros_backend1.1
@@ -32,7 +32,7 @@ cp .env.example .env 2>/dev/null || true
 
 ## Install Prebuilt Quest App
 
-Use this when a prebuilt APK exists locally under `UnityApp/App_Build/`. APK files are ignored by Git, so another computer may need to build the app in Unity first.
+Prebuilt APKs are local artifacts under `UnityApp/App_Build/` when available. APK files are not stored in the public repository, so a fresh machine may need to build the app in Unity before installation.
 
 1. Connect the Quest 3 by USB.
 2. Accept the USB debugging prompt in the headset.
@@ -122,7 +122,7 @@ Each physical controller drives one robot arm by default.
 - Recording controls: start/stop wrist-camera recording.
 - Haptics page: haptic output and gain controls.
 
-The old in-headset control-mode switch is disabled by default. Optional keyboard/thumbstick/gamepad control modes are activated from terminal commands instead.
+The legacy in-headset control-mode switch is disabled by default. Optional keyboard/thumbstick/gamepad control modes are activated from terminal commands instead.
 
 ## Optional Controllers
 
@@ -130,7 +130,7 @@ Optional controllers are right-arm overrides by default. The left Quest controll
 
 ### Thumbstick / Gamepad Mode
 
-This keeps the Quest app running, but tells only the right-arm backend mapper to ignore right-hand pose following and use the gamepad/thumbstick fields instead.
+This mode keeps the Quest app running while the right-arm backend mapper ignores right-hand pose following and uses the gamepad/thumbstick fields instead.
 
 Enable right-arm thumbstick/gamepad mode:
 
@@ -284,7 +284,7 @@ ros_backend1.1/src/teleop_bridge/teleop_bridge/optional_inputs/
 
 Current macOS test result: the synthetic TCP path published `/right_arm/target_twist_states` at about 60 Hz, `MATCH[1]` produced physical cap motion, and the right Servo/gripper bridges received the SpaceMouse stream.
 
-The official 3Dconnexion SDK is available through their Software Developer Program (<https://3dconnexion.com/us/software-developer-program/>), but this project currently uses direct HID input so the SpaceMouse path can run as a normal ROS node.
+The official 3Dconnexion SDK is available through the 3Dconnexion Software Developer Program (<https://3dconnexion.com/us/software-developer-program/>). This project currently uses direct HID input so the SpaceMouse path can run as a normal ROS node.
 
 ### Optional Input Script Locations
 
@@ -298,7 +298,7 @@ Gamepad/thumbstick mode is implemented inside `teleop_bridge/mapping/hand_pose_m
 
 ## Step-By-Step Bringup With Checkpoints
 
-Use this when validating a new machine or debugging.
+Use this sequence when validating a new machine or debugging the runtime stack.
 
 ### 1. Set Variables
 
@@ -510,7 +510,7 @@ Important parameters:
 - `map_axes`, `map_signs`: position mapping axes/signs.
 - `rot_map_axes`, `rot_map_signs`: rotation mapping axes/signs.
 - `control_mode`: `hand_pose` or `gamepad`, normally changed by terminal commands.
-- `allow_unity_control_mode_switch`: default `false`; keep false unless intentionally restoring old UI mode switching.
+- `allow_unity_control_mode_switch`: default `false`; keep false unless intentionally restoring legacy UI mode switching.
 - `gamepad_*`: optional thumbstick/gamepad control tuning.
 - `home_joint_positions`: robot reset/home pose.
 

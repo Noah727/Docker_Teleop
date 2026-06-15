@@ -1,65 +1,44 @@
 # System Setup
 
-This document is the replication guide for the UR5e Hand-E VR teleoperation project. It explains what the system does, what hardware/software is required, how the repository is organized, and how a new developer can rebuild the Unity Quest app and ROS/Gazebo backend.
+This document defines the supported setup path for the current mixed-reality dual-arm teleoperation system. It is intended for a new developer or lab machine that must reproduce the Unity/Quest frontend and Dockerized ROS/Gazebo backend from a fresh clone.
 
-## Project Goal
+For daily operation after setup, use [Getting_Started.md](Getting_Started.md). For implementation details, use [Technical_Details.md](Technical_Details.md).
 
-This project lets a Meta Quest 3 user teleoperate a simulated UR5e robot with a Robotiq Hand-E gripper in Gazebo through a Unity MR/VR interface. Unity provides headset/controller input, robot visualization, synchronized object visualization, a floating control panel, and wrist-camera recording. ROS 2, MoveIt Servo, and Gazebo provide the robot control and physics authority.
+## Project Scope
 
-## Demo Videos
+The platform connects a Meta Quest 3 Unity application to a ROS 2 Humble backend. Unity provides mixed-reality passthrough presentation, controller input, robot and task-object visualization, workspace manipulation, central panel controls, camera preview, and recording. ROS 2, MoveIt Servo, and Gazebo provide robot control, task-object physics, gripper control, reset behavior, haptic/contact events, and state synchronization.
 
-Use this table for short demo links. Prefer GitHub Releases, YouTube, Google Drive, or lab storage instead of committing `.mp4` files directly.
+Gazebo is the physics authority. Unity is the headset-side interface and visualizer.
 
-Recommended clips:
+## Current Canonical Configuration
 
-- System bringup: backend launch, Gazebo dual-arm scene, Quest app connection, and first robot motion.
-- MR workspace placement: passthrough view with workspace drag/rotate and viewpoint reset.
-- Dual-arm teleop: left/right controller control of separate robot arms.
-- Pick/place task: one complete grasp and placement onto a blue plate.
-- Attachment mode: end effector following the controller with calibrated attachment offset.
-- Coupled gripper behavior: close-up showing stable grasp without finger rail drift.
-- Camera/data recording: camera preview, recording toggle, and saved data location.
+| Item | Value |
+| --- | --- |
+| Backend folder | `ros_backend1.1` |
+| Docker container | `motion_planner_11` |
+| Lifecycle script | `ros_backend1.1/scripts/backend11_lifecycle.sh` |
+| Unity active scene | `UnityApp/Assets/Scenes/GazeboReplica_DualArm_MR.unity` |
+| Single-arm backup scene | `UnityApp/Assets/Scenes/GazeboReplica_MR.unity` |
+| Generated Gazebo world | `ros_backend1.1/simulation/worlds/ur_hande_dual_arm_tabletop.sdf` |
+| Generated Unity task profile | `UnityApp/Assets/Resources/TaskProfiles/active_task.json` |
+| Preferred connection | Wired Quest USB with `adb reverse` |
+| Quest controller TCP | Quest `127.0.0.1:5026` -> host `127.0.0.1:5026` -> container `5005` |
+| Unity ROS-TCP | Quest `127.0.0.1:10001` -> host `127.0.0.1:10001` -> container `10000` |
 
-| Demo | Description | Link |
-| --- | --- | --- |
-| Full system bringup | Backend launch, Gazebo dual-arm scene, Quest connection, and first confirmed robot motion. | TODO |
-| MR workspace placement | Passthrough scene with draggable/rotatable workspace and viewpoint reset. | TODO |
-| Dual-arm teleoperation | Independent left/right controller control of both robot arms. | TODO |
-| Pick/place task | Complete grasp, transport, and placement of one cube/cylinder onto a target plate. | TODO |
-| Attachment mode | End effector following controller attachment pose with calibrated offset. | TODO |
-| Coupled gripper behavior | Close-up showing stable two-finger grasp without rail drift. | TODO |
-| Camera/data recording | Control panel camera preview, start/stop recording, and saved recording location. | TODO |
+## Demonstration Material
 
-## System Diagram
+The repository tracks lightweight preview images and hosted video links in the root `README.md`. Raw Quest recordings, source `.mp4` clips, APK builds, and full evaluation archives are kept outside the public repository.
 
-```mermaid
-flowchart LR
-    Quest[Quest 3 / Unity App] -->|TCP controller pose| Receiver[ROS TCP Receiver]
-    Quest -->|ROS-TCP Connector| RosTcp[ROS-TCP Endpoint]
-    Receiver --> Mapper[Teleop Mapping]
-    Mapper --> Servo[MoveIt Servo]
-    Servo --> Gazebo[Gazebo UR5e + Hand-E]
-    Gazebo --> Sync[Joint/Object Pose Sync]
-    Sync --> RosTcp
-    RosTcp --> Quest
-    Gazebo --> Camera[Gazebo Gripper Camera Topics]
-```
+The public demo set covers:
 
-## Current Status
-
-The current canonical backend is:
-
-```text
-ros_backend1.1
-```
-
-The active Unity scene is:
-
-```text
-UnityApp/Assets/Scenes/GazeboReplica_DualArm_MR.unity
-```
-
-The preferred development connection mode is wired Quest mode over USB using `adb reverse`.
+- Mixed-reality workspace overview.
+- Central control panel.
+- Workspace drag, rotation, and reset.
+- Floating and wrist camera workflows.
+- Attachment mode.
+- Haptic feedback controls.
+- Task/debug pages.
+- Pick/place, dual-arm handoff, and cable insertion tasks.
 
 ## Tested Environment
 
@@ -68,14 +47,15 @@ The preferred development connection mode is wired Quest mode over USB using `ad
 | Unity | `6000.2.10f1` |
 | Headset | Meta Quest 3 |
 | Unity target platform | Android / Quest |
-| Unity app package ID | `com.noahli.ROSUNITY` |
+| Unity package ID | `com.noahli.ROSUNITY` |
 | Backend | Dockerized ROS 2 workspace |
 | ROS | Humble inside container |
-| Robot | UR5e + Robotiq Hand-E |
 | Simulation | Gazebo |
 | Motion control | MoveIt Servo |
-| Host development | macOS with Docker Desktop |
-| Preferred Quest connection | USB wired via `adb reverse` |
+| Robot | Dual UR5e arms with Robotiq Hand-E grippers |
+| Primary host development | macOS with Docker Desktop |
+| Additional backend target | Native Ubuntu / Windows through WSL2 Ubuntu |
+| Preferred Quest connection | USB wired mode via `adb reverse` |
 
 ## Repository Layout
 
@@ -85,70 +65,39 @@ The preferred development connection mode is wired Quest mode over USB using `ad
 ├── docs/
 │   ├── System_Setup.md
 │   ├── Getting_Started.md
+│   ├── Linux_Windows_setup.md
 │   └── Technical_Details.md
 ├── UnityApp/
 │   ├── Assets/
 │   ├── Packages/
 │   └── ProjectSettings/
-└── ros_backend1.0/
+└── ros_backend1.1/
     ├── Dockerfile
     ├── docker-compose.yaml
     ├── .env.example
+    ├── profiles/
     ├── scripts/
     ├── simulation/
     └── src/
 ```
 
-## Repository Size And Git LFS
-
-The local `UnityApp/` folder can become several GB after Unity opens it because Unity generates `Library/`, `Temp/`, logs, and local build outputs.
-
-The pushed/tracked Unity content is much smaller:
-
-```text
-Tracked UnityApp files: about 94 MB
-UnityApp Git LFS files: about 91 MB
-```
-
-This repository uses Git LFS for large Unity/robot assets. After cloning, always run:
-
-```bash
-git lfs pull
-```
-
-Do not commit generated folders or data outputs:
-
-```text
-UnityApp/Library/
-UnityApp/Temp/
-UnityApp/Build/
-UnityApp/Builds/
-UnityApp/BuildTest/
-ros_backend1.0/build/
-ros_backend1.0/install/
-ros_backend1.0/log/
-recordings/
-GripperCameraRecordings/
-*.apk
-*.mp4
-*.mov
-```
+The public repository intentionally excludes generated outputs and large local artifacts. Do not commit Unity `Library/`, Unity `Temp/`, APKs, Quest recordings, source demo videos, ROS build/install/log folders, local `.env` files, raw thesis/evaluation archives, or private development notes.
 
 ## Hardware Requirements
 
 Required:
 
-- Meta Quest 3.
-- USB-C data cable.
+- Meta Quest 3 with Developer Mode enabled.
+- USB-C data cable for wired development.
 - Host computer capable of running Docker.
-- Unity Editor with Android build support.
-- Internet access for first clone/package restore.
+- Unity Editor with Android/Quest build support.
+- Internet access for first clone, Git LFS asset restoration, package restore, and container builds.
 
 Optional:
 
-- Quest casting or screen recording for demos/debugging.
-- External display for Gazebo/noVNC monitoring.
-- Lab storage for datasets/videos.
+- Native Linux workstation for higher Gazebo real-time factor.
+- External monitor for noVNC or Gazebo visual debugging.
+- Lab storage, YouTube, GitHub Releases, or Google Drive for hosted demo media.
 
 ## Software Requirements
 
@@ -156,11 +105,9 @@ Optional:
 - Git LFS.
 - Unity Hub.
 - Unity `6000.2.10f1`.
-- Unity Android Build Support.
-- Unity Android SDK & NDK Tools.
-- Unity OpenJDK.
-- Docker Desktop on macOS or Docker Engine / Docker Compose on Linux.
-- `adb` for Quest wired mode.
+- Unity Android Build Support, Android SDK/NDK Tools, and OpenJDK.
+- Docker Desktop on macOS/Windows, or Docker Engine plus Docker Compose on Linux.
+- `adb` for Quest installation and wired reverse tunnels.
 
 ## Clone And Restore Assets
 
@@ -171,101 +118,149 @@ cd ros_unity_project
 git lfs pull
 ```
 
-If Git LFS is skipped, robot meshes/textures may import incorrectly in Unity.
+If Git LFS is skipped, Unity may import mesh or texture pointer files instead of the real assets.
 
-## Unity Quest Rebuild
+## Backend Setup
 
-1. Open Unity Hub.
-2. Add project from disk:
+Create the backend environment file and select wired mode:
 
-```text
-ros_unity_project/UnityApp
+```bash
+cd ros_backend1.1
+cp .env.example .env
+./scripts/backend11_lifecycle.sh mode_wired
 ```
 
-3. Open with Unity `6000.2.10f1`.
-4. Let Unity restore packages and regenerate `Library/`.
-5. Confirm active scene:
+Build and start the backend:
 
-```text
-Assets/Scenes/Ur5e_Working 1.unity
+```bash
+./scripts/backend11_lifecycle.sh safe_down
+./scripts/backend11_lifecycle.sh up_container_build
+./scripts/backend11_lifecycle.sh build_ws
+./scripts/backend11_lifecycle.sh bringup_dual
+./scripts/backend11_lifecycle.sh status
 ```
 
-6. Confirm Quest build profile:
+`bringup_dual` starts the container, applies wired ADB reverse tunnels when the Quest is connected, generates the dual-arm Gazebo world from profiles, starts Gazebo, starts MoveIt Servo, starts the Quest TCP receiver, starts both arm mapping/control pipelines, and starts Unity synchronization services.
+
+Expected runtime container:
 
 ```text
-Assets/Settings/Build Profiles/Quest3_4.2.asset
+motion_planner_11
 ```
 
-7. Connect Quest 3 by USB and accept the USB debugging prompt.
-8. Check the device:
+Expected wired port mappings:
+
+```text
+5005/tcp  -> 127.0.0.1:5026
+10000/tcp -> 127.0.0.1:10001
+```
+
+## Quest Wired Mode
+
+Connect the headset by USB and accept the USB debugging prompt. Then verify ADB:
 
 ```bash
 adb devices
 ```
 
-9. In Unity, use `File > Build Profiles`, select Android/Quest, then `Build And Run`.
+Expected state:
 
-## Backend Setup
-
-From the repository root:
-
-```bash
-cd ros_backend1.0
-cp .env.example .env
-./scripts/backend10_lifecycle.sh up_container
-./scripts/backend10_lifecycle.sh build_ws
+```text
+<device_id>    device
 ```
 
-For normal wired development:
+Enable and inspect reverse tunnels:
 
 ```bash
-./scripts/backend10_lifecycle.sh bringup_wired
-./scripts/backend10_lifecycle.sh status
+cd ros_backend1.1
+./scripts/backend11_lifecycle.sh wired_on
+./scripts/backend11_lifecycle.sh wired_status
+adb reverse --list
 ```
+
+Expected tunnel entries:
+
+```text
+tcp:5026 tcp:5026
+tcp:10001 tcp:10001
+```
+
+## Unity Project Setup
+
+Open the Unity project:
+
+```text
+Unity Hub -> Add project from disk -> UnityApp
+Unity version: 6000.2.10f1
+Active scene: Assets/Scenes/GazeboReplica_DualArm_MR.unity
+```
+
+The current package ID is:
+
+```text
+com.noahli.ROSUNITY
+```
+
+In wired mode, the deployed Quest app should use:
+
+| Unity Setting | Value |
+| --- | --- |
+| Hand/controller TCP target IP | `127.0.0.1` |
+| Hand/controller TCP target port | `5026` |
+| ROS Settings IP Address | `127.0.0.1` |
+| ROS Settings Port | `10001` |
+
+Build and run through Unity when a new APK is required. If a prebuilt APK exists locally, it can be installed directly:
+
+```bash
+adb install -r -d 'UnityApp/App_Build/<app-build>.apk'
+```
+
+APK files are local build artifacts and are not stored in the public repository.
 
 ## Expected Working Behavior
 
-When the system is healthy:
+When setup is complete:
 
-- Gazebo shows the UR5e + Robotiq Hand-E gripper and tabletop objects.
-- Quest app connects through `127.0.0.1` wired mode.
-- Holding right grip engages robot teleop.
-- Right trigger toggles gripper open/close.
-- `B` resets robot and table objects.
-- Unity robot visualization follows Gazebo joint states.
-- Synchronized Unity objects follow Gazebo object poses.
-- Wrist camera preview appears in the floating panel.
-- Left `X` starts/stops wrist-camera recording.
+- The `motion_planner_11` container is running.
+- Gazebo starts the dual UR5e + Hand-E tabletop world.
+- MoveIt Servo controllers are active for both arms.
+- The Quest app connects over `127.0.0.1` through ADB reverse tunnels.
+- Holding either controller grip engages the corresponding robot arm.
+- Trigger taps toggle the corresponding gripper open/closed.
+- Unity robot visuals follow ROS/Gazebo joint state.
+- Synchronized Unity task objects follow Gazebo object poses.
+- The central control panel provides reset, camera, recording, haptics, and task controls.
+- Wrist and floating camera preview/recording paths are available from the Unity side.
 
 ## Main Controls
 
 Right controller:
 
-- `Grip hold`: engage robot teleop.
-- `Trigger tap`: toggle gripper open / close.
-- `A hold`: rotation mode for hand-pose control.
-- `B tap`: reset robot and table objects.
-- `Thumbstick press`: clutch / pause hand following; release to reset hand reference.
+- `Grip hold`: engage right-arm teleop.
+- `Trigger tap`: toggle right gripper open/close.
+- `A hold`: right-arm rotation mode.
+- `B tap`: toggle right-arm attachment mode.
 
 Left controller:
 
 - `Grip hold`: engage left-arm teleop.
-- `Trigger tap`: toggle left gripper open / close.
+- `Trigger tap`: toggle left gripper open/close.
 - `X hold`: left-arm rotation mode.
 - `Y tap`: toggle left-arm attachment mode.
 
-Optional thumbstick/gamepad and keyboard controls are terminal-driven right-arm overrides. See `docs/Getting_Started.md`.
+Central control panel:
 
-Floating panel:
-
-- Release right grip so teleop is not engaged.
-- Point left controller at the floating panel.
-- Hold left trigger and move the controller to drag the panel.
-- Release left trigger to drop the panel.
+- Reset left arm, right arm, both arms, objects, workspace view, or full state.
+- Swap controller-to-arm assignment.
+- Select camera preview source.
+- Start and stop recording.
+- Inspect task and debug status.
+- Configure haptic output.
 
 ## Recording And Data Collection
 
-Wrist-camera recordings are stored on Quest under:
+Quest recordings are saved under:
 
 ```text
 /storage/emulated/0/Android/data/com.noahli.ROSUNITY/files/GripperCameraRecordings
@@ -277,56 +272,45 @@ Pull recordings to the host:
 adb pull "/storage/emulated/0/Android/data/com.noahli.ROSUNITY/files/GripperCameraRecordings" ./GripperCameraRecordings
 ```
 
-Do not commit recordings or videos to Git. Put demos in GitHub Releases, YouTube, Google Drive, or lab storage and link them from the README.
+Recordings and datasets are local artifacts. Store final public clips in external hosting and link them from the README.
 
-## Troubleshooting Top Checks
+## Troubleshooting Checks
 
-- Missing Unity meshes/textures: run `git lfs pull`.
-- Quest not visible: run `adb devices` and accept the headset USB debugging prompt.
-- Wired mode not connecting: rerun `./scripts/backend10_lifecycle.sh wired_on`.
-- Robot does not move: run `./scripts/backend10_lifecycle.sh status`.
-- Unity receives no sync: confirm Part 4 is running.
-- Gripper visual jitters: confirm Unity gripper is visual-only and not physics-driven.
-- Recording path is empty: confirm package ID is `com.noahli.ROSUNITY`.
+| Symptom | Primary Check |
+| --- | --- |
+| Missing Unity assets | Run `git lfs pull` from the repository root. |
+| Quest not visible | Run `adb devices`; accept the headset USB debugging prompt. |
+| Wired mode not connecting | Run `./scripts/backend11_lifecycle.sh wired_on` and inspect `adb reverse --list`. |
+| Backend not responding | Run `./scripts/backend11_lifecycle.sh status`. |
+| Quest input not reaching ROS | Inspect `/tmp/qcr.log` inside `motion_planner_11`. |
+| Gazebo moves but Unity does not sync | Inspect `/unity_sync/*` topics and `/tmp/dual_part4_tcp_endpoint.log`. |
+| Recording folder is empty | Confirm the installed app package ID is `com.noahli.ROSUNITY` and inspect Unity logs through `adb logcat`. |
 
-## Known Limitations
+Useful status commands:
 
-- Gazebo rendering on macOS Docker can be CPU-heavy.
-- Wired Quest mode requires `adb reverse` and an active USB connection.
-- Unity is intended as visualization/control UI; Gazebo is the physics authority.
-- Videos and datasets are intentionally not stored in Git.
-- Some runtime Quest bugs still require `adb logcat` or headset video to debug effectively.
+```bash
+cd ros_backend1.1
+./scripts/backend11_lifecycle.sh status
+docker exec motion_planner_11 bash -lc 'tail -n 80 /tmp/qcr.log'
+docker exec motion_planner_11 bash -lc 'tail -n 80 /tmp/servo_dual_gz.log'
+docker exec motion_planner_11 bash -lc 'tail -n 80 /tmp/dual_part4_tcp_endpoint.log'
+```
 
 ## Development Workflow
 
-Keep `main` stable and use branches for changes:
+Keep `main` stable. Use feature branches for changes that affect Unity scenes, backend launch behavior, robot descriptions, profiles, or documentation:
 
 ```bash
 git checkout -b feature/my-change
 ```
 
-After testing:
+Before merging, verify:
 
-```bash
-git add UnityApp ros_backend1.0 docs README.md
-git commit -m "Describe the change"
-git push -u origin feature/my-change
-```
-
-Merge to `main` only after the Quest build and backend are tested.
-
-Useful branch names:
-
-```text
-feature/runtime-debug-panel
-feature/input-record-replay
-feature/wrist-camera-panel
-bugfix/y-button-mode
-bugfix/gripper-visual-sync
-```
+- Unity project opens without script errors.
+- Quest build installs or the affected Unity path is manually tested.
+- `ros_backend1.1/scripts/backend11_lifecycle.sh status` reports the expected runtime state.
+- Generated or local-only artifacts are not staged.
 
 ## License And Credits
 
-Add a root `LICENSE` before wider reuse. Recommended options for this robotics project are BSD-3-Clause or Apache-2.0.
-
-Third-party components and licenses are retained in their source folders where available, including ROS-TCP Endpoint, UR description/config assets, Robotiq Hand-E assets, Unity packages, ROS 2, MoveIt, and Gazebo-related components.
+Add a root `LICENSE` before distributing the project for reuse outside the lab. Third-party components retain their upstream notices in source folders where available, including ROS-TCP Endpoint, Universal Robots assets, Robotiq Hand-E assets, Unity packages, ROS 2, MoveIt, and Gazebo-related components.
