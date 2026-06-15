@@ -95,6 +95,10 @@ __pycache__/
 
 # Private local developer scratch notes
 dev_notes/
+dev_notes/agent/
+AGENTS.md
+docs/*agent*.md
+docs/*Agent*.md
 
 # Local curated thesis material
 complete_material/

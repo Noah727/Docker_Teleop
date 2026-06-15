@@ -1,17 +1,16 @@
-# Linux Setup
+# Linux / Windows Setup
 
-This guide records the Ubuntu setup path used on Noah's Linux workstation and the fixes needed to make the ROS/Gazebo backend build on x86_64 Linux.
+This guide records the Ubuntu setup path used on Noah's Linux workstation and the Windows path through WSL2 Ubuntu. The ROS/Gazebo backend is Linux-first; on Windows, use WSL2 as the backend environment and then run the same Linux commands from the WSL shell.
 
-Read these first when taking over the project:
+Windows is not a fully native backend target in this project. Treat Windows as:
 
-```bash
-sed -n '1,220p' AGENTS.md
-sed -n '1,220p' docs/across_platform_agent.md
-```
+- Windows host for Unity Editor, Quest APK builds, and optionally ADB.
+- WSL2 Ubuntu environment for Git, Docker, ROS/Gazebo backend commands, and scripted backend tests.
+- Docker Desktop or Docker Engine backing the WSL2 Docker workflow.
 
-## Confirmed Host
+## Confirmed Linux Host
 
-This setup was exercised on:
+The native Linux setup was exercised on:
 
 ```text
 OS: Ubuntu 24.04.4 LTS
@@ -33,7 +32,29 @@ Backend status from the first Ubuntu setup pass:
 - Only setuptools deprecation warnings were seen during the successful workspace build.
 - Quest USB / `adb reverse` was not tested yet on this machine.
 
-## Required Linux Fixes
+## Windows / WSL2 Model
+
+For Windows, install WSL2 with Ubuntu and run the Linux backend from inside WSL. This is the recommended Windows backend path because the repository's backend scripts, Docker container, ROS tooling, and Gazebo runtime are Linux-oriented.
+
+Minimum Windows-side setup:
+
+1. Install WSL2 with Ubuntu.
+2. Install Docker Desktop and enable WSL integration for the Ubuntu distribution, or install Docker Engine inside WSL.
+3. Clone the repository inside the WSL filesystem, not under `/mnt/c`, to avoid slow file I/O.
+4. Run the backend commands in the WSL Ubuntu shell.
+5. Use the Windows Unity Editor for Quest builds if needed.
+6. Use Windows `adb` for Quest install/reverse unless USB forwarding into WSL has been configured and tested.
+
+Windows can use the Linux commands below once you are inside the WSL Ubuntu shell. Replace paths such as `/home/noah/ros_unity_project` with the WSL home path you used.
+
+Important caveat for Quest wired mode:
+
+- `adb reverse` must run on the side that can see the Quest USB device.
+- On most Windows machines, that is the Windows host, not WSL.
+- If `adb devices` inside WSL shows no device, run ADB from Windows PowerShell or configure USB forwarding with `usbipd-win`.
+- The Quest app still uses `127.0.0.1:5026` and `127.0.0.1:10001`; verify that the Windows host, WSL, Docker, and ADB reverse path all reach the same forwarded services before assuming wired mode works.
+
+## Dockerfile Requirements
 
 Two Dockerfile details were required on this x86_64 Ubuntu machine:
 
@@ -64,11 +85,11 @@ These fixes are currently applied in:
 ros_backend1.1/Dockerfile
 ```
 
-Keep them unless intentionally building only for an ARM host.
+Keep them for native Linux and WSL2 unless intentionally building only for an ARM host.
 
-## Install Host Tools
+## Install Ubuntu / WSL Host Tools
 
-Install the baseline Ubuntu packages:
+Inside native Ubuntu or WSL Ubuntu, install the baseline packages:
 
 ```bash
 sudo apt update
@@ -92,11 +113,11 @@ git lfs version
 adb version
 ```
 
-`android-tools-adb` is needed for Quest wired mode. If `adb version` is not found, install the package above before testing the headset path.
+`android-tools-adb` is needed only if ADB will run from Linux/WSL. On Windows, installing ADB on the Windows host is often simpler for headset install and `adb reverse`.
 
 ## Install Docker
 
-If Docker is not already installed, use Docker's official Ubuntu repository:
+On native Ubuntu, install Docker from Docker's official Ubuntu repository:
 
 ```bash
 sudo install -m 0755 -d /etc/apt/keyrings
@@ -128,9 +149,24 @@ docker compose version
 docker run --rm hello-world
 ```
 
+On Windows, Docker Desktop with WSL integration is usually the easiest path:
+
+1. Install Docker Desktop for Windows.
+2. Enable WSL2 backend in Docker Desktop settings.
+3. Enable integration for the Ubuntu distribution.
+4. Open the WSL Ubuntu shell and verify:
+
+```bash
+docker --version
+docker compose version
+docker run --rm hello-world
+```
+
+If Docker commands fail inside WSL, fix Docker Desktop WSL integration before running backend scripts.
+
 ## Clone And Pull LFS Assets
 
-Use SSH after adding the machine's public SSH key to GitHub:
+Use SSH after adding the machine's public SSH key to GitHub. On Windows/WSL, create or load the SSH key inside WSL if cloning from the WSL shell:
 
 ```bash
 cd /home/noah
@@ -164,7 +200,6 @@ Expected repository shape:
 
 ```text
 /home/noah/ros_unity_project
-  AGENTS.md
   docs/
   ros_backend1.1/
   UnityApp/
@@ -254,7 +289,7 @@ SIM_HEADLESS=0 ./scripts/backend11_lifecycle.sh start_dual_sim
 
 ## Quest Wired Mode
 
-Install `adb` first:
+On native Linux, install `adb` first:
 
 ```bash
 sudo apt install -y android-tools-adb
@@ -298,6 +333,28 @@ ROS Settings IP: 127.0.0.1
 ROS Settings port: 10001
 ```
 
+On Windows/WSL, test ADB visibility before relying on this path:
+
+```powershell
+adb devices
+adb reverse tcp:5026 tcp:5026
+adb reverse tcp:10001 tcp:10001
+```
+
+If running ADB from Windows but the backend is inside WSL/Docker, confirm host port forwarding with:
+
+```powershell
+netstat -ano | findstr 5026
+netstat -ano | findstr 10001
+```
+
+If WSL should own ADB instead, configure USB forwarding with `usbipd-win`, attach the Quest USB device to the WSL distribution, and then rerun:
+
+```bash
+adb devices
+adb reverse --list
+```
+
 ## Scripted Tests
 
 The scripted test tools are under:
@@ -325,7 +382,7 @@ Topic-rate audit after `bringup_dual`:
 python3 scripts/test_tools/eval_scripts/03_ros_topic_rate_audit.py --duration 20
 ```
 
-Short dynamic backend performance smoke test:
+Short dynamic backend performance smoke test on native Linux or WSL:
 
 ```bash
 DURATION=20 WARMUP=5 ./scripts/test_tools/performance_test_scripts/run_dynamic_backend_performance_linux.sh
@@ -390,6 +447,7 @@ newgrp docker
 Docker image platform:
 
 - On x86_64, `FROM arm64v8/ros:humble-ros-base` fails. Use `FROM ros:humble-ros-base`.
+- WSL2 Ubuntu on typical Windows PCs is also x86_64, so the same multi-architecture base image rule applies.
 
 Interactive apt prompt during image build:
 
@@ -405,6 +463,7 @@ adb kill-server
 adb start-server
 adb devices
 ```
+- On Windows/WSL, first decide whether ADB is running on Windows or inside WSL. Do not run two competing ADB servers unless you are intentionally debugging USB forwarding.
 
 Sandboxed agent sessions:
 
@@ -415,15 +474,18 @@ Sandboxed agent sessions:
 When finishing a Linux bringup/test pass, report:
 
 ```text
+Platform: native Linux / Windows WSL2
 OS:
 Kernel:
+Windows version if applicable:
+WSL distro/version if applicable:
 CPU:
 GPU:
 RAM:
 Docker version:
 Docker compose version:
 Git LFS version:
-ADB version:
+ADB version and location: Linux / WSL / Windows host / not tested
 Repo commit:
 Container build: pass/fail
 build_ws: pass/fail

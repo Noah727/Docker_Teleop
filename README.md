@@ -10,6 +10,7 @@ Gazebo is the physics authority. Unity is the headset-side control, visualizatio
 
 - [docs/System_Setup.md](docs/System_Setup.md): full replication/setup guide for a new computer or new developer.
 - [docs/Getting_Started.md](docs/Getting_Started.md): day-to-day run guide and operational checks.
+- [docs/Linux_Windows_setup.md](docs/Linux_Windows_setup.md): Linux and Windows/WSL backend setup notes.
 - [docs/Technical_Details.md](docs/Technical_Details.md): architecture, networking, mapping, recording, troubleshooting, and robot/task adaptation details.
 - [ros_backend1.1/Readme/DualArm_Getting_Started.md](ros_backend1.1/Readme/DualArm_Getting_Started.md): current dual-arm backend command sheet.
 - [ros_backend1.1/Readme/Task_Profile_Workflow.md](ros_backend1.1/Readme/Task_Profile_Workflow.md): task/workspace/profile workflow.
@@ -78,6 +79,7 @@ flowchart LR
 ├── docs/
 │   ├── System_Setup.md
 │   ├── Getting_Started.md
+│   ├── Linux_Windows_setup.md
 │   └── Technical_Details.md
 ├── UnityApp/
 │   ├── Assets/
