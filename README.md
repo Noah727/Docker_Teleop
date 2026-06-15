@@ -266,5 +266,4 @@ This repository is a simulation-first research platform rather than a validated 
 | Quest connection | Wired Quest mode through USB and `adb reverse` is the recommended operational path. It depends on ADB authorization and active reverse tunnels for both controller TCP and ROS-TCP traffic. |
 | Task switching | Profile-based task generation is supported. Live runtime task switching exists as an experimental path and should be validated per task before use in formal studies. |
 | Haptics | Haptic feedback is intended to be contact/proximity-driven. End-effector error signals are useful for diagnostics but can be misleading as user-facing feedback during fast or constrained motion. |
-| Repository contents | Source code, profiles, lightweight documentation assets, and hosted-demo links are tracked. Raw recordings, APKs, evaluation archives, generated Unity folders, ROS build outputs, and private notes remain outside the public repository. |
 | License | A project license has not been finalized. Select and add a root `LICENSE` before distributing the project for reuse outside the lab. |
