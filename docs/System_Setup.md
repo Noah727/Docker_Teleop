@@ -323,4 +323,6 @@ Before merging, verify:
 
 ## License And Credits
 
-Add a root `LICENSE` before distributing the project for reuse outside the lab. Third-party components retain their upstream notices in source folders where available, including ROS-TCP Endpoint, Universal Robots assets, Robotiq Hand-E assets, Unity packages, ROS 2, MoveIt, and Gazebo-related components.
+License pending. Reuse, redistribution, or derivative use of this project requires permission from the author/lab until a project license is finalized.
+
+Third-party components retain their upstream notices in source folders where available, including ROS-TCP Endpoint, Universal Robots assets, Robotiq Hand-E assets, Unity packages, ROS 2, MoveIt, and Gazebo-related components.
