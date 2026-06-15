@@ -1,1 +1,0 @@
-date,trial_id,platform,host_hardware,gpu_mode,docker_version,backend_build_success,backend_bringup_success,quest_connection_tested,teleop_tested,rtf_mean,cpu_mean_percent,topic_rate_summary_ref,performance_summary_ref,notes

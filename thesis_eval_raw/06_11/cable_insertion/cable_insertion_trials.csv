@@ -1,1 +1,0 @@
-date,trial_id,box_type,port_clearance_per_side_mm,cable_object,arm_used,control_mode,success,completion_time_s,attempt_count,drop_count,reset_count,collision_count,final_depth_or_note,video_ref,screenshot_ref,rosbag_ref,notes

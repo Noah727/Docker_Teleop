@@ -1,6 +1,0 @@
- Container motion_planner_11 Stopping 
- Container motion_planner_11 Stopped 
- Container motion_planner_11 Removing 
- Container motion_planner_11 Removed 
- Network ros_backend11_default Removing 
- Network ros_backend11_default Removed 

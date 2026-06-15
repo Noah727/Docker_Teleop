@@ -1,8 +1,0 @@
-{
-  "failures": 0,
-  "objects_checked": 11,
-  "scene_profile": "profiles/scenes/dual_arm_tabletop/scene.yaml",
-  "sdf": "simulation/worlds/ur_hande_dual_arm_tabletop.sdf",
-  "task_profile": "profiles/tasks/pick_place_basic/task.yaml",
-  "unity_json": "UnityApp/Assets/Resources/TaskProfiles/active_task.json"
-}

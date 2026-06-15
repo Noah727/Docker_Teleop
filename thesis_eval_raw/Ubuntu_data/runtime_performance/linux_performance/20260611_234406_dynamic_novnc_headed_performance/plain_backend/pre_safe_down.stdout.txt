@@ -1,2 +1,0 @@
-[info] motion_planner_11 not running; skip node stop.
-[ok] Compose stack is down and stale containers are cleaned.
