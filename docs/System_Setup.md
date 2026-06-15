@@ -210,13 +210,23 @@ In wired mode, the deployed Quest app should use:
 | ROS Settings IP Address | `127.0.0.1` |
 | ROS Settings Port | `10001` |
 
-Build and run through Unity when a new APK is required. If a prebuilt APK exists locally, it can be installed directly:
+The current prebuilt Quest APK is published as a GitHub Release asset:
+
+- Release: [Unity Quest App 7.0.7](https://github.com/su-idr-lab/ros_unity_project/releases/tag/unity-app-7.0.7)
+- APK asset: [`R.U_7.0.7.apk`](https://github.com/su-idr-lab/ros_unity_project/releases/download/unity-app-7.0.7/R.U_7.0.7.apk)
+
+Download and install it:
 
 ```bash
-adb install -r -d 'UnityApp/App_Build/<app-build>.apk'
+mkdir -p UnityApp/App_Build
+gh release download unity-app-7.0.7 \
+  --repo su-idr-lab/ros_unity_project \
+  --pattern 'R.U_7.0.7.apk' \
+  --dir UnityApp/App_Build
+adb install -r -d 'UnityApp/App_Build/R.U_7.0.7.apk'
 ```
 
-APK files are local build artifacts and are not stored in the public repository.
+Build through Unity only when a new APK is required. Source-build instructions are maintained in [Getting_Started.md](Getting_Started.md#build-quest-app-from-source).
 
 ## Expected Working Behavior
 

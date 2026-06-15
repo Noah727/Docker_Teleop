@@ -30,9 +30,22 @@ cp .env.example .env 2>/dev/null || true
 
 `bringup_dual` starts the container, applies wired ADB reverse tunnels if the Quest is connected, generates the Gazebo world from task profiles, starts dual Gazebo, starts dual MoveIt Servo, starts the Quest TCP receiver, starts both arm control pipelines, and starts Unity synchronization.
 
-## Install Prebuilt Quest App
+## Install Published Quest App
 
-Prebuilt APKs are local artifacts under `UnityApp/App_Build/` when available. APK files are not stored in the public repository, so a fresh machine may need to build the app in Unity before installation.
+The current prebuilt Quest APK is published as a GitHub Release asset:
+
+- Release: [Unity Quest App 7.0.7](https://github.com/su-idr-lab/ros_unity_project/releases/tag/unity-app-7.0.7)
+- APK asset: [`R.U_7.0.7.apk`](https://github.com/su-idr-lab/ros_unity_project/releases/download/unity-app-7.0.7/R.U_7.0.7.apk)
+
+Download it with GitHub CLI:
+
+```bash
+mkdir -p UnityApp/App_Build
+gh release download unity-app-7.0.7 \
+  --repo su-idr-lab/ros_unity_project \
+  --pattern 'R.U_7.0.7.apk' \
+  --dir UnityApp/App_Build
+```
 
 1. Connect the Quest 3 by USB.
 2. Accept the USB debugging prompt in the headset.
@@ -44,16 +57,10 @@ adb devices
 
 Expected: the Quest appears as `device`, not `unauthorized`.
 
-4. Install the newest local APK, for example:
+4. Install the APK:
 
 ```bash
-adb install -r -d 'UnityApp/App_Build/R&U_7.0.1.apk'
-```
-
-If the APK name is different, list available builds first:
-
-```bash
-ls UnityApp/App_Build/*.apk
+adb install -r -d 'UnityApp/App_Build/R.U_7.0.7.apk'
 ```
 
 5. Launch the installed app from the headset app library. Current package ID is:
@@ -68,6 +75,88 @@ Useful install checks:
 adb shell pm list packages | grep -i noahli
 adb logcat -d "Unity:I" "*:S" | tail -n 80
 ```
+
+APK files are release artifacts rather than normal Git-tracked files. Build from source only when changing Unity code, changing Unity project settings, or producing a new public release build.
+
+## Build Quest App From Source
+
+Use this path when the published APK is not sufficient or a new Unity build is required.
+
+### Unity Environment
+
+Required Unity setup:
+
+| Item | Value |
+| --- | --- |
+| Unity version | `6000.2.10f1` |
+| Project folder | `UnityApp` |
+| Active scene | `Assets/Scenes/GazeboReplica_DualArm_MR.unity` |
+| Target platform | Android / Quest |
+| Package ID | `com.noahli.ROSUNITY` |
+
+Install these Unity modules through Unity Hub:
+
+- Android Build Support.
+- Android SDK & NDK Tools.
+- OpenJDK.
+
+### Open The Project
+
+1. Open Unity Hub.
+2. Select `Add project from disk`.
+3. Choose the repository's `UnityApp` folder.
+4. Open with Unity `6000.2.10f1`.
+5. Let Unity restore packages and regenerate the local `Library/` folder.
+6. Open the active scene:
+
+```text
+Assets/Scenes/GazeboReplica_DualArm_MR.unity
+```
+
+### Confirm Connection Settings
+
+For wired Quest operation, the Unity build should use:
+
+| Unity Setting | Value |
+| --- | --- |
+| Hand/controller TCP target IP | `127.0.0.1` |
+| Hand/controller TCP target port | `5026` |
+| ROS Settings IP Address | `127.0.0.1` |
+| ROS Settings Port | `10001` |
+
+The backend `adb reverse` tunnels map these headset-local addresses back to the host and Docker container.
+
+### Build And Install
+
+1. Connect the Quest 3 by USB.
+2. Accept the USB debugging prompt in the headset.
+3. Confirm ADB sees the headset:
+
+```bash
+adb devices
+```
+
+4. In Unity, open:
+
+```text
+File > Build Profiles
+```
+
+5. Select the Android/Quest build profile.
+6. Confirm that `GazeboReplica_DualArm_MR.unity` is included in the build scenes.
+7. Use `Build And Run`, or build an APK into:
+
+```text
+UnityApp/App_Build/
+```
+
+If an APK is built locally, it can also be installed from the terminal:
+
+```bash
+adb install -r -d 'UnityApp/App_Build/<app-build>.apk'
+```
+
+Local APKs, Unity `Library/`, Unity `Temp/`, and generated build folders are not tracked by Git.
 
 ## Unity/Quest Connection Settings
 

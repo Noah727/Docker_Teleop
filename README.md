@@ -140,33 +140,35 @@ cd ros_backend1.1
 ./scripts/backend11_lifecycle.sh bringup_dual
 ```
 
-### 3. Install Or Run The Quest App
+### 3. Install The Prebuilt Quest App
 
-If a prebuilt APK exists locally, install it directly on the headset:
+The current prebuilt Quest APK is published as a GitHub Release asset:
+
+- [Unity Quest App 7.0.7](https://github.com/su-idr-lab/ros_unity_project/releases/tag/unity-app-7.0.7)
+- APK asset: [`R.U_7.0.7.apk`](https://github.com/su-idr-lab/ros_unity_project/releases/download/unity-app-7.0.7/R.U_7.0.7.apk)
+
+Download it with GitHub CLI:
+
+```bash
+mkdir -p UnityApp/App_Build
+gh release download unity-app-7.0.7 \
+  --repo su-idr-lab/ros_unity_project \
+  --pattern 'R.U_7.0.7.apk' \
+  --dir UnityApp/App_Build
+```
+
+Install it on the headset:
 
 ```bash
 adb devices
-adb install -r -d 'UnityApp/App_Build/R&U_1.0.5.apk'
+adb install -r -d 'UnityApp/App_Build/R.U_7.0.7.apk'
 ```
 
-If the APK name is different:
+APK files are release artifacts rather than normal Git-tracked files. To rebuild the app instead of using the published APK, see [Build Quest App From Source](docs/Getting_Started.md#build-quest-app-from-source).
 
-```bash
-ls UnityApp/App_Build/*.apk
-adb install -r -d '<path-to-apk>'
-```
+### 4. Confirm Unity/Quest Connection Settings
 
-APKs are ignored by Git, so a fresh clone may need a Unity build first.
-
-### 4. Open The Unity Project If Rebuilding
-
-```text
-Unity Hub -> Add project from disk -> UnityApp
-Unity version: 6000.2.10f1
-Active scene: Assets/Scenes/GazeboReplica_DualArm_MR.unity
-```
-
-In wired mode, the Unity app should use:
+The published APK is configured for the wired development path. If rebuilding from source, keep these settings:
 
 | Unity Setting | Value |
 | --- | --- |
@@ -174,8 +176,6 @@ In wired mode, the Unity app should use:
 | Hand/controller TCP target port | `5026` |
 | ROS Settings IP Address | `127.0.0.1` |
 | ROS Settings Port | `10001` |
-
-Build and run the Android/Quest profile from Unity only when rebuilding instead of installing a prebuilt APK.
 
 ## Control Summary
 
