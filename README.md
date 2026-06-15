@@ -144,15 +144,15 @@ cd ros_backend1.1
 
 The current prebuilt Quest APK is published as a GitHub Release asset:
 
-- [Unity Quest App 7.0.7](https://github.com/su-idr-lab/ros_unity_project/releases/tag/unity-app-7.0.7)
-- APK asset: [`R.U_7.0.7.apk`](https://github.com/su-idr-lab/ros_unity_project/releases/download/unity-app-7.0.7/R.U_7.0.7.apk)
+- [Unity Quest App 7.0.7](https://github.com/Noah727/Docker_Teleop/releases/tag/unity-app-7.0.7)
+- APK asset: [`R.U_7.0.7.apk`](https://github.com/Noah727/Docker_Teleop/releases/download/unity-app-7.0.7/R.U_7.0.7.apk)
 
 Download it with GitHub CLI:
 
 ```bash
 mkdir -p UnityApp/App_Build
 gh release download unity-app-7.0.7 \
-  --repo su-idr-lab/ros_unity_project \
+  --repo Noah727/Docker_Teleop \
   --pattern 'R.U_7.0.7.apk' \
   --dir UnityApp/App_Build
 ```
