@@ -1,10 +1,21 @@
 # ROS Unity MR Dual-Arm Teleoperation
 
-This repository contains a Meta Quest 3 mixed-reality teleoperation platform for simulated robot manipulation. Unity provides the MR passthrough interface, controller input, robot/object visualization, movable workspace UI, central control panel, and camera recording. The Dockerized ROS 2 Humble backend provides Gazebo simulation, MoveIt Servo control, Robotiq Hand-E gripper control, task-object synchronization, reset logic, and haptic/contact feedback.
+A simulation-first mixed-reality teleoperation platform for dual-arm robot manipulation. The system connects Meta Quest 3 and Unity to a dockerized ROS 2 Humble backend with Gazebo, MoveIt Servo, dual UR5e robots, and Robotiq Hand-E grippers.
 
-Gazebo is the physics authority. Unity is the headset-side control, visualization, and data-collection interface.
+[Watch the full demo](https://youtu.be/xJCyWlMuZTQ) · [Read the setup guide](docs/System_Setup.md) · [Explore the technical details](docs/Technical_Details.md)
+
+Unity provides the MR passthrough interface, controller input, robot/object visualization, movable workspace UI, central control panel, and camera recording. The ROS backend provides simulation, motion and gripper control, task-object synchronization, reset logic, and haptic/contact feedback.
+
+Gazebo is the physics authority; Unity is the headset-side control, visualization, and data-collection interface.
 
 <img src="docs/assets/demo/quest_mr_workspace_overview_20260614_184136.jpg" alt="Mixed-reality dual-arm teleoperation workspace overview" width="900">
+
+## Highlights
+
+- Independent dual-arm teleoperation with workspace-aware motion mapping, gripper control, task reset, and Unity visualization.
+- Demonstrations covering pick-and-place, coordinated handoff, cable insertion, camera recording, and contact-driven haptic feedback.
+- A Dockerized robotics backend with documented workflows for macOS, Linux, and Windows/WSL development environments.
+- Reproducible setup, operating, architecture, and troubleshooting documentation for new users and collaborators.
 
 ## System Overview
 
@@ -101,16 +112,23 @@ Local recordings, APKs, generated Unity folders, ROS build folders, raw thesis/e
 
 ## Quick Start
 
-### 1. Clone And Restore Assets
+### Prerequisites
+
+- Git and [Git LFS](https://git-lfs.com/)
+- Docker Desktop or a compatible Docker Engine installation
+- A Meta Quest 3 with ADB authorization for the recommended wired workflow
+- The tools and versions listed in [System Setup](docs/System_Setup.md)
+
+### 1. Clone and restore assets
 
 ```bash
 git lfs install
-git clone git@github.com:su-idr-lab/ros_unity_project.git
-cd ros_unity_project
+git clone https://github.com/Noah727/Docker_Teleop.git
+cd Docker_Teleop
 git lfs pull
 ```
 
-### 2. Start The Dual-Arm Backend
+### 2. Start the dual-arm backend
 
 ```bash
 cd ros_backend1.1
@@ -142,7 +160,7 @@ cd ros_backend1.1
 ./scripts/backend11_lifecycle.sh bringup_dual
 ```
 
-### 3. Install The Prebuilt Quest App
+### 3. Install the prebuilt Quest app
 
 The current prebuilt Quest APK is published as a GitHub Release asset:
 
@@ -168,7 +186,7 @@ adb install -r -d 'UnityApp/App_Build/R.U_7.0.7.apk'
 
 APK files are release artifacts rather than normal Git-tracked files. To rebuild the app instead of using the published APK, see [Build Quest App From Source](docs/Getting_Started.md#build-quest-app-from-source).
 
-### 4. Confirm Unity/Quest Connection Settings
+### 4. Confirm Unity/Quest connection settings
 
 The published APK is configured for the wired development path. If rebuilding from source, keep these settings:
 
@@ -269,3 +287,9 @@ This repository is a simulation-first research platform rather than a validated 
 | Task switching | Profile-based task generation is supported. Live runtime task switching exists as an experimental path and should be validated per task before use in formal studies. |
 | Haptics | Haptic feedback is intended to be contact/proximity-driven. End-effector error signals are useful for diagnostics but can be misleading as user-facing feedback during fast or constrained motion. |
 | License | License pending. Reuse, redistribution, or derivative use of this project requires permission from the author/lab until a project license is finalized. |
+
+## Author
+
+Developed by [Noah Li](https://github.com/Noah727), a Mechanical Engineering senior and robotics researcher at The Ohio State University.
+
+[LinkedIn](https://www.linkedin.com/in/noah-li-71300a2b2/) · [Project demo](https://youtu.be/xJCyWlMuZTQ)
