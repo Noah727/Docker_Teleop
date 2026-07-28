@@ -256,6 +256,32 @@ The hosted demo media documents the current Unity/Quest user-facing workflow. Ra
 | Tightest ports / conclusion | <img src="docs/assets/demo/v2_16_tightest_ports.jpg" alt="Tightest ports and conclusion" width="280"> | `16_tightest_ports_Tightest_ports_and_conclusion.mp4` | Show the most difficult port condition and closing demo frame. | [Watch](https://youtu.be/RCicppveXlI) |
 | Control panel drag/resize | <img src="docs/assets/demo/v2_17_control_panel_drag_resize.jpg" alt="Control panel drag and resize" width="280"> | `17_control_panel_drag_resize_Control_panel_drag_and_resize.mp4` | Drag the central panel and resize it with the corner handles. | [Watch](https://youtu.be/g5qecVFjjOM) |
 
+## Evaluation Summary
+
+Evaluation focused on whether the MR interface can support repeatable simulated manipulation, dual-arm coordination, Gazebo-to-Unity synchronization, camera recording, and backend runtime operation. Raw videos, trace logs, and full CSV/plot outputs are kept outside the public repository with the thesis/evaluation archive; this README includes the headline results and caveats.
+
+### Manipulation Trials
+
+| Evaluation Task | Result | Notes |
+| --- | --- | --- |
+| Single-arm pick/place with MR hand-pose control | 46 successful placements across two 3 min trials, 7.67 successes/min average | Operator-counted Quest trials. |
+| Single-arm comparison controls | Keyboard: 2.67 successes/min; SpaceMouse: 4.67 successes/min; gamepad: 3.33 successes/min | Same 3 min pick/place task; baseline controls are single-arm only. |
+| Dual-arm simultaneous pick/place | 26 successful placements in 3 min, 8.67 successes/min | Both arms operated together in the shared MR workspace. |
+| Dual-arm airborne handoff | 9 successful handoffs in 3 min, 3.00 successes/min | One arm passes an object to the other without placing it down first. |
+| Fixed-box cable insertion | 15, 13, 9, 4, and 2 insertions/min at 2.0, 1.5, 1.0, 0.5, and 0.2 mm/side clearance | Receiver box remains fixed in the workspace. |
+| Airborne-box cable insertion | 11, 12, 11, 2, and 2 insertions/min at 2.0, 1.5, 1.0, 0.5, and 0.2 mm/side clearance | One arm holds the receiver box while the other inserts the cable. |
+
+### System Measurements
+
+| Measurement | Headline Result | Caveat |
+| --- | --- | --- |
+| Headset-to-backend command path | Receiver-to-joint-command mean delay ranged from 1.32-7.25 ms across traced arm/run rows; Servo-to-joint-command mean delay was about 13.0 ms | Measured inside ROS/container timing after receiver publication, not optical controller-to-display latency. |
+| Gazebo-to-Unity object sync | RedCube static alignment error was effectively zero; moving-object mean position error was 0.11 mm, with transient outliers during grasp/object motion | Object sync rows are usable; old end-effector absolute alignment rows are excluded from the headline result. |
+| Quest recording performance | Recording trace averaged 40.3 FPS with a 42.0 FPS median; preferred object visual-latency sequence had 54.5 ms median latency | FPS and object-sync evidence are usable; raw end-effector event detection remains debug-only unless manually filtered. |
+| Backend runtime performance | The current macOS dynamic backend case study measured 0.63 mean real-time factor headless and 0.52 with headed Gazebo/noVNC | Runtime numbers are hardware and Docker-stack dependent, so cross-platform values should be treated as case studies rather than strict OS benchmarks. |
+
+Evaluation helper scripts live under `ros_backend1.1/scripts/test_tools/eval_scripts/`. The repository intentionally excludes raw recordings, large trace outputs, and generated thesis material.
+
 ## Operational Boundaries
 
 This repository is a simulation-first research platform rather than a validated physical robot deployment.
